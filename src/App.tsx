@@ -122,8 +122,8 @@ const AppContainer = styled.div`
 const Header = styled.header`
   width: 100%;
   height: 60px;
+  font-size: 1.5rem;
   padding: 0.75rem 2rem;
-  border-bottom: 2px solid #ff0000;
   text-align: center;
   position: relative;
   flex-shrink: 0;
@@ -183,6 +183,7 @@ const App = () => (
     <GlobalStyle />
     <BrowserRouter>
       <AppContainer>
+        <Header>Data Transfer Compliance Tool</Header>
         <NavBar />
         <Main>
           <Routes>
