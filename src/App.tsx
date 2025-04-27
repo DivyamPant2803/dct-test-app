@@ -5,6 +5,11 @@ import Questionnaire from './components/Questionnaire'
 import ResultsTable from './components/ResultsTable'
 import './App.css'
 import { createGlobalStyle } from 'styled-components'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import NavBar from './components/NavBar'
+import Home from './pages/Home'
+import Guidance from './pages/Guidance'
+import Administration from './pages/Administration'
 
 const queryClient = new QueryClient()
 
@@ -173,83 +178,22 @@ const BackButton = styled.button`
   }
 `
 
-function App() {
-  const [showResults, setShowResults] = useState<boolean>(false)
-  const [formData, setFormData] = useState<FormData>(INITIAL_FORM_DATA)
-
-  const handleQuestionnaireComplete = (data: Partial<FormData>) => {
-    console.log('Questionnaire completed with data:', data)
-    
-    // Ensure entities structure is preserved
-    const processedData = {
-      ...INITIAL_FORM_DATA,
-      ...data,
-      entities: {
-        ...INITIAL_FORM_DATA.entities,
-        ...(data.entities || {})
-      }
-    }
-    
-    setFormData(processedData)
-    setShowResults(true)
-  }
-
-  const transformFormDataForTable = (data: FormData) => {
-    console.log('Raw form data:', data)
-    
-    // Get all entities for selected countries
-    const allEntities = data.countries.reduce((acc: string[], country: string) => {
-      const countryEntities = data.entities[country] || []
-      return [...acc, ...countryEntities]
-    }, [])
-
-    // Create the transformed data structure
-    const transformedData = {
-      informationCategory: data.informationCategory || [],
-      dataSubjectType: data.dataSubjectType || [],
-      countries: data.countries || [],
-      entities: allEntities,
-      recipientType: data.recipientType || []
-    }
-
-    console.log('Transformed data:', transformedData)
-    
-    // Validate transformed data
-    if (!transformedData.countries.length) {
-      console.error('No countries selected')
-    }
-    if (!transformedData.entities.length) {
-      console.error('No entities available for selected countries:', data.entities)
-    }
-    if (!transformedData.informationCategory.length) {
-      console.error('No information categories selected')
-    }
-    
-    return transformedData
-  }
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      <GlobalStyle />
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <GlobalStyle />
+    <BrowserRouter>
       <AppContainer>
-        <Header>
-          {showResults && (
-            <BackButton onClick={() => setShowResults(false)}>
-              ← Back to Questionnaire
-            </BackButton>
-          )}
-          <Title>Data Transfer Compliance Tool</Title>
-        </Header>
+        <NavBar />
         <Main>
-          {!showResults ? (
-            <Questionnaire onComplete={handleQuestionnaireComplete} />
-          ) : (
-            <ResultsTable formData={transformFormDataForTable(formData)} />
-          )}
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/guidance" element={<Guidance />} />
+            <Route path="/admin" element={<Administration />} />
+          </Routes>
         </Main>
       </AppContainer>
-    </QueryClientProvider>
-  )
-}
+    </BrowserRouter>
+  </QueryClientProvider>
+);
 
 export default App

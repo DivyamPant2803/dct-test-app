@@ -3,12 +3,12 @@ import styled from 'styled-components';
 import { useForm } from 'react-hook-form';
 import Flag from 'react-world-flags';
 import debounce from 'lodash/debounce';
-import { RECIPIENT_TYPES } from '../types';
-import { fetchEntitiesForCountry, groupEntitiesByCategory, searchEntities } from '../services/entityService';
-import EntitySelection from './EntitySelection/index';
-import ReviewDataTransferPurpose from './ReviewDataTransferPurpose';
-import { INITIAL_FORM_DATA, FormData } from '../App';
-import type { Entity } from '../types';
+import { RECIPIENT_TYPES } from '../../types';
+import { fetchEntitiesForCountry, groupEntitiesByCategory, searchEntities } from '../../services/entityService';
+import EntitySelection from '../../components/EntitySelection/index';
+import ReviewDataTransferPurpose from '../../components/ReviewDataTransferPurpose';
+import { INITIAL_FORM_DATA, FormData } from '../../App';
+import type { Entity } from '../../types';
 
 const Form = styled.form`
   position: absolute;
