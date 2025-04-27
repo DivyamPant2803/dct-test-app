@@ -1,5 +1,7 @@
 import styled from 'styled-components';
 import { FaBullhorn, FaFileAlt, FaBookOpen, FaStickyNote, FaInfoCircle } from 'react-icons/fa';
+import React, { useState } from 'react';
+import { useStaticContent, ContentItem } from '../contexts/StaticContentContext';
 
 const Container = styled.div`
   max-width: 1100px;
@@ -25,21 +27,24 @@ const Card = styled.div`
   align-items: flex-start;
 `;
 
-const IconWrapper = styled.div`
-  font-size: 1.6rem;
+const CardHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 10px;
+`;
+
+const IconWrapper = styled.div`
+  font-size: 1.3rem;
+  margin-bottom: 0;
   color:rgb(0, 0, 0);
 `;
 
-const Title = styled.h2`
-  color: #222;
-  margin-bottom: 1rem;
-`;
-
 const CardTitle = styled.h3`
-  margin: 0 0 8px 0;
-  font-size: 1.5rem;
+  margin: 0;
+  font-size: 1.15rem;
   color: #222;
+  font-weight: 600;
 `;
 
 const Summary = styled.p`
@@ -74,38 +79,102 @@ const Collapsible = styled.details`
   }
 `;
 
-const Home = () => (
-  <Container>
-    <Summary>
-      The Data Transfer Compliance Tool helps you manage, track, and ensure compliance for all your data transfer activities.
-    </Summary>
-    <Grid>
-      <Card>
-        <IconWrapper><FaBullhorn aria-hidden="true" /></IconWrapper>
-        <CardTitle>Important Announcements</CardTitle>
-        <Summary>System maintenance on April 30</Summary>
-        <Button>View All</Button>
-      </Card>
-      <Card>
-        <IconWrapper><FaFileAlt aria-hidden="true" /></IconWrapper>
-        <CardTitle>Release Notes</CardTitle>
-        <Summary>v2.3.1 Released - Minor bug fixes</Summary>
-        <Button>View All</Button>
-      </Card>
-      <Card>
-        <IconWrapper><FaStickyNote aria-hidden="true" /></IconWrapper>
-        <CardTitle>Key Notes</CardTitle>
-        <Summary>Updated compliance guidelines</Summary>
-        <Button>View All</Button>
-      </Card>
-      <Card>
-        <IconWrapper><FaBookOpen aria-hidden="true" /></IconWrapper>
-        <CardTitle>Training Materials</CardTitle>
-        <Summary>New user onboarding module available</Summary>
-        <Button>View All</Button>
-      </Card>
-    </Grid>
-  </Container>
-);
+type Entry = { title: string; body: string; date: string };
+type CategoryKey = 'announcements' | 'releasenotes' | 'keynotes' | 'training';
+
+const categoryMeta = {
+  announcements: { icon: <FaBullhorn aria-hidden="true" />, label: 'Important Announcements' },
+  releasenotes: { icon: <FaFileAlt aria-hidden="true" />, label: 'Release Notes' },
+  keynotes: { icon: <FaStickyNote aria-hidden="true" />, label: 'Key Notes' },
+  training: { icon: <FaBookOpen aria-hidden="true" />, label: 'Training Materials' },
+};
+
+const ExpandedPanel = styled.div`
+  background: #fafbfc;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  margin-top: 18px;
+  padding: 18px 14px 8px 14px;
+  max-height: 260px;
+  overflow-y: auto;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  animation: fadeIn 0.3s;
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: none; }
+  }
+`;
+
+const EntryTitle = styled.div`
+  font-weight: 600;
+  margin-bottom: 2px;
+`;
+const EntryDate = styled.div`
+  font-size: 0.92rem;
+  color: #888;
+  margin-bottom: 4px;
+`;
+const EntryBody = styled.div`
+  margin-bottom: 12px;
+  color: #333;
+  white-space: pre-line;
+`;
+const Divider = styled.div`
+  border-bottom: 1px solid #ececec;
+  margin: 10px 0 12px 0;
+`;
+
+const Home = () => {
+  const [expanded, setExpanded] = useState<CategoryKey|null>(null);
+  const { content } = useStaticContent();
+
+  const handleExpand = (key: CategoryKey) => {
+    setExpanded(prev => (prev === key ? null : key));
+  };
+
+  return (
+    <Container>
+      <Summary>
+        The Data Transfer Compliance Tool helps you manage, track, and ensure compliance for all your data transfer activities.
+      </Summary>
+      <Grid>
+        {(Object.keys(content) as CategoryKey[]).map((key) => {
+          const entries = content[key];
+          const meta = categoryMeta[key];
+          return (
+            <Card key={key}>
+              <CardHeader>
+                <IconWrapper>{meta.icon}</IconWrapper>
+                <CardTitle>{meta.label}</CardTitle>
+              </CardHeader>
+              {expanded === key ? (
+                <>
+                  <Button onClick={() => handleExpand(key)} aria-expanded={expanded===key} aria-controls={`${key}-panel`}>
+                    Hide Details
+                  </Button>
+                  <ExpandedPanel id={`${key}-panel`}>
+                    <div style={{fontWeight:500, marginBottom:10}}>▼ All {meta.label}</div>
+                    {entries.map((entry, idx) => (
+                      <div key={idx}>
+                        <EntryTitle>{entry.title}</EntryTitle>
+                        <EntryDate>{entry.date ? entry.date : ''}</EntryDate>
+                        <EntryBody>{entry.body}</EntryBody>
+                        {idx < entries.length-1 && <Divider />}
+                      </div>
+                    ))}
+                  </ExpandedPanel>
+                </>
+              ) : (
+                <Button onClick={() => handleExpand(key)} aria-expanded={expanded===key} aria-controls={`${key}-panel`}>
+                  View Details
+                </Button>
+              )}
+            </Card>
+          );
+        })}
+      </Grid>
+    </Container>
+  );
+};
 
 export default Home; 

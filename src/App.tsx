@@ -10,6 +10,7 @@ import NavBar from './components/NavBar'
 import Home from './pages/Home'
 import Guidance from './pages/Guidance'
 import Administration from './pages/Administration'
+import { StaticContentProvider } from './contexts/StaticContentContext'
 
 const queryClient = new QueryClient()
 
@@ -116,7 +117,7 @@ const AppContainer = styled.div`
   color: black;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: auto;
 `
 
 const Header = styled.header`
@@ -141,7 +142,7 @@ const Main = styled.main`
   height: calc(100vh - 60px);
   position: relative;
   background: #f5f5f5;
-  overflow: hidden;
+  overflow: auto;
 `
 
 const Title = styled.h1`
@@ -182,17 +183,19 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <GlobalStyle />
     <BrowserRouter>
-      <AppContainer>
-        <Header>Data Transfer Compliance Tool</Header>
-        <NavBar />
-        <Main>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/guidance" element={<Guidance />} />
-            <Route path="/admin" element={<Administration />} />
-          </Routes>
-        </Main>
-      </AppContainer>
+      <StaticContentProvider>
+        <AppContainer>
+          <Header>Data Transfer Compliance Tool</Header>
+          <NavBar />
+          <Main>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/guidance" element={<Guidance />} />
+              <Route path="/admin" element={<Administration />} />
+            </Routes>
+          </Main>
+        </AppContainer>
+      </StaticContentProvider>
     </BrowserRouter>
   </QueryClientProvider>
 );
