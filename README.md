@@ -1,54 +1,57 @@
-# React + TypeScript + Vite
+# dct-test-app
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Project Overview
 
-Currently, two official plugins are available:
+dct-test-app is a modern web application built with React, TypeScript, and Vite. It serves as a template and starting point for scalable, high-performance front-end projects. The app is designed for rapid development, easy configuration, and best practices in code quality and maintainability.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Description
 
-## Expanding the ESLint configuration
+This project demonstrates a minimal yet powerful setup for building React applications with TypeScript and Vite. It includes hot module replacement (HMR), ESLint integration, and a recommended project structure. The template is suitable for both learning and production use, and can be easily extended with additional features and libraries as needed.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Technologies Used
+- React
+- TypeScript
+- Vite
+- ESLint
+- Node.js (for development and build scripts)
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+## How to Run
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/DivyamPant2803/dct-test-app.git
+   cd dct-test-app
+   ```
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+2. **Install dependencies:**
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+3. **Start the development server:**
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
+   The app will be available at `http://localhost:5173` by default.
+
+4. **Build for production:**
+   ```bash
+   npm run build
+   # or
+   yarn build
+   ```
+   The production-ready files will be in the `dist` directory.
+
+5. **Preview the production build:**
+   ```bash
+   npm run preview
+   # or
+   yarn preview
+   ```
+
+## License
+This project is for demonstration and template purposes. Please update the license as needed for your use case.
