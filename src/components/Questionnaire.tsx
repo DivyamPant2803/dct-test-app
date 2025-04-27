@@ -3,8 +3,12 @@ import styled from 'styled-components';
 import { useForm } from 'react-hook-form';
 import Flag from 'react-world-flags';
 import debounce from 'lodash/debounce';
-import { DATA_SUBJECT_TYPES, RECIPIENT_TYPES } from '../types';
+import { RECIPIENT_TYPES } from '../types';
 import { fetchEntitiesForCountry, groupEntitiesByCategory, searchEntities } from '../services/entityService';
+import EntitySelection from './EntitySelection/index';
+import ReviewDataTransferPurpose from './ReviewDataTransferPurpose';
+import { INITIAL_FORM_DATA, FormData } from '../App';
+import type { Entity } from '../types';
 
 const Form = styled.form`
   position: absolute;
@@ -45,6 +49,93 @@ const TabsContainer = styled.div`
   }
 `;
 
+const TabGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+const TabGroupHeader = styled.div<{ isExpanded: boolean }>`
+  padding: 1rem 1.5rem;
+  background: #f0f0f0;
+  font-weight: 500;
+  color: #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background: #e8e8e8;
+  }
+`;
+
+const TabGroupContent = styled.div<{ isExpanded: boolean }>`
+  display: ${props => props.isExpanded ? 'flex' : 'none'};
+  flex-direction: column;
+`;
+
+const StepNumber = styled.span<{ status: 'completed' | 'current' | 'pending' }>`
+  font-size: 12px;
+  font-weight: 600;
+  color: ${props => props.status === 'pending' ? '#999' : props.status === 'completed' ? '#fff' : '#000'};
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  transition: all 0.3s ease;
+`;
+
+const ProgressIndicator = styled.div<{ status: 'completed' | 'current' | 'pending' }>`
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  position: relative;
+  margin-right: 16px;
+  flex-shrink: 0;
+  background: ${props => {
+    switch (props.status) {
+      case 'completed':
+        return '#000';
+      case 'current':
+        return '#fff';
+      default:
+        return '#fff';
+    }
+  }};
+  border: ${props => {
+    switch (props.status) {
+      case 'completed':
+        return '2px solid #000';
+      case 'current':
+        return '2px solid #000';
+      default:
+        return '2px solid #ddd';
+    }
+  }};
+  transition: all 0.3s ease;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+  }
+
+  ${props => props.status === 'current' && `
+    &::before {
+      border-color: rgba(0, 0, 0, 0.1);
+      transform: scale(1.2);
+    }
+  `}
+`;
+
 const Tab = styled.button.attrs<{ isActive: boolean; disabled: boolean; isNextEnabled: boolean }>(props => ({
   type: 'button',
   'aria-selected': props.isActive,
@@ -57,13 +148,13 @@ const Tab = styled.button.attrs<{ isActive: boolean; disabled: boolean; isNextEn
   font-weight: ${props => props.isActive ? '600' : 'normal'};
   color: ${props => {
     if (props.disabled) return '#ccc';
-    if (props.isNextEnabled) return '#ff0000';
-    return props.isActive ? '#ff0000' : '#666';
+    if (props.isNextEnabled) return '#000';
+    return props.isActive ? '#000' : '#666';
   }};
   border-left: 4px solid ${props => {
     if (props.disabled) return 'transparent';
-    if (props.isActive) return '#ff0000';
-    if (props.isNextEnabled) return '#ff9999';
+    if (props.isActive) return '#000';
+    if (props.isNextEnabled) return 'rgba(0, 0, 0, 0.2)';
     return 'transparent';
   }};
   transition: all 0.3s ease;
@@ -76,16 +167,14 @@ const Tab = styled.button.attrs<{ isActive: boolean; disabled: boolean; isNextEn
 
   &:hover {
     background: ${props => props.disabled ? 'transparent' : 'white'};
-    color: ${props => props.disabled ? '#ccc' : '#ff0000'};
+    color: ${props => props.disabled ? '#ccc' : '#000'};
   }
 
-  &::after {
-    content: '✓';
-    position: absolute;
-    right: 1rem;
-    opacity: ${props => props.disabled ? 0 : props.isActive ? 0 : 1};
-    color: #4CAF50;
-  }
+  ${props => props.isActive && !props.disabled && `
+    &:hover ${ProgressIndicator}::before {
+      transform: scale(1.3);
+    }
+  `}
 `;
 
 const ContentContainer = styled.div`
@@ -133,8 +222,8 @@ const QuestionText = styled.h3`
 const OptionsContainer = styled.div`
   position: relative;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1rem;
   width: 100%;
   padding: 0;
   margin: 0;
@@ -144,53 +233,44 @@ const OptionsContainer = styled.div`
   }
 `;
 
-const OptionPanel = styled.label<{ selected: boolean }>`
+const OptionPanel = styled.div<{ selected: boolean }>`
   display: flex;
   align-items: flex-start;
-  padding: 1.5rem;
-  border: 2px solid ${props => props.selected ? '#ff0000' : '#eee'};
-  border-radius: 8px;
+  padding: 1rem;
+  border: 2px solid ${props => props.selected ? '#000' : '#eee'};
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  background-color: ${props => props.selected ? '#fff5f5' : 'white'};
+  transition: all 0.2s ease;
+  background-color: ${props => props.selected ? '#f8f8f8' : 'white'};
   position: relative;
-  height: 140px;
+  height: auto;
+  min-height: 80px;
 
   &:hover {
-    border-color: #ff0000;
-    background-color: ${props => props.selected ? '#fff5f5' : '#f9f9f9'};
-    transform: translateY(-2px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  }
-
-  &::after {
-    content: '✓';
-    position: absolute;
-    right: 1.5rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #4CAF50;
-    opacity: ${props => props.selected ? 1 : 0};
-    transition: opacity 0.3s ease;
+    border-color: #000;
+    background-color: ${props => props.selected ? '#f8f8f8' : '#f9f9f9'};
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   }
 `;
 
 const OptionContent = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
   flex: 1;
 `;
 
 const OptionTitle = styled.span`
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 500;
+  color: #333;
 `;
 
 const OptionDescription = styled.span`
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   color: #666;
-  line-height: 1.4;
+  line-height: 1.3;
 `;
 
 const HiddenCheckbox = styled.input`
@@ -202,7 +282,7 @@ const HiddenCheckbox = styled.input`
 `;
 
 const SubmitButton = styled.button`
-  background-color: #ff0000;
+  background-color: #000;
   color: white;
   border: none;
   padding: 1rem 2rem;
@@ -216,14 +296,14 @@ const SubmitButton = styled.button`
   flex-shrink: 0;
 
   &:hover {
-    background-color: #cc0000;
+    background-color: #333;
     transform: translateY(-2px);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 `;
 
 const ErrorMessage = styled.p`
-  color: #ff0000;
+  color: #000;
   margin-top: 0.5rem;
 `;
 
@@ -256,35 +336,36 @@ const ReviewContent = styled.div`
 `;
 
 const SelectedItem = styled.span`
-  background: #fff5f5;
-  color: #ff0000;
+  background: #f8f8f8;
+  color: #000;
   padding: 0.25rem 0.75rem;
   border-radius: 16px;
   font-size: 0.85rem;
+  border: 1px solid #eee;
 `;
 
 const EditButton = styled.button`
   background: none;
   border: none;
-  color: #ff0000;
+  color: #000;
   font-size: 0.85rem;
   cursor: pointer;
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   
   &:hover {
-    background: #fff5f5;
+    background: #f8f8f8;
   }
 `;
 
 const RegionsContainer = styled.div`
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 0.5rem;
   margin-bottom: 1rem;
-  overflow-x: auto;
   padding-bottom: 0.5rem;
-  flex-shrink: 0;
+  flex: 1;
+  overflow-x: auto;
 
   &::-webkit-scrollbar {
     height: 4px;
@@ -304,19 +385,19 @@ const RegionChip = styled.button<{ selected: boolean }>`
   display: flex;
   align-items: center;
   padding: 0.5rem 1rem;
-  border: 2px solid ${props => props.selected ? '#ff0000' : '#eee'};
+  border: 2px solid ${props => props.selected ? '#000' : '#eee'};
   border-radius: 20px;
-  background: ${props => props.selected ? '#fff5f5' : 'white'};
-  color: ${props => props.selected ? '#ff0000' : '#666'};
+  background: ${props => props.selected ? '#f8f8f8' : 'white'};
+  color: ${props => props.selected ? '#000' : '#666'};
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 500;
   transition: all 0.2s ease;
 
   &:hover {
-    border-color: #ff0000;
-    background: #fff5f5;
-    color: #ff0000;
+    border-color: #000;
+    background: #f8f8f8;
+    color: #000;
   }
 `;
 
@@ -325,21 +406,10 @@ const CountryGrid = styled.div`
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 1rem;
   width: 100%;
-  max-height: 50vh;
+  flex: 1;
   overflow-y: auto;
   padding-right: 0.5rem;
-  animation: fadeIn 0.3s ease;
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
+  align-content: start;
 
   &::-webkit-scrollbar {
     width: 8px;
@@ -354,21 +424,25 @@ const CountryGrid = styled.div`
     background: #888;
     border-radius: 4px;
   }
-
-  &::-webkit-scrollbar-thumb:hover {
-    background: #555;
-  }
 `;
 
-const CountryOption = styled(OptionPanel)<{ selected: boolean }>`
+const CountryOption = styled.label<{ selected: boolean }>`
   display: flex;
   align-items: center;
   gap: 1rem;
   padding: 0.75rem;
-  min-height: 60px;
+  border: 2px solid ${props => props.selected ? '#000' : '#eee'};
+  border-radius: 8px;
+  cursor: pointer;
   transition: all 0.2s ease;
+  background-color: ${props => props.selected ? '#f8f8f8' : 'white'};
+  height: 60px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 
   &:hover {
+    border-color: #000;
     transform: translateY(-2px);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
@@ -392,20 +466,28 @@ const CountryInfo = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  min-width: 0;
+  flex: 1;
 `;
 
 const CountryName = styled.span`
   font-weight: 500;
   font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 `;
 
 const CountryRegion = styled.span`
   font-size: 0.8rem;
   color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 `;
 
 const CountBadge = styled.span`
-  background: #ff0000;
+  background: #000;
   color: white;
   font-size: 0.75rem;
   padding: 0.1rem 0.4rem;
@@ -429,99 +511,43 @@ const CountryCount = styled.div`
 
 const EntityContainer = styled.div`
   display: flex;
-  gap: 2rem;
-  height: 100%;
+  flex-direction: column;
+  gap: 1rem;
   width: 100%;
 `;
 
-const EntitySelectionColumn = styled.div`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0; // Prevents flex item from overflowing
-`;
-
-const SelectedEntitiesColumn = styled.div`
-  width: 300px;
-  display: flex;
-  flex-direction: column;
-  background: #f8f8f8;
-  border-left: 1px solid #eee;
-  padding: 1rem;
-`;
-
-const CategoryTabs = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+const SelectedEntitiesSection = styled.div<{ isExpanded: boolean }>`
+  width: 100%;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #eee;
+  overflow: hidden;
   margin-bottom: 1rem;
-  padding: 0.5rem 0;
-  border-bottom: 2px solid #eee;
 `;
 
-const CategoryTab = styled.button.attrs<{ selected: boolean }>(props => ({
-  type: 'button',
-  'aria-selected': props.selected,
-}))`
-  padding: 0.5rem 1rem;
-  border: none;
-  background: ${props => props.selected ? '#ff0000' : '#f0f0f0'};
-  color: ${props => props.selected ? 'white' : '#666'};
-  border-radius: 4px;
+const SelectedEntitiesHeader = styled.div<{ isExpanded: boolean }>`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: white;
   cursor: pointer;
-  font-size: 0.9rem;
-  white-space: nowrap;
-  transition: all 0.2s ease;
+  border-bottom: ${props => props.isExpanded ? '1px solid #eee' : 'none'};
+  transition: background-color 0.2s ease;
 
   &:hover {
-    background: ${props => props.selected ? '#ff0000' : '#e0e0e0'};
-    color: ${props => props.selected ? 'white' : '#333'};
-  }
-`;
-
-const SearchBar = styled.input`
-  padding: 0.75rem;
-  border: 2px solid #eee;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  width: 100%;
-  margin-bottom: 1rem;
-
-  &:focus {
-    border-color: #ff0000;
-    outline: none;
-  }
-`;
-
-const EntityList = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1rem;
-  overflow-y: auto;
-  padding-right: 0.5rem;
-  height: 100%;
-  
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: #f5f5f5;
-    border-radius: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #ddd;
-    border-radius: 4px;
+    background: #f9f9f9;
   }
 `;
 
 const SelectedEntitiesList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 0.75rem;
+  padding: 1rem;
+  background: #f8f8f8;
+  max-height: 300px;
   overflow-y: auto;
-  flex: 1;
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -538,6 +564,50 @@ const SelectedEntitiesList = styled.div`
   }
 `;
 
+const EntitySelectionArea = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #eee;
+  padding: 1.5rem;
+`;
+
+const EntitySelectionColumn = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #eee;
+  padding: 1rem;
+`;
+
+const EntityList = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  flex: 1;
+  
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f5f5f5;
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #ddd;
+    border-radius: 4px;
+  }
+`;
+
 const SelectedEntityCard = styled.div`
   display: flex;
   justify-content: space-between;
@@ -551,7 +621,7 @@ const SelectedEntityCard = styled.div`
   button {
     background: none;
     border: none;
-    color: #ff0000;
+    color: #000;
     cursor: pointer;
     padding: 0.25rem;
     
@@ -561,18 +631,22 @@ const SelectedEntityCard = styled.div`
   }
 `;
 
-const SelectedEntitiesHeader = styled.div`
-  font-weight: 500;
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid #eee;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+const ExpandButton = styled.button<{ isExpanded: boolean }>`
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  color: #666;
+  transform: rotate(${props => props.isExpanded ? '180deg' : '0deg'});
+  transition: transform 0.3s ease;
+  
+  &:hover {
+    color: #333;
+  }
 `;
 
 const SelectedCount = styled.span`
-  background: #ff0000;
+  background: #000;
   color: white;
   padding: 0.25rem 0.5rem;
   border-radius: 12px;
@@ -583,27 +657,16 @@ const EntityCard = styled.div<{ selected: boolean }>`
   display: flex;
   flex-direction: column;
   padding: 1rem;
-  border: 2px solid ${props => props.selected ? '#ff0000' : '#eee'};
+  border: 2px solid ${props => props.selected ? '#000' : '#eee'};
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
-  background-color: ${props => props.selected ? '#fff5f5' : 'white'};
+  background-color: ${props => props.selected ? '#f8f8f8' : 'white'};
   position: relative;
 
   &:hover {
-    border-color: #ff0000;
-    background-color: ${props => props.selected ? '#fff5f5' : '#f9f9f9'};
-  }
-
-  &::after {
-    content: '✓';
-    position: absolute;
-    right: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #4CAF50;
-    opacity: ${props => props.selected ? 1 : 0};
-    transition: opacity 0.3s ease;
+    border-color: #000;
+    background-color: ${props => props.selected ? '#f8f8f8' : '#f9f9f9'};
   }
 `;
 
@@ -634,187 +697,230 @@ const EntityCategoryLabel = styled.span`
   margin-top: 0.25rem;
 `;
 
-const ModalOverlay = styled.div`
-  position: fixed;
+const CategoryTabs = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 2px solid #eee;
+  position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-`;
-
-const ModalContent = styled.div`
   background: white;
-  width: 90vw;
-  height: 90vh;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 1;
 `;
 
-const ModalHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem;
-  border-bottom: 1px solid #eee;
-`;
-
-const ModalTitle = styled.h2`
-  margin: 0;
-  font-size: 1.25rem;
-  color: #333;
-`;
-
-const ModalBody = styled.div`
-  flex: 1;
-  overflow: hidden;
-  padding: 1.5rem;
-`;
-
-const ModalFooter = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  padding: 1.5rem;
-  border-top: 1px solid #eee;
-  background: white;
-`;
-
-const Button = styled.button<{ variant?: 'primary' | 'secondary' }>`
-  padding: 0.75rem 1.5rem;
-  border-radius: 4px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  ${props => props.variant === 'primary' ? `
-    background: #ff0000;
-    color: white;
-    border: none;
-    
-    &:hover {
-      background: #cc0000;
-    }
-  ` : `
-    background: white;
-    color: #666;
-    border: 1px solid #ddd;
-    
-    &:hover {
-      background: #f5f5f5;
-    }
-  `}
-`;
-
-const SelectedEntitiesPreview = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1rem;
-  background: #f8f8f8;
-  border-radius: 8px;
-  margin-top: 1rem;
-`;
-
-const SelectedEntityChip = styled.div`
-  display: inline-flex;
-  align-items: center;
-  background: white;
+const CategoryTab = styled.button.attrs<{ selected: boolean }>(props => ({
+  type: 'button',
+  'aria-selected': props.selected,
+}))`
   padding: 0.5rem 1rem;
-  border-radius: 20px;
-  border: 1px solid #eee;
-  margin: 0.25rem;
+  border: none;
+  background: ${props => props.selected ? '#000' : '#f0f0f0'};
+  color: ${props => props.selected ? 'white' : '#666'};
+  border-radius: 4px;
+  cursor: pointer;
   font-size: 0.9rem;
-  
-  button {
-    background: none;
-    border: none;
-    color: #ff0000;
-    margin-left: 0.5rem;
-    cursor: pointer;
-    padding: 0.25rem;
-    
-    &:hover {
-      opacity: 0.8;
-    }
+  white-space: nowrap;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: ${props => props.selected ? '#000' : '#e0e0e0'};
+    color: ${props => props.selected ? 'white' : '#333'};
   }
 `;
 
-const SelectEntitiesButton = styled(Button)`
-  margin-top: 1rem;
+const SearchBar = styled.input`
+  padding: 0.75rem;
+  border: 2px solid #eee;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  width: 100%;
+  margin-bottom: 1rem;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 1;
+
+  &:focus {
+    border-color: #000;
+    outline: none;
+  }
 `;
+
+const SectionHeader = styled.div`
+  padding: 1rem 1.5rem;
+  background: #f0f0f0;
+  font-weight: 500;
+  color: #333;
+  border-bottom: 1px solid #eee;
+`;
+
+const SelectedCountriesHeader = styled.div`
+  padding: 1rem 0;
+  font-weight: 500;
+  color: #333;
+  font-size: 0.95rem;
+`;
+
+const SearchContainer = styled.div`
+  flex-shrink: 0;
+  width: 300px;
+  margin-left: 1rem;
+`;
+
+const SearchInput = styled.input`
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid #eee;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  height: 36px;
+
+  &:focus {
+    outline: none;
+    border-color: #000;
+  }
+
+  &::placeholder {
+    color: #999;
+  }
+`;
+
+const CategorySection = styled.div`
+  margin-bottom: 2rem;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const CategoryTitle = styled.h4`
+  color: #666;
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 500;
+`;
+
+const SelectAllButton = styled.button<{ selected: boolean }>`
+  padding: 0.5rem 1rem;
+  border: 2px solid ${props => props.selected ? '#000' : '#eee'};
+  border-radius: 6px;
+  background: ${props => props.selected ? '#000' : 'white'};
+  color: ${props => props.selected ? 'white' : '#666'};
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  &:hover {
+    border-color: #000;
+    color: ${props => props.selected ? 'white' : '#000'};
+  }
+`;
+
+const ContentHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  gap: 1rem;
+`;
+
+const QuestionTitle = styled.h2`
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+  flex: 1;
+`;
+
+interface DataSubjectCategory {
+  category: string;
+  options: string[];
+}
 
 interface Question {
   id: string;
   text: string;
-  type: 'multiple' | 'review';
-  options: string[];
+  type: 'multiple';
+  options: string[] | DataSubjectCategory[];
   dependsOn?: {
     questionId: string;
     value: string;
   };
 }
 
-interface Entity {
-  id: string;
-  name: string;
-  category: string;
-  countryCode: string;
-  description?: string;
-}
+const DATA_SUBJECT_TYPES = {
+  CLIENT: {
+    category: 'Client',
+    options: ['Client', 'Prospect', 'CS Client'] as string[]
+  },
+  PERSON: {
+    category: 'Person',
+    options: ['Employee', 'Candidate', 'CS Employee'] as string[]
+  }
+} as const;
 
 // Updated country data organized by business regions
 const REGIONS = {
-  EMEA: 'Europe, Middle East & Africa',
-  APAC: 'Asia Pacific',
-  AMER: 'Americas',
+  APAC: 'APAC',
+  EMEA: 'EMEA',
+  CH: 'CH',
+  US: 'United States',
 } as const;
 
 const COUNTRIES_DATA = {
-  EMEA: [
-    { name: 'United Kingdom', code: 'GB', region: 'Europe' },
-    { name: 'Germany', code: 'DE', region: 'Europe' },
-    { name: 'France', code: 'FR', region: 'Europe' },
-    { name: 'Spain', code: 'ES', region: 'Europe' },
-    { name: 'Italy', code: 'IT', region: 'Europe' },
-    { name: 'Netherlands', code: 'NL', region: 'Europe' },
-    { name: 'Switzerland', code: 'CH', region: 'Europe' },
-    { name: 'United Arab Emirates', code: 'AE', region: 'Middle East' },
-    { name: 'South Africa', code: 'ZA', region: 'Africa' },
-  ],
   APAC: [
-    { name: 'Japan', code: 'JP', region: 'Asia' },
-    { name: 'South Korea', code: 'KR', region: 'Asia' },
-    { name: 'Singapore', code: 'SG', region: 'Asia' },
-    { name: 'India', code: 'IN', region: 'Asia' },
-    { name: 'China', code: 'CN', region: 'Asia' },
-    { name: 'Australia', code: 'AU', region: 'Oceania' },
+    { name: 'Japan', code: 'JP', region: 'APAC' },
+    { name: 'South Korea', code: 'KR', region: 'APAC' },
+    { name: 'Singapore', code: 'SG', region: 'APAC' },
+    { name: 'India', code: 'IN', region: 'APAC' },
+    { name: 'China', code: 'CN', region: 'APAC' },
+    { name: 'Australia', code: 'AU', region: 'APAC' },
+    { name: 'New Zealand', code: 'NZ', region: 'APAC' },
   ],
-  AMER: [
-    { name: 'United States', code: 'US', region: 'North America' },
-    { name: 'Canada', code: 'CA', region: 'North America' },
-    { name: 'Mexico', code: 'MX', region: 'North America' },
-    { name: 'Brazil', code: 'BR', region: 'South America' },
+  EMEA: [
+    { name: 'United Kingdom', code: 'GB', region: 'EMEA' },
+    { name: 'Germany', code: 'DE', region: 'EMEA' },
+    { name: 'France', code: 'FR', region: 'EMEA' },
+    { name: 'Spain', code: 'ES', region: 'EMEA' },
+    { name: 'Italy', code: 'IT', region: 'EMEA' },
+    { name: 'Netherlands', code: 'NL', region: 'EMEA' },
+    { name: 'Belgium', code: 'BE', region: 'EMEA' },
+    { name: 'Austria', code: 'AT', region: 'EMEA' },
+    { name: 'Ireland', code: 'IE', region: 'EMEA' },
+    { name: 'Sweden', code: 'SE', region: 'EMEA' },
+    { name: 'Norway', code: 'NO', region: 'EMEA' },
+    { name: 'Denmark', code: 'DK', region: 'EMEA' },
+    { name: 'Finland', code: 'FI', region: 'EMEA' },
+    { name: 'Portugal', code: 'PT', region: 'EMEA' },
+    { name: 'United Arab Emirates', code: 'AE', region: 'EMEA' },
+    { name: 'Saudi Arabia', code: 'SA', region: 'EMEA' },
+  ],
+  CH: [
+    { name: 'Switzerland', code: 'CH', region: 'Switzerland' },
+  ],
+  US: [
+    { name: 'United States', code: 'US', region: 'United States' },
   ],
 };
 
 const baseQuestions = [
+  // Preliminary Questions
   {
     id: 'informationCategory',
-    text: 'Please select Information Category',
+    text: 'Select Information Category',
     type: 'multiple',
     options: ['Client', 'Employee'],
   },
   {
     id: 'dataSubjectType',
-    text: 'Please select Data subject type',
+    text: 'Select Data Subject Type',
     type: 'multiple',
     options: [] as string[],
     dependsOn: {
@@ -824,13 +930,13 @@ const baseQuestions = [
   },
   {
     id: 'countries',
-    text: 'Please select the countries',
+    text: 'Select the countries',
     type: 'multiple',
     options: Object.values(COUNTRIES_DATA).flat().map(country => country.name),
   },
   {
     id: 'entities',
-    text: 'Please select the entities',
+    text: 'Select the entities',
     type: 'multiple',
     options: [], // Will be populated dynamically
     dependsOn: {
@@ -839,25 +945,36 @@ const baseQuestions = [
     },
   },
   {
+    id: 'transferLocation',
+    text: 'Select Transfer Location',
+    type: 'multiple',
+    options: ['Inside Country', 'Outside Country'],
+  },
+  {
     id: 'recipientType',
-    text: 'Please select Recipient Type',
+    text: 'Select Recipient Types',
     type: 'multiple',
     options: [...RECIPIENT_TYPES],
   },
   {
-    id: 'review',
-    text: 'Review Selections',
-    type: 'review',
+    id: 'reviewDataTransferPurpose',
+    text: 'Review Data Transfer Purpose',
+    type: 'multiple',
     options: [],
   },
 ] as const as Question[];
+
+interface Country {
+  name: string;
+  code: string;
+  region: string;
+}
 
 export default function Questionnaire({ onComplete }: { onComplete: (data: any) => void }) {
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm();
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [enabledSteps, setEnabledSteps] = useState<number[]>([0]); // Start with first step enabled
-  //const [selectedEntities, setSelectedEntities] = useState<Record<string, string[]>>({});
   const selectedEntities = {};
   const [questions, setQuestions] = useState(baseQuestions);
   const [selectedRegions, setSelectedRegions] = useState<Set<keyof typeof REGIONS>>(new Set());
@@ -865,7 +982,11 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEntitiesExpanded, setIsEntitiesExpanded] = useState(false);
+  const [isQuestionsExpanded, setIsQuestionsExpanded] = useState(true);
+  const [isSubsequentExpanded, setIsSubsequentExpanded] = useState(true);
+  const [isOutputExpanded, setIsOutputExpanded] = useState(true);
+  const [countrySearchTerm, setCountrySearchTerm] = useState('');
 
   const formValues = watch();
   const currentQuestion = questions[currentStep];
@@ -874,12 +995,13 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
     informationCategory: formValues.informationCategory || [],
     dataSubjectType: formValues.dataSubjectType || [],
     countries: formValues.countries || [],
+    transferLocation: formValues.transferLocation || [],
     recipientType: formValues.recipientType || [],
   };
 
-  // Check if all required steps are completed - moved up before usage
+  // Update isAllStepsCompleted to include all steps
   const isAllStepsCompleted = useCallback(() => {
-    const requiredStepIndices = [0, 1, 2, 3, 4]; // All steps except review
+    const requiredStepIndices = [0, 1, 2, 3, 4, 5]; // All steps except review
     return requiredStepIndices.every(index => completedSteps.includes(index));
   }, [completedSteps]);
 
@@ -915,32 +1037,39 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
   useEffect(() => {
     const category = formValues.informationCategory || [];
     if (category.length > 0) {
-      const dataSubjectOptions = category.includes('Employee')
-        ? [...DATA_SUBJECT_TYPES.PERSON]
-        : [...DATA_SUBJECT_TYPES.CLIENT];
+      const dataSubjectOptions: DataSubjectCategory[] = [];
+      
+      if (category.includes('Client')) {
+        dataSubjectOptions.push({
+          category: DATA_SUBJECT_TYPES.CLIENT.category,
+          options: [...DATA_SUBJECT_TYPES.CLIENT.options]
+        });
+      }
+      if (category.includes('Employee')) {
+        dataSubjectOptions.push({
+          category: DATA_SUBJECT_TYPES.PERSON.category,
+          options: [...DATA_SUBJECT_TYPES.PERSON.options]
+        });
+      }
       
       setQuestions(prevQuestions => 
         prevQuestions.map(q => 
           q.id === 'dataSubjectType' 
             ? { ...q, options: dataSubjectOptions }
             : q
-        )
+        ) as Question[]
       );
       
-      // Enable the next step (Data Subject Type)
       setEnabledSteps(prev => [...new Set([...prev, 1])]);
-      
-      // Mark Information Category as completed
       setCompletedSteps(prev => [...new Set([...prev, 0])]);
-
-      // Reset data subject type when category changes
       setValue('dataSubjectType', []);
     }
   }, [formValues.informationCategory, setValue]);
 
-  // Handle tab click with more permissive logic
+  // Debug log for tab click
   const handleTabClick = useCallback((index: number) => {
-    const isReviewTab = index === questions.length - 1;
+    console.log('Tab clicked:', index);
+    const isReviewTab = index === questions.length - 2; // Adjusted for review data transfer purpose
     const canAccessReviewTab = isReviewTab && isAllStepsCompleted();
     const canAccessStep = enabledSteps.includes(index) || 
                          completedSteps.includes(index) || 
@@ -948,9 +1077,16 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
                          index <= currentStep + 1; // Allow accessing next step
     
     if (canAccessStep) {
+      console.log('Navigating to step:', index);
       setCurrentStep(index);
     }
   }, [enabledSteps, completedSteps, questions.length, isAllStepsCompleted, currentStep]);
+
+  // Debug log for rendering
+  useEffect(() => {
+    console.log('Current step:', currentStep);
+    console.log('Current question ID:', currentQuestion.id);
+  }, [currentStep, currentQuestion.id]);
 
   // Step completion and enabling logic
   const updateStepStatus = useCallback((stepIndex: number, values: string[]) => {
@@ -1005,24 +1141,51 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
     console.log('Completed steps:', completedSteps);
   }, [currentStep, enabledSteps, completedSteps]);
 
-  // Enable review tab when all steps are completed
+  // Update the step enabling logic for transfer location
+  useEffect(() => {
+    if (currentSelections.transferLocation.length > 0) {
+      updateStepStatus(4, currentSelections.transferLocation);
+      setEnabledSteps(prev => [...new Set([...prev, 5])]); // Enable recipient type step
+    }
+  }, [currentSelections.transferLocation.toString(), updateStepStatus]);
+
+  // Update the step enabling logic for recipient type
+  useEffect(() => {
+    if (currentSelections.recipientType.length > 0) {
+      updateStepStatus(5, currentSelections.recipientType);
+      setEnabledSteps(prev => [...new Set([...prev, 6])]); // Enable review data transfer purpose step
+    }
+  }, [currentSelections.recipientType.toString(), updateStepStatus]);
+
+  // Ensure the review data transfer purpose step is enabled when all previous steps are completed
   useEffect(() => {
     if (isAllStepsCompleted()) {
-      setEnabledSteps(prev => [...new Set([...prev, questions.length - 1])]);
+      setEnabledSteps(prev => [...new Set([...prev, 6])]);
     }
   }, [isAllStepsCompleted]);
 
-
   const onSubmit = (data: any) => {
+    console.log('Raw form data:', data);
+    
+    // Get selected entities for each country
+    const selectedEntities: { [key: string]: string[] } = {};
+    data.countries.forEach((country: string) => {
+      const countryEntities = INITIAL_FORM_DATA.entities[country] || [];
+      selectedEntities[country] = countryEntities;
+    });
+
     const formData = {
       ...data,
-      entities: selectedEntities,
+      entities: selectedEntities
     };
+
+    console.log('Processed form data:', formData);
     onComplete(formData);
   };
 
   const selectedOptions = formValues[currentQuestion.id] || [];
 
+  // Update the getOptionDescription function to include the new question
   const getOptionDescription = (option: string) => {
     switch (currentQuestion.id) {
       case 'informationCategory':
@@ -1033,18 +1196,26 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
         return 'Select the type of data subject';
       case 'countries':
         return 'Select the countries involved in the data transfer';
+      case 'transferLocation':
+        return option === 'Inside Country'
+          ? 'Data will be transferred within the same country'
+          : 'Data will be transferred to other countries';
       case 'recipientType':
         return 'Select the type of recipient';
+      case 'reviewDataTransferPurpose':
+        return 'Review the data transfer purpose';
       default:
         return '';
     }
   };
 
+  // Update the review section to show all questions in order
   const renderReviewSection = () => {
     const allSelections = {
       'Information Category': currentSelections.informationCategory,
       'Data Subject Type': currentSelections.dataSubjectType,
       'Countries': currentSelections.countries,
+      'Transfer Location': formValues.transferLocation || [],
       'Recipient Type': currentSelections.recipientType,
     };
 
@@ -1069,77 +1240,116 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
     );
   };
 
-  const handleRegionClick = (region: keyof typeof REGIONS) => {
-    setSelectedRegions(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(region)) {
-        newSet.delete(region);
-      } else {
-        newSet.add(region);
-      }
-      return newSet;
+  const getAllCountries = () => {
+    return Object.values(COUNTRIES_DATA).flat();
+  };
+
+  const getCountriesForRegion = (region: keyof typeof REGIONS) => {
+    return COUNTRIES_DATA[region];
+  };
+
+  const renderCountryOptions = () => {
+    const allCountries = getAllCountries();
+    const selectedOptions = watch(currentQuestion.id) || [];
+
+    // Filter countries based on search term
+    const filteredCountries = allCountries.filter(country =>
+      country.name.toLowerCase().includes(countrySearchTerm.toLowerCase())
+    );
+
+    // Sort countries to show selected ones at the top
+    const sortedCountries = [...filteredCountries].sort((a, b) => {
+      const aSelected = selectedOptions.includes(a.name);
+      const bSelected = selectedOptions.includes(b.name);
+      if (aSelected && !bSelected) return -1;
+      if (!aSelected && bSelected) return 1;
+      return 0;
     });
-  };
 
-  const getSelectedRegionsCountries = () => {
-    return Array.from(selectedRegions).flatMap(region => COUNTRIES_DATA[region]);
-  };
-
-  const renderCountryOptions = () => (
-    <>
-      <RegionsContainer>
-        {Object.entries(REGIONS).map(([key, label]) => (
-          <RegionChip
-            key={key}
-            selected={selectedRegions.has(key as keyof typeof REGIONS)}
-            onClick={() => handleRegionClick(key as keyof typeof REGIONS)}
-            type="button"
-          >
-            {label}
-            {selectedRegions.has(key as keyof typeof REGIONS) && (
-              <CountBadge>
-                {COUNTRIES_DATA[key as keyof typeof REGIONS].length}
-              </CountBadge>
-            )}
-          </RegionChip>
-        ))}
-      </RegionsContainer>
+    const handleRegionClick = (region: keyof typeof REGIONS) => {
+      const regionCountries = getCountriesForRegion(region);
+      const regionCountryNames = regionCountries.map(country => country.name);
       
-      {selectedRegions.size > 0 && (
-        <>
-          <RegionHeader>
-            {selectedRegions.size === 1 
-              ? REGIONS[Array.from(selectedRegions)[0]]
-              : `Selected Regions (${Array.from(selectedRegions).length})`}
-            <CountryCount>
-              {getSelectedRegionsCountries().length} countries available
-            </CountryCount>
-          </RegionHeader>
-          <CountryGrid>
-            {getSelectedRegionsCountries().map(country => (
-              <CountryOption
-                key={country.code}
-                selected={selectedOptions.includes(country.name)}
-              >
-                <HiddenCheckbox
-                  type="checkbox"
-                  value={country.name}
-                  {...register(currentQuestion.id)}
-                />
-                <FlagContainer>
-                  <Flag code={country.code} />
-                </FlagContainer>
-                <CountryInfo>
-                  <CountryName>{country.name}</CountryName>
-                  <CountryRegion>{country.region}</CountryRegion>
-                </CountryInfo>
-              </CountryOption>
-            ))}
-          </CountryGrid>
-        </>
-      )}
-    </>
-  );
+      setSelectedRegions(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(region)) {
+          newSet.delete(region);
+          const remainingSelected = selectedOptions.filter(
+            (country: string) => !regionCountryNames.includes(country)
+          );
+          setValue(currentQuestion.id, remainingSelected);
+        } else {
+          newSet.add(region);
+          const newSelected = Array.from(
+            new Set([...selectedOptions, ...regionCountryNames])
+          );
+          setValue(currentQuestion.id, newSelected);
+        }
+        return newSet;
+      });
+    };
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
+          <RegionsContainer>
+            {Object.entries(REGIONS).map(([key, label]) => {
+              const regionCountries = COUNTRIES_DATA[key as keyof typeof REGIONS];
+              const regionCountryNames = regionCountries.map(country => country.name);
+              const isRegionFullySelected = regionCountryNames.every(
+                countryName => selectedOptions.includes(countryName)
+              );
+              
+              return (
+                <RegionChip
+                  key={key}
+                  selected={isRegionFullySelected}
+                  onClick={() => handleRegionClick(key as keyof typeof REGIONS)}
+                  type="button"
+                >
+                  {label}
+                  <CountBadge>
+                    {regionCountries.length}
+                  </CountBadge>
+                </RegionChip>
+              );
+            })}
+          </RegionsContainer>
+
+          <SearchContainer>
+            <SearchInput
+              type="text"
+              placeholder="Search countries..."
+              value={countrySearchTerm}
+              onChange={(e) => setCountrySearchTerm(e.target.value)}
+            />
+          </SearchContainer>
+        </div>
+
+        <CountryGrid>
+          {sortedCountries.map(country => (
+            <CountryOption
+              key={country.code}
+              selected={selectedOptions.includes(country.name)}
+            >
+              <HiddenCheckbox
+                type="checkbox"
+                value={country.name}
+                {...register(currentQuestion.id)}
+              />
+              <FlagContainer>
+                <Flag code={country.code} />
+              </FlagContainer>
+              <CountryInfo>
+                <CountryName>{country.name}</CountryName>
+                <CountryRegion>{country.region}</CountryRegion>
+              </CountryInfo>
+            </CountryOption>
+          ))}
+        </CountryGrid>
+      </div>
+    );
+  };
 
   // Memoize filtered and grouped entities
   const filteredAndGroupedEntities = useMemo(() => {
@@ -1160,9 +1370,11 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
 
   const renderEntitySelection = () => {
     const selectedValues = watch(currentQuestion.id) || [];
+    const selectedCountries = watch('countries') || [];
+    const informationCategories = watch('informationCategory') || [];
 
-    const handleEntitySelect = (entityId: string, isSelected: boolean) => {
-      const newValues = isSelected
+    const handleEntitySelect = (entityId: string) => {
+      const newValues = selectedValues.includes(entityId)
         ? selectedValues.filter((id: string) => id !== entityId)
         : [...selectedValues, entityId];
       setValue(currentQuestion.id, newValues);
@@ -1173,200 +1385,13 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
       }
     };
 
-    const closeModal = () => {
-      setIsModalOpen(false);
-    };
-
-    const renderSelectedEntities = () => (
-      <SelectedEntitiesPreview>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ margin: 0 }}>Selected Entities ({selectedValues.length})</h3>
-          <SelectEntitiesButton 
-            type="button"
-            onClick={(e: React.MouseEvent) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsModalOpen(true);
-            }}
-          >
-            {selectedValues.length === 0 ? 'Select Entities' : 'Modify Selection'}
-          </SelectEntitiesButton>
-        </div>
-        {selectedValues.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            {selectedValues.map((entityId: string) => {
-              const entity = entities.find(e => e.id === entityId);
-              if (!entity) return null;
-              
-              return (
-                <SelectedEntityChip key={entityId}>
-                  {entity.name}
-                  <small style={{ color: '#666', marginLeft: '0.5rem' }}>
-                    {entity.category}
-                  </small>
-                  <button 
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleEntitySelect(entityId, true);
-                    }}
-                  >
-                    ×
-                  </button>
-                </SelectedEntityChip>
-              );
-            })}
-          </div>
-        )}
-      </SelectedEntitiesPreview>
-    );
-
     return (
-      <>
-        {renderSelectedEntities()}
-        
-        {isModalOpen && (
-          <ModalOverlay>
-            <ModalContent>
-              <ModalHeader>
-                <ModalTitle>Select Entities</ModalTitle>
-                <Button 
-                  type="button"
-                  variant="secondary" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    closeModal();
-                  }}
-                >
-                  ×
-                </Button>
-              </ModalHeader>
-              
-              <ModalBody>
-                <EntityContainer>
-                  <EntitySelectionColumn>
-                    <SearchBar
-                      type="text"
-                      placeholder="Search entities..."
-                      onChange={e => handleSearch(e.target.value)}
-                    />
-                    
-                    <CategoryTabs>
-                      <CategoryTab
-                        selected={selectedCategories.size === 0}
-                        onClick={() => setSelectedCategories(new Set())}
-                      >
-                        All Categories
-                      </CategoryTab>
-                      {filteredAndGroupedEntities.map(group => (
-                        <CategoryTab
-                          key={group.category}
-                          selected={selectedCategories.has(group.category)}
-                          onClick={() => {
-                            setSelectedCategories(prev => {
-                              const newSet = new Set(prev);
-                              if (newSet.has(group.category)) {
-                                newSet.delete(group.category);
-                              } else {
-                                newSet.add(group.category);
-                              }
-                              return newSet;
-                            });
-                          }}
-                        >
-                          {group.category} ({group.entities.length})
-                        </CategoryTab>
-                      ))}
-                    </CategoryTabs>
-
-                    {loading ? (
-                      <LoadingSpinner>Loading entities...</LoadingSpinner>
-                    ) : (
-                      <EntityList>
-                        {(selectedCategories.size > 0
-                          ? filteredAndGroupedEntities
-                              .filter(g => selectedCategories.has(g.category))
-                              .flatMap(g => g.entities)
-                          : filteredAndGroupedEntities.flatMap(g => g.entities)
-                        ).map(entity => {
-                          const isSelected = selectedValues.includes(entity.id);
-                          
-                          return (
-                            <EntityCard
-                              key={entity.id}
-                              selected={isSelected}
-                              onClick={() => handleEntitySelect(entity.id, isSelected)}
-                            >
-                              <HiddenCheckbox
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => handleEntitySelect(entity.id, isSelected)}
-                                onClick={e => e.stopPropagation()}
-                              />
-                              <EntityName>{entity.name}</EntityName>
-                              <EntityCategoryLabel>{entity.category}</EntityCategoryLabel>
-                              {entity.description && (
-                                <EntityDescription>{entity.description}</EntityDescription>
-                              )}
-                            </EntityCard>
-                          );
-                        })}
-                      </EntityList>
-                    )}
-                  </EntitySelectionColumn>
-
-                  <SelectedEntitiesColumn>
-                    <SelectedEntitiesHeader>
-                      Selected Entities
-                      <SelectedCount>{selectedValues.length}</SelectedCount>
-                    </SelectedEntitiesHeader>
-                    <SelectedEntitiesList>
-                      {selectedValues.map((entityId: string) => {
-                        const entity = entities.find(e => e.id === entityId);
-                        if (!entity) return null;
-                        
-                        return (
-                          <SelectedEntityCard key={entityId}>
-                            <div>
-                              <div>{entity.name}</div>
-                              <small style={{ color: '#666' }}>{entity.category}</small>
-                            </div>
-                            <button onClick={() => handleEntitySelect(entityId, true)}>×</button>
-                          </SelectedEntityCard>
-                        );
-                      })}
-                    </SelectedEntitiesList>
-                  </SelectedEntitiesColumn>
-                </EntityContainer>
-              </ModalBody>
-              
-              <ModalFooter>
-                <Button 
-                  type="button"
-                  variant="secondary" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    closeModal();
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="button"
-                  variant="primary" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    closeModal();
-                  }}
-                >
-                  Done
-                </Button>
-              </ModalFooter>
-            </ModalContent>
-          </ModalOverlay>
-        )}
-      </>
+      <EntitySelection
+        selectedCountries={selectedCountries}
+        informationCategory={informationCategories}
+        selectedEntities={selectedValues}
+        onEntitySelect={handleEntitySelect}
+      />
     );
   };
 
@@ -1383,76 +1408,334 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
   useEffect(() => {
     const recipientTypes = watch('recipientType') || [];
     if (recipientTypes.length > 0) {
-      updateStepStatus(4, recipientTypes);
-      setEnabledSteps(prev => [...new Set([...prev, 5])]); // Enable review step
+      updateStepStatus(5, recipientTypes);
+      setEnabledSteps(prev => [...new Set([...prev, 6])]); // Enable review step
     }
   }, [watch('recipientType'), updateStepStatus]);
 
-  const renderOptionPanel = (option: string) => (
-    <OptionPanel
-      key={option}
-      selected={selectedOptions.includes(option)}
-    >
-      <HiddenCheckbox
-        type="checkbox"
-        value={option}
-        {...register(currentQuestion.id)}
+  const handleOptionSelect = (e: React.MouseEvent, option: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const currentValues = watch(currentQuestion.id) || [];
+    const newValues = currentValues.includes(option)
+      ? currentValues.filter((value: string) => value !== option)
+      : [...currentValues, option];
+    setValue(currentQuestion.id, newValues);
+
+    // Update step status and enable next step if needed
+    if (newValues.length > 0) {
+      updateStepStatus(currentStep, newValues);
+      setEnabledSteps(prev => [...new Set([...prev, currentStep + 1])]);
+    }
+  };
+
+  const renderBasicOptionPanel = (option: string) => {
+    const selectedValues = watch(currentQuestion.id) || [];
+    const isSelected = selectedValues.includes(option);
+
+    return (
+      <OptionPanel
+        key={option}
+        selected={isSelected}
+        onClick={(e) => handleOptionSelect(e, option)}
+      >
+        <OptionContent>
+          <OptionTitle>{option}</OptionTitle>
+          <OptionDescription>{getOptionDescription(option)}</OptionDescription>
+        </OptionContent>
+      </OptionPanel>
+    );
+  };
+
+  const renderDataSubjectOptionPanel = (option: DataSubjectCategory) => {
+    return (
+      <CategorySection key={option.category}>
+        <CategoryTitle>{option.category}</CategoryTitle>
+        <OptionsContainer>
+          {option.options.map(subOption => (
+            <OptionPanel
+              key={subOption}
+              selected={selectedOptions.includes(subOption)}
+              onClick={(e) => handleOptionSelect(e, subOption)}
+            >
+              <OptionContent>
+                <OptionTitle>{subOption}</OptionTitle>
+                <OptionDescription>{getOptionDescription(subOption)}</OptionDescription>
+              </OptionContent>
+            </OptionPanel>
+          ))}
+        </OptionsContainer>
+      </CategorySection>
+    );
+  };
+
+  const handleSelectAll = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const currentValues = watch(currentQuestion.id) || [];
+    let newValues: string[] = [];
+
+    switch (currentQuestion.id) {
+      case 'informationCategory':
+      case 'transferLocation':
+        newValues = currentValues.length === currentQuestion.options.length
+          ? []
+          : [...currentQuestion.options as string[]];
+        break;
+
+      case 'dataSubjectType':
+        const allOptions = (currentQuestion.options as DataSubjectCategory[])
+          .flatMap(category => category.options);
+        newValues = currentValues.length === allOptions.length
+          ? []
+          : allOptions;
+        break;
+
+      case 'countries':
+        const filteredCountries = getAllCountries()
+          .filter((country: Country) => 
+            country.name.toLowerCase().includes(countrySearchTerm.toLowerCase())
+          )
+          .map((country: Country) => country.name);
+        newValues = currentValues.length === filteredCountries.length
+          ? currentValues.filter((country: string) => !filteredCountries.includes(country))
+          : [...new Set([...currentValues, ...filteredCountries])];
+        break;
+
+      case 'recipientType':
+        newValues = currentValues.length === RECIPIENT_TYPES.length
+          ? []
+          : [...RECIPIENT_TYPES];
+        break;
+    }
+
+    setValue(currentQuestion.id, newValues);
+    if (newValues.length > 0) {
+      updateStepStatus(currentStep, newValues);
+      setEnabledSteps(prev => [...new Set([...prev, currentStep + 1])]);
+    }
+  };
+
+  const isAllSelected = () => {
+    const currentValues = watch(currentQuestion.id) || [];
+    
+    switch (currentQuestion.id) {
+      case 'informationCategory':
+      case 'transferLocation':
+        return currentValues.length === currentQuestion.options.length;
+
+      case 'dataSubjectType':
+        const allOptions = (currentQuestion.options as DataSubjectCategory[])
+          .flatMap(category => category.options);
+        return currentValues.length === allOptions.length;
+
+      case 'countries':
+        const filteredCountries = getAllCountries()
+          .filter((country: Country) => 
+            country.name.toLowerCase().includes(countrySearchTerm.toLowerCase())
+          )
+          .map((country: Country) => country.name);
+        return currentValues.length === filteredCountries.length;
+
+      case 'recipientType':
+        return currentValues.length === RECIPIENT_TYPES.length;
+
+      default:
+        return false;
+    }
+  };
+
+  const renderReviewDataTransferPurpose = () => {
+    const selectedValues = watch(currentQuestion.id) || [];
+    const informationCategories = watch('informationCategory') || [];
+    const dataSubjectTypes = watch('dataSubjectType') || [];
+    const recipientTypes = watch('recipientType') || [];
+
+    return (
+      <ReviewDataTransferPurpose
+        informationCategory={informationCategories}
+        dataSubjectType={dataSubjectTypes}
+        recipientType={recipientTypes}
       />
-      <OptionContent>
-        <OptionTitle>{option}</OptionTitle>
-        <OptionDescription>{getOptionDescription(option)}</OptionDescription>
-      </OptionContent>
-    </OptionPanel>
-  );
+    );
+  };
 
   return (
-    <Form onSubmit={handleSubmit(onSubmit)}>
+    <Form onSubmit={(e) => {
+      if (currentStep !== questions.length - 1) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      handleSubmit(onSubmit)(e);
+    }}>
       <TabsContainer>
-        {questions.map((question, index) => {
-          const isReviewTab = index === questions.length - 1;
-          const isDisabled = !enabledSteps.includes(index) && 
-                           !completedSteps.includes(index) && 
-                           !(isReviewTab && isAllStepsCompleted());
-          
-          return (
+        <TabGroup>
+          <TabGroupHeader 
+            isExpanded={isQuestionsExpanded}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsQuestionsExpanded(!isQuestionsExpanded);
+            }}
+          >
+            <span>Preliminary Questions</span>
+            <ExpandButton isExpanded={isQuestionsExpanded}>▼</ExpandButton>
+          </TabGroupHeader>
+          <TabGroupContent isExpanded={isQuestionsExpanded}>
+            {questions.slice(0, 6).map((question, index) => {
+              const isDisabled = !enabledSteps.includes(index) && 
+                               !completedSteps.includes(index);
+              
+              return (
+                <Tab
+                  key={question.id}
+                  isActive={currentStep === index}
+                  disabled={isDisabled}
+                  isNextEnabled={enabledSteps.includes(index) && !completedSteps.includes(index)}
+                  onClick={() => handleTabClick(index)}
+                >
+                  <ProgressIndicator 
+                    status={
+                      completedSteps.includes(index) 
+                        ? 'completed' 
+                        : currentStep === index 
+                          ? 'current' 
+                          : 'pending'
+                    }
+                  >
+                    <StepNumber
+                      status={
+                        completedSteps.includes(index) 
+                          ? 'completed' 
+                          : currentStep === index 
+                            ? 'current' 
+                            : 'pending'
+                      }
+                    >
+                      {index + 1}
+                    </StepNumber>
+                  </ProgressIndicator>
+                  {question.text}
+                </Tab>
+              );
+            })}
+          </TabGroupContent>
+        </TabGroup>
+
+        <TabGroup>
+          <TabGroupHeader 
+            isExpanded={isSubsequentExpanded}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsSubsequentExpanded(!isSubsequentExpanded);
+            }}
+          >
+            <span>Subsequent Questions</span>
+            <ExpandButton isExpanded={isSubsequentExpanded}>▼</ExpandButton>
+          </TabGroupHeader>
+          <TabGroupContent isExpanded={isSubsequentExpanded}>
             <Tab
-              key={question.id}
-              isActive={currentStep === index}
-              disabled={isDisabled}
-              isNextEnabled={enabledSteps.includes(index) && !completedSteps.includes(index)}
-              onClick={() => handleTabClick(index)}
+              isActive={currentStep === 6}
+              disabled={!isAllStepsCompleted()}
+              isNextEnabled={isAllStepsCompleted()}
+              onClick={() => {
+                console.log('Review Data Transfer Purpose clicked');
+                if (isAllStepsCompleted()) {
+                  handleTabClick(6);
+                }
+              }}
             >
-              {question.text}
+              <ProgressIndicator 
+                status={isAllStepsCompleted() ? 'completed' : 'pending'}
+              >
+                <StepNumber
+                  status={isAllStepsCompleted() ? 'completed' : 'pending'}
+                >
+                  6
+                </StepNumber>
+              </ProgressIndicator>
+              Review Data Transfer Purpose
             </Tab>
-          );
-        })}
+          </TabGroupContent>
+        </TabGroup>
+
+        <TabGroup>
+          <TabGroupHeader 
+            isExpanded={isOutputExpanded}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsOutputExpanded(!isOutputExpanded);
+            }}
+          >
+            <span>Output</span>
+            <ExpandButton isExpanded={isOutputExpanded}>▼</ExpandButton>
+          </TabGroupHeader>
+          <TabGroupContent isExpanded={isOutputExpanded}>
+            <Tab
+              isActive={false}
+              disabled={!isAllStepsCompleted()}
+              isNextEnabled={false}
+              onClick={() => {}}
+            >
+              <ProgressIndicator 
+                status={isAllStepsCompleted() ? 'completed' : 'pending'}
+              >
+                <StepNumber
+                  status={isAllStepsCompleted() ? 'completed' : 'pending'}
+                >
+                  7
+                </StepNumber>
+              </ProgressIndicator>
+              Results 
+            </Tab>
+          </TabGroupContent>
+        </TabGroup>
       </TabsContainer>
 
       <ContentContainer>
         <QuestionContainer>
-          {currentStep === questions.length - 1 ? (
-            renderReviewSection()
-          ) : (
-            <>
-              <QuestionText>{currentQuestion.text}</QuestionText>
-              {currentQuestion.id === 'countries' ? (
-                renderCountryOptions()
-              ) : currentQuestion.id === 'entities' ? (
-                renderEntitySelection()
-              ) : (
-                <OptionsContainer>
-                  {currentQuestion.options.map(option => renderOptionPanel(option))}
-                </OptionsContainer>
+          <>
+            <ContentHeader>
+              {currentQuestion.id !== 'entities' && (
+                <SelectAllButton
+                  selected={isAllSelected()}
+                  onClick={handleSelectAll}
+                >
+                  {isAllSelected() ? 'Deselect All' : 'Select All'}
+                </SelectAllButton>
               )}
-              {errors[currentQuestion.id] && (
-                <ErrorMessage>Please select at least one option</ErrorMessage>
-              )}
-            </>
-          )}
+            </ContentHeader>
+
+            {currentQuestion.id === 'countries' ? (
+              renderCountryOptions()
+            ) : currentQuestion.id === 'entities' ? (
+              renderEntitySelection()
+            ) : currentQuestion.id === 'dataSubjectType' ? (
+              (currentQuestion.options as DataSubjectCategory[]).map(option => renderDataSubjectOptionPanel(option))
+            ) : currentQuestion.id === 'recipientType' ? (
+              <OptionsContainer>
+                {RECIPIENT_TYPES.map(option => renderBasicOptionPanel(option))}
+              </OptionsContainer>
+            ) : currentQuestion.id === 'reviewDataTransferPurpose' ? (
+              renderReviewDataTransferPurpose()
+            ) : (
+              <OptionsContainer>
+                {(currentQuestion.options as string[]).map(option => renderBasicOptionPanel(option))}
+              </OptionsContainer>
+            )}
+            {errors[currentQuestion.id] && (
+              <ErrorMessage>Please select at least one option</ErrorMessage>
+            )}
+          </>
         </QuestionContainer>
 
         {currentStep === questions.length - 1 && (
-          <SubmitButton type="submit">Submit Assessment</SubmitButton>
+          <SubmitButton type="submit">View Output</SubmitButton>
         )}
       </ContentContainer>
     </Form>

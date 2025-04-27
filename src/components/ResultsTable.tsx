@@ -1,14 +1,46 @@
 import React, { useState, useMemo } from 'react';
 import styled from 'styled-components';
+import OutputHeader from './OutputHeader';
 
 const TableContainer = styled.div`
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 2rem;
   overflow: hidden;
   background: white;
+`;
+
+const ExportButtonsContainer = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #eee;
+`;
+
+const ExportButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  background: white;
+  color: #666;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #f8f8f8;
+    border-color: #ddd;
+    color: #333;
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
 `;
 
 const FiltersContainer = styled.div`
@@ -87,8 +119,7 @@ const FilterSelect = styled.select`
 const TableWrapper = styled.div`
   flex: 1;
   overflow: auto;
-  border: 1px solid #eee;
-  border-radius: 8px;
+  padding: 20px;
 
   &::-webkit-scrollbar {
     width: 8px;
@@ -117,7 +148,6 @@ const Th = styled.th`
   text-align: left;
   font-weight: 500;
   color: #333;
-  position: sticky;
   top: 0;
   z-index: 1;
   border-bottom: 2px solid #eee;
@@ -337,47 +367,53 @@ const getLegalRequirements = (category: string, transferStatus: 'allowed' | 'res
 };
 
 const ResultsTable: React.FC<ResultsTableProps> = ({ formData }) => {
-  console.log('ResultsTable received formData:', formData);
-
-  const [filters, setFilters] = useState({
-    informationCategory: '',
-    dataSubjectType: '',
-    recipientType: '',
-    output: '',
-    riskLevel: '',
-    status: ''
+  const [appliedFilters, setAppliedFilters] = useState<Record<string, string[]>>({
+    informationCategory: [],
+    purposeTypes: [],
+    countryScope: [],
+    recipientTypes: [],
+    clientPurposes: []
   });
 
-  const generateInitialData = (formData: ResultsTableProps['formData']): ResultRow[] => {
-    console.log('Generating data with:', formData);
+  const initialData = useMemo(() => {
     const results: ResultRow[] = [];
     const currentDate = new Date().toISOString().split('T')[0];
 
-    // Validate input data
-    if (!formData || 
-        !Array.isArray(formData.countries) || formData.countries.length === 0 ||
-        !Array.isArray(formData.entities) || formData.entities.length === 0 ||
-        !Array.isArray(formData.informationCategory) || formData.informationCategory.length === 0 ||
-        !Array.isArray(formData.dataSubjectType) || formData.dataSubjectType.length === 0 ||
-        !Array.isArray(formData.recipientType) || formData.recipientType.length === 0) {
-      console.error('Invalid or missing data in formData:', formData);
+    console.log('Generating data with formData:', formData);
+
+    // Early validation with detailed logging
+    if (!formData?.countries?.length) {
+      console.error('No countries in formData');
+      return results;
+    }
+    if (!formData?.entities?.length) {
+      console.error('No entities in formData');
+      return results;
+    }
+    if (!formData?.informationCategory?.length) {
+      console.error('No information categories in formData');
+      return results;
+    }
+    if (!formData?.dataSubjectType?.length) {
+      console.error('No data subject types in formData');
+      return results;
+    }
+    if (!formData?.recipientType?.length) {
+      console.error('No recipient types in formData');
       return results;
     }
 
+    // Generate combinations
     try {
-      // Generate data for each combination
-      formData.countries.forEach((country: string) => {
-        if (!country) return;
-
-        formData.entities.forEach((entity: string) => {
-          if (!entity) return;
-
-          formData.informationCategory.forEach((category: string) => {
-            formData.dataSubjectType.forEach((subjectType: string) => {
-              formData.recipientType.forEach((recipient: string) => {
+      formData.countries.forEach(country => {
+        formData.entities.forEach(entity => {
+          formData.informationCategory.forEach(category => {
+            formData.dataSubjectType.forEach(subjectType => {
+              formData.recipientType.forEach(recipient => {
                 const transferStatus = getTransferStatus(country);
-                const result: ResultRow = {
-                  id: `${country}-${entity}-${Date.now()}-${Math.random()}`,
+                
+                results.push({
+                  id: `${country}-${entity}-${category}-${Date.now()}`,
                   country,
                   entityName: entity,
                   output: (
@@ -399,137 +435,89 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ formData }) => {
                   riskLevel: transferStatus === 'prohibited' ? 'High' :
                             transferStatus === 'restricted' ? 'Medium' : 'Low',
                   status: 'Active'
-                };
-                results.push(result);
+                });
               });
             });
           });
         });
       });
-
-      console.log('Generated results count:', results.length);
-      return results;
     } catch (error) {
       console.error('Error generating data:', error);
-      return [];
     }
-  };
 
-  const allData = useMemo(() => generateInitialData(formData), [formData]);
+    console.log('Generated rows:', results.length);
+    return results;
+  }, [formData]);
 
   const filteredData = useMemo(() => {
-    return allData.filter(row => {
-      const outputElement = row.output as React.ReactElement<StatusBadgeProps>;
-      const outputText = outputElement?.props?.children || '';
-      
-      return (
-        (!filters.informationCategory || row.informationCategory === filters.informationCategory) &&
-        (!filters.dataSubjectType || row.dataSubjectType === filters.dataSubjectType) &&
-        (!filters.recipientType || row.recipientType === filters.recipientType) &&
-        (!filters.output || outputText === filters.output) &&
-        (!filters.riskLevel || row.riskLevel === filters.riskLevel) &&
-        (!filters.status || row.status === filters.status)
-      );
-    });
-  }, [allData, filters]);
+    console.log('Filtering data with filters:', appliedFilters);
+    
+    if (!initialData.length) {
+      console.log('No initial data to filter');
+      return [];
+    }
 
-  const handleFilterChange = (filterName: keyof typeof filters) => (
-    event: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    setFilters(prev => ({
-      ...prev,
-      [filterName]: event.target.value
-    }));
+    return initialData.filter(row => {
+      if (Object.values(appliedFilters).every(filters => filters.length === 0)) {
+        return true;
+      }
+
+      if (appliedFilters.informationCategory.length > 0 &&
+          !appliedFilters.informationCategory.includes(row.informationCategory.toLowerCase())) {
+        return false;
+      }
+
+      if (appliedFilters.purposeTypes.length > 0) {
+        const purposeMatch = appliedFilters.purposeTypes.some(purpose => {
+          const [subject, type] = purpose.split('-');
+          return row.dataSubjectType.toLowerCase().includes(subject) &&
+                 row.dataSubjectType.toLowerCase().includes(type);
+        });
+        if (!purposeMatch) return false;
+      }
+
+      if (appliedFilters.recipientTypes.length > 0 &&
+          !appliedFilters.recipientTypes.includes(row.recipientType.toLowerCase())) {
+        return false;
+      }
+
+      if (appliedFilters.countryScope.length > 0) {
+        const isInside = row.country === formData.countries[0];
+        const matchesScope = appliedFilters.countryScope.includes(isInside ? 'inside' : 'outside');
+        if (!matchesScope) return false;
+      }
+
+      return true;
+    });
+  }, [initialData, appliedFilters, formData.countries]);
+
+  const handleFilterChange = (newFilters: Record<string, string[]>) => {
+    console.log('Applying new filters:', newFilters);
+    setAppliedFilters(newFilters);
   };
+
+  const handleExportPDF = () => {
+    // TODO: Implement PDF export
+    console.log('Exporting to PDF...');
+  };
+
+  const handleExportExcel = () => {
+    // TODO: Implement Excel export
+    console.log('Exporting to Excel...');
+  };
+
+  console.log('Rendering table with data:', {
+    initialDataLength: initialData.length,
+    filteredDataLength: filteredData.length,
+    formData
+  });
 
   return (
     <TableContainer>
-      <FiltersContainer>
-        <FilterGroup>
-          <FilterLabel>Information Category</FilterLabel>
-          <FilterSelect
-            value={filters.informationCategory}
-            onChange={handleFilterChange('informationCategory')}
-          >
-            <option value="">All</option>
-            {formData.informationCategory.map(category => (
-              <option key={category} value={category}>
-                {category}
-              </option>
-            ))}
-          </FilterSelect>
-        </FilterGroup>
-
-        <FilterGroup>
-          <FilterLabel>Data Subject Type</FilterLabel>
-          <FilterSelect
-            value={filters.dataSubjectType}
-            onChange={handleFilterChange('dataSubjectType')}
-          >
-            <option value="">All</option>
-            {formData.dataSubjectType.map(type => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </FilterSelect>
-        </FilterGroup>
-
-        <FilterGroup>
-          <FilterLabel>Recipient Type</FilterLabel>
-          <FilterSelect
-            value={filters.recipientType}
-            onChange={handleFilterChange('recipientType')}
-          >
-            <option value="">All</option>
-            {formData.recipientType.map(type => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </FilterSelect>
-        </FilterGroup>
-
-        <FilterGroup>
-          <FilterLabel>Transfer Status</FilterLabel>
-          <FilterSelect
-            value={filters.output}
-            onChange={handleFilterChange('output')}
-          >
-            <option value="">All</option>
-            <option value="OK">OK</option>
-            <option value="OKC">OKC</option>
-            <option value="NOK">NOK</option>
-          </FilterSelect>
-        </FilterGroup>
-
-        <FilterGroup>
-          <FilterLabel>Risk Level</FilterLabel>
-          <FilterSelect
-            value={filters.riskLevel}
-            onChange={handleFilterChange('riskLevel')}
-          >
-            <option value="">All</option>
-            <option value="Low">Low</option>
-            <option value="Medium">Medium</option>
-            <option value="High">High</option>
-          </FilterSelect>
-        </FilterGroup>
-
-        <FilterGroup>
-          <FilterLabel>Status</FilterLabel>
-          <FilterSelect
-            value={filters.status}
-            onChange={handleFilterChange('status')}
-          >
-            <option value="">All</option>
-            <option value="Active">Active</option>
-            <option value="Pending">Pending</option>
-            <option value="Expired">Expired</option>
-          </FilterSelect>
-        </FilterGroup>
-      </FiltersContainer>
-
+      <OutputHeader
+        informationCategory={formData.informationCategory}
+        onFilterChange={handleFilterChange}
+      />
       <TableWrapper>
         <Table>
           <thead>
@@ -549,8 +537,8 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ formData }) => {
           </thead>
           <tbody>
             {filteredData.length > 0 ? (
-              filteredData.map((row, index) => (
-                <Tr key={index}>
+              filteredData.map((row) => (
+                <Tr key={row.id}>
                   <Td>{row.country}</Td>
                   <Td>{row.entityName}</Td>
                   <Td>{row.output}</Td>

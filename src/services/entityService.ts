@@ -2,10 +2,11 @@ import { Entity } from '../types';
 
 // Simulated entity data - In a real app, this would come from an API
 const generateEntitiesForCountry = (countryCode: string): Entity[] => {
-  const categories = ['Investment', 'Securities', 'Wealth', 'Banking', 'Insurance'];
+  const clientCategories = ['Investment', 'Securities', 'Wealth', 'Banking', 'Insurance'];
   const entities: Entity[] = [];
 
-  categories.forEach(category => {
+  // Generate Client entities
+  clientCategories.forEach(category => {
     // Generate 20-30 entities per category
     const count = Math.floor(Math.random() * 11) + 20;
     for (let i = 0; i < count; i++) {
@@ -18,6 +19,18 @@ const generateEntitiesForCountry = (countryCode: string): Entity[] => {
       });
     }
   });
+
+  // Generate Employee entities
+  const employeeCount = Math.floor(Math.random() * 11) + 20; // 20-30 employee entities
+  for (let i = 0; i < employeeCount; i++) {
+    entities.push({
+      id: `${countryCode}-Employee-${i}`,
+      name: `${countryCode} Employee Entity ${i + 1}`,
+      category: 'Employee',
+      countryCode,
+      description: `Employee entity in ${countryCode}`,
+    });
+  }
 
   return entities;
 };

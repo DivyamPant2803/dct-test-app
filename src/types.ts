@@ -49,8 +49,8 @@ export const DATA_SUBJECT_TYPES = {
 };
 
 export const RECIPIENT_TYPES = [
-  'Group Company',
+  'Entity',
   'Service Provider',
-  'Government Authority',
-  'Business Partner'
+  'Third Party',
+  'External Authorities'
 ]; 

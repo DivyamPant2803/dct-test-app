@@ -17,12 +17,64 @@ type CountryEntities = {
   [key: string]: string[]; // Allow additional countries
 };
 
-type FormData = {
+export type FormData = {
   informationCategory: string[];
   dataSubjectType: string[];
   countries: string[];
   entities: CountryEntities;
   recipientType: string[];
+};
+
+export const INITIAL_FORM_DATA: FormData = {
+  informationCategory: ['Employee'],
+  dataSubjectType: ['Current Employee'],
+  countries: ['United States', 'Germany', 'Singapore', 'United Kingdom'],
+  entities: {
+    'United States': [
+      'US Global Technology Solutions Corporation',
+      'American Data Analytics & Consulting Services LLC',
+      'US Enterprise Business Management Systems Inc.',
+      'North American Digital Infrastructure Holdings',
+      'US Financial Technology & Services Corporation',
+      'American Cloud Computing & Data Centers LLC'
+    ],
+    'Germany': [
+      'Deutsche Technologie und Datendienste GmbH',
+      'Europäische Unternehmensberatung AG',
+      'Deutsche Digitale Infrastruktur und Services GmbH',
+      'Berliner Technologiezentrum für Innovation GmbH',
+      'Deutsche Cloud- und Rechenzentren AG'
+    ],
+    'Singapore': [
+      'Singapore Advanced Technology Solutions Pte Ltd',
+      'APAC Digital Infrastructure & Services Corporation',
+      'Singapore Enterprise Data Management Pte Ltd',
+      'Asia Pacific Cloud Computing Holdings Pte Ltd',
+      'Singapore Business Analytics & Consulting Services'
+    ],
+    'United Kingdom': [
+      'British Technology & Innovation Services Ltd',
+      'UK Enterprise Data Solutions Corporation',
+      'London Digital Infrastructure Management Ltd',
+      'British Business Analytics & Consulting Group',
+      'UK Cloud Computing & Data Centre Operations Ltd'
+    ],
+    'Japan': [
+      'Japan Technology Solutions Corporation 株式会社',
+      'Tokyo Digital Infrastructure Services 株式会社',
+      'Japanese Enterprise Systems & Consulting 株式会社',
+      'Japan Cloud Computing Solutions Corporation',
+      'Tokyo Business Analytics & Data Services Ltd'
+    ],
+    'South Korea': [
+      'Korean Enterprise Technology Solutions Co., Ltd',
+      'Seoul Digital Infrastructure & Services Corporation',
+      'Korean Business Systems & Analytics Corporation',
+      'Korea Cloud Computing & Data Center Operations',
+      'Seoul Advanced Technology Consulting Services'
+    ]
+  },
+  recipientType: ['Group Entity']
 };
 
 const GlobalStyle = createGlobalStyle`
@@ -121,76 +173,60 @@ const BackButton = styled.button`
   }
 `
 
-const INITIAL_FORM_DATA: FormData = {
-  informationCategory: ['Employee'],
-  dataSubjectType: ['Current Employee'],
-  countries: ['United States', 'Germany', 'Singapore', 'United Kingdom'],
-  entities: {
-    'United States': ['US Corp', 'US Tech Solutions', 'US Data Services'],
-    'Germany': ['German GmbH', 'Deutsche Tech AG'],
-    'Singapore': ['SG Pte Ltd', 'APAC Services'],
-    'United Kingdom': ['UK Ltd', 'British Services']
-  },
-  recipientType: ['Group Entity']
-}
-
 function App() {
   const [showResults, setShowResults] = useState<boolean>(false)
   const [formData, setFormData] = useState<FormData>(INITIAL_FORM_DATA)
 
   const handleQuestionnaireComplete = (data: Partial<FormData>) => {
-    console.log('Questionnaire completed with data:', data);
+    console.log('Questionnaire completed with data:', data)
     
-    // Initialize with default structure
-    const entitiesMap: CountryEntities = {
-      'United States': [],
-      'Germany': [],
-      'Singapore': [],
-      'United Kingdom': []
-    };
-
-    // Only add entities for selected countries
-    const selectedCountries = Array.isArray(data.countries) ? data.countries : [];
-    selectedCountries.forEach(country => {
-      if (INITIAL_FORM_DATA.entities[country]) {
-        entitiesMap[country] = [...INITIAL_FORM_DATA.entities[country]];
+    // Ensure entities structure is preserved
+    const processedData = {
+      ...INITIAL_FORM_DATA,
+      ...data,
+      entities: {
+        ...INITIAL_FORM_DATA.entities,
+        ...(data.entities || {})
       }
-    });
-
-    // Process and validate all fields
-    const processedData: FormData = {
-      informationCategory: data.informationCategory?.filter((item): item is string => Boolean(item)) || INITIAL_FORM_DATA.informationCategory,
-      dataSubjectType: data.dataSubjectType?.filter((item): item is string => Boolean(item)) || INITIAL_FORM_DATA.dataSubjectType,
-      countries: data.countries?.filter((item): item is string => Boolean(item)) || INITIAL_FORM_DATA.countries,
-      entities: entitiesMap,
-      recipientType: data.recipientType?.filter((item): item is string => Boolean(item)) || INITIAL_FORM_DATA.recipientType
-    };
-
-    console.log('Processed form data:', processedData);
-    setFormData(processedData);
-    setShowResults(true);
+    }
+    
+    setFormData(processedData)
+    setShowResults(true)
   }
 
-  // Transform entities data structure for ResultsTable
   const transformFormDataForTable = (data: FormData) => {
+    console.log('Raw form data:', data)
+    
     // Get all entities for selected countries
     const allEntities = data.countries.reduce((acc: string[], country: string) => {
-      const countryEntities = data.entities[country] || [];
-      return [...acc, ...countryEntities];
-    }, []);
+      const countryEntities = data.entities[country] || []
+      return [...acc, ...countryEntities]
+    }, [])
 
     // Create the transformed data structure
     const transformedData = {
-      informationCategory: data.informationCategory,
-      dataSubjectType: data.dataSubjectType,
-      countries: data.countries,
-      entities: Array.from(new Set(allEntities)), // Remove duplicates
-      recipientType: data.recipientType
-    };
+      informationCategory: data.informationCategory || [],
+      dataSubjectType: data.dataSubjectType || [],
+      countries: data.countries || [],
+      entities: allEntities,
+      recipientType: data.recipientType || []
+    }
 
-    console.log('Transformed data for table:', transformedData);
-    return transformedData;
-  };
+    console.log('Transformed data:', transformedData)
+    
+    // Validate transformed data
+    if (!transformedData.countries.length) {
+      console.error('No countries selected')
+    }
+    if (!transformedData.entities.length) {
+      console.error('No entities available for selected countries:', data.entities)
+    }
+    if (!transformedData.informationCategory.length) {
+      console.error('No information categories selected')
+    }
+    
+    return transformedData
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -202,8 +238,7 @@ function App() {
               ← Back to Questionnaire
             </BackButton>
           )}
-          <Title>Data Transfer Compliance Assessment</Title>
-          <Subtitle>Evaluate your data transfer requirements</Subtitle>
+          <Title>Data Transfer Compliance Tool</Title>
         </Header>
         <Main>
           {!showResults ? (
