@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import styled from 'styled-components';
 import OutputHeader from '../../components/OutputHeader';
 
@@ -88,10 +88,32 @@ const RiskBadge = styled.span<{ level: string }>`
   }};
 `;
 
-const Output: React.FC = () => {
-  const [filters, setFilters] = useState<Record<string, string[]>>({});
+// Define a type for the data rows that includes filterable fields
+interface OutputRow {
+  country: string;
+  entityName: string;
+  output: string;
+  legalRequirements: string[];
+  endUserActions: string[];
+  remediation: string[];
+  riskLevel: string;
+  status: string;
+  contactPerson: string;
+  dateGenerated: string;
+  versionDate: string;
+  informationCategory: string;
+  purposeTypes: string;
+  countryScope: string;
+  recipientTypes: string;
+  clientPurposes: string;
+  scopeOfTransfer: string;
+  [key: string]: string | string[]; // index signature for filterable fields
+}
 
-  const sampleData = [
+const Output: React.FC = () => {
+  const [filters, setFilters] = useState<Record<string, string>>({});
+
+  const sampleData: OutputRow[] = [
     {
       country: 'Japan',
       entityName: 'SG Pte Ltd',
@@ -115,15 +137,36 @@ const Output: React.FC = () => {
       status: 'Active',
       contactPerson: 'APAC Data Protection Officer',
       dateGenerated: '2025-04-24',
-      versionDate: '2025-04-24'
+      versionDate: '2025-04-24',
+      // Example filterable fields:
+      informationCategory: 'client',
+      purposeTypes: 'employee-employee',
+      countryScope: 'inside',
+      recipientTypes: 'entity',
+      clientPurposes: 'outsourcing',
+      scopeOfTransfer: 'internal',
     }
   ];
 
-  const handleFilterChange = (newFilters: Record<string, string[]>) => {
+  const handleFilterChange = (newFilters: Record<string, string>) => {
     setFilters(newFilters);
-    // Apply filters to your data here
-    console.log('Filters updated:', newFilters);
+    // Filtering is handled by useMemo below
   };
+
+  // Filtering logic: only include rows that match all non-empty filters
+  const filteredRows = useMemo(() => {
+    return sampleData.filter(row => {
+      return Object.entries(filters).every(([key, value]) => {
+        if (!value) return true;
+        // Only compare if the row's value is a string
+        const rowValue = row[key];
+        if (typeof rowValue === 'string') {
+          return rowValue === value;
+        }
+        return true;
+      });
+    });
+  }, [sampleData, filters]);
 
   return (
     <PageContainer>
@@ -151,7 +194,7 @@ const Output: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {sampleData.map((row, index) => (
+              {filteredRows.map((row, index) => (
                 <tr key={index}>
                   <Td>{row.country}</Td>
                   <Td>{row.entityName}</Td>

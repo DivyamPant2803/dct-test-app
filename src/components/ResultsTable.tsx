@@ -413,7 +413,7 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ formData }) => {
                 const transferStatus = getTransferStatus(country);
                 
                 results.push({
-                  id: `${country}-${entity}-${category}-${Date.now()}`,
+                  id: `${Math.random()}-${country}-${entity}-${category}-${Date.now()}`,
                   country,
                   entityName: entity,
                   output: (
@@ -491,7 +491,7 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ formData }) => {
     });
   }, [initialData, appliedFilters, formData.countries]);
 
-  const handleFilterChange = (newFilters: Record<string, string[]>) => {
+  const handleFilterChange = (newFilters: Record<string, string>) => {
     console.log('Applying new filters:', newFilters);
     setAppliedFilters(newFilters);
   };

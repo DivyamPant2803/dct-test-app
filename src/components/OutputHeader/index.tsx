@@ -44,7 +44,7 @@ const ExportButton = styled.button`
 
 interface OutputHeaderProps {
   informationCategory: string[];
-  onFilterChange: (filters: Record<string, string[]>) => void;
+  onFilterChange: (filters: Record<string, string>) => void;
 }
 
 const OutputHeader: React.FC<OutputHeaderProps> = ({

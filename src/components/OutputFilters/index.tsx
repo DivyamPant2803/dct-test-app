@@ -205,7 +205,7 @@ interface FilterOption {
 
 interface OutputFiltersProps {
   informationCategory: string[];
-  onFilterChange: (filters: Record<string, string[]>) => void;
+  onFilterChange: (filters: Record<string, string>) => void;
 }
 
 const OutputFilters: React.FC<OutputFiltersProps> = ({
@@ -214,13 +214,13 @@ const OutputFilters: React.FC<OutputFiltersProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['informationCategory']));
-  const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({
-    informationCategory: [],
-    purposeTypes: [],
-    countryScope: [],
-    recipientTypes: [],
-    clientPurposes: [],
-    scopeOfTransfer: []
+  const [selectedFilters, setSelectedFilters] = useState<Record<string, string>>({
+    informationCategory: '',
+    purposeTypes: '',
+    countryScope: '',
+    recipientTypes: '',
+    clientPurposes: '',
+    scopeOfTransfer: ''
   });
 
   const filterOptions: Record<string, { title: string; options: FilterOption[] }> = {
@@ -267,16 +267,11 @@ const OutputFilters: React.FC<OutputFiltersProps> = ({
 
   const handleFilterToggle = (option: FilterOption) => {
     setSelectedFilters(prev => {
-      const newFilters = { ...prev };
       const group = option.group;
-      
-      if (newFilters[group].includes(option.id)) {
-        newFilters[group] = newFilters[group].filter(id => id !== option.id);
-      } else {
-        newFilters[group] = [...newFilters[group], option.id];
-      }
-      
-      return newFilters;
+      return {
+        ...prev,
+        [group]: prev[group] === option.id ? '' : option.id
+      };
     });
   };
 
@@ -297,7 +292,7 @@ const OutputFilters: React.FC<OutputFiltersProps> = ({
   }, [selectedFilters, onFilterChange]);
 
   const getActiveFiltersCount = () => {
-    return Object.values(selectedFilters).reduce((count, filters) => count + filters.length, 0);
+    return Object.values(selectedFilters).filter(Boolean).length;
   };
 
   return (
@@ -332,20 +327,19 @@ const OutputFilters: React.FC<OutputFiltersProps> = ({
 
         {getActiveFiltersCount() > 0 && (
           <ActiveFiltersBar>
-            {Object.entries(selectedFilters).map(([group, filters]) =>
-              filters.map(filterId => {
-                const option = filterOptions[group].options.find(opt => opt.id === filterId);
-                if (!option) return null;
-                return (
-                  <ActiveChip key={filterId}>
-                    {option.label}
-                    <button onClick={() => handleFilterToggle(option)}>
-                      <FiX size={14} />
-                    </button>
-                  </ActiveChip>
-                );
-              })
-            )}
+            {Object.entries(selectedFilters).map(([group, filterId]) => {
+              if (!filterId) return null;
+              const option = filterOptions[group]?.options.find(opt => opt.id === filterId);
+              if (!option) return null;
+              return (
+                <ActiveChip key={filterId}>
+                  {option.label}
+                  <button onClick={() => handleFilterToggle(option)}>
+                    <FiX size={14} />
+                  </button>
+                </ActiveChip>
+              );
+            })}
           </ActiveFiltersBar>
         )}
 
@@ -364,11 +358,11 @@ const OutputFilters: React.FC<OutputFiltersProps> = ({
                 {section.options.map(option => (
                   <Chip
                     key={option.id}
-                    isSelected={selectedFilters[option.group].includes(option.id)}
+                    isSelected={selectedFilters[option.group] === option.id}
                     onClick={() => handleFilterToggle(option)}
                   >
                     {option.label}
-                    {selectedFilters[option.group].includes(option.id) && (
+                    {selectedFilters[option.group] === option.id && (
                       <FiCheck size={14} />
                     )}
                   </Chip>
