@@ -135,7 +135,7 @@ const Home = () => {
   return (
     <Container>
       <Summary>
-        The Data Transfer Compliance Tool helps you manage, track, and ensure compliance for all your data transfer activities.
+        The Data Transfer Compliance Tool helps you ensure compliance for all your data transfer activities.
       </Summary>
       <Grid>
         {(Object.keys(content) as CategoryKey[]).map((key) => {

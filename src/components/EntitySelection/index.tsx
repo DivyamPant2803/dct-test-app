@@ -220,8 +220,8 @@ const SelectedEntitiesTitle = styled.div`
 
 const SelectedEntitiesContent = styled.div<{ isExpanded: boolean }>`
   padding: ${props => props.isExpanded ? '0.75rem' : '0'};
-  max-height: ${props => props.isExpanded ? '300px' : '0'};
-  overflow: hidden;
+  max-height: ${props => props.isExpanded ? '250px' : '0'};
+  overflow: auto;
   transition: all 0.3s ease-in-out;
 `;
 
@@ -358,7 +358,7 @@ const EntitySelection: React.FC<Props> = ({
             id: `${country}-${category}-${i}`,
             name: `${country} ${getCategoryDisplayName(category as EntityCategory)} Entity ${i + 1}`,
             category: category as EntityCategory,
-            countryCode: country.substring(0, 2).toUpperCase(),
+            countryCode: country.toUpperCase(),
             description: `${getCategoryDisplayName(category as EntityCategory)} services in ${country}`
           });
         }

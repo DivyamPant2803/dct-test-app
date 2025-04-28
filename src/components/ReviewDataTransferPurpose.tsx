@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 
 const Container = styled.div`
-  padding: 1rem;
   max-width: 100%;
   height: 100%;
   overflow-y: auto;
@@ -101,6 +100,43 @@ const Chip = styled.div<{ selected: boolean }>`
   }
 `;
 
+// Redesigned TabsWrapper for better UI/UX
+const TabsWrapper = styled.div`
+  display: flex;
+  gap: 0.75rem;
+  border-bottom: 2px solid #e0e0e0;
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 2;
+`;
+
+// Redesigned TabButton for better UI/UX
+const TabButton = styled.button<{ selected: boolean }>`
+  background: ${props => (props.selected ? '#fff' : 'transparent')};
+  border: none;
+  outline: none;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: ${props => (props.selected ? '#111' : '#888')};
+  border-radius: 16px 16px 0 0;
+  box-shadow: ${props => (props.selected ? '0 2px 8px 0 rgba(0,0,0,0.07)' : 'none')};
+  border-bottom: 3px solid ${props => (props.selected ? '#111' : 'transparent')};
+  padding: 0.85rem 2.2rem 0.7rem 2.2rem;
+  margin-bottom: -2px;
+  cursor: pointer;
+  transition: color 0.18s, background 0.18s, border-bottom 0.18s, box-shadow 0.18s;
+  position: relative;
+
+  &:hover {
+    background: ${props => (props.selected ? '#fff' : '#f5f5f5')};
+    color: #111;
+  }
+`;
+
 type RecipientType = 'Entity' | 'Service Provider' | 'Third Party' | 'External Authorities';
 
 interface Props {
@@ -109,6 +145,26 @@ interface Props {
   recipientType: string[];
   onChange?: (selectedItems: Set<string>) => void;
 }
+
+// Helper to map dataSubjectType to display label and section type
+const getTabInfo = (type: string) => {
+  switch (type) {
+    case 'Employee':
+      return { label: 'UBS Employee', section: 'employee', fullType: 'Employee - UBS Employee' };
+    case 'Candidate':
+      return { label: 'UBS Candidate', section: 'employee', fullType: 'Employee - UBS Candidate' };
+    case 'CS Employee':
+      return { label: 'CS Employee', section: 'employee', fullType: 'Employee - CS Employee' };
+    case 'Client':
+      return { label: 'UBS Client', section: 'client', fullType: 'Client - UBS Client' };
+    case 'Prospect':
+      return { label: 'UBS Prospect', section: 'client', fullType: 'Client - UBS Prospect' };
+    case 'CS Client':
+      return { label: 'CS Client', section: 'client', fullType: 'Client - CS Client' };
+    default:
+      return { label: type, section: 'client', fullType: type };
+  }
+};
 
 const ReviewDataTransferPurpose: React.FC<Props> = ({
   informationCategory,
@@ -133,6 +189,10 @@ const ReviewDataTransferPurpose: React.FC<Props> = ({
     'Third Party': ['Compliance with Legal or Regulatory Obligations', 'Other Purposes'],
     'External Authorities': ['Compliance with Legal or Regulatory Obligations', 'Compliance with Voluntary Disclosure']
   };
+
+  // Build tabs dynamically from selected dataSubjectType
+  const tabInfos = dataSubjectType.map(getTabInfo);
+  const [activeTab, setActiveTab] = useState<string>(tabInfos[0]?.label || '');
 
   useEffect(() => {
     const allItems = new Set<string>();
@@ -167,7 +227,15 @@ const ReviewDataTransferPurpose: React.FC<Props> = ({
     setSelectedItems(allItems);
   }, [dataSubjectType, recipientType]);
 
-  const handleToggle = (id: string) => {
+  useEffect(() => {
+    // If the available tabs change, update the active tab if needed
+    if (!tabInfos.find(tab => tab.label === activeTab) && tabInfos.length > 0) {
+      setActiveTab(tabInfos[0].label);
+    }
+  }, [tabInfos, activeTab]);
+
+  const handleToggle = (id: string, e: React.MouseEvent) => {
+    e.preventDefault();
     setSelectedItems(prev => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
@@ -186,7 +254,7 @@ const ReviewDataTransferPurpose: React.FC<Props> = ({
         <Chip
           key={`${prefix}-${item}`}
           selected={selectedItems.has(`${prefix}-${item}`)}
-          onClick={() => handleToggle(`${prefix}-${item}`)}
+          onClick={(e) => handleToggle(`${prefix}-${item}`, e)}
         >
           {item}
         </Chip>
@@ -242,37 +310,33 @@ const ReviewDataTransferPurpose: React.FC<Props> = ({
     </CategoryContainer>
   );
 
-  const renderSections = () => {
-    const sections = [];
-    
-    // Employee sections - only render if the type is selected
-    if (dataSubjectType.includes('Employee')) {
-      sections.push(renderEmployeeSection('Employee - UBS Employee'));
+  // Render a single section based on tab info
+  const renderTabSection = (tab: { label: string; section: string; fullType: string }) => {
+    if (tab.section === 'employee') {
+      return renderEmployeeSection(tab.fullType);
+    } else {
+      return renderClientSection(tab.fullType);
     }
-    if (dataSubjectType.includes('Candidate')) {
-      sections.push(renderEmployeeSection('Employee - UBS Candidate'));
-    }
-    if (dataSubjectType.includes('CS Employee')) {
-      sections.push(renderEmployeeSection('Employee - CS Employee'));
-    }
-
-    // Client sections - only render if the type is selected
-    if (dataSubjectType.includes('Client')) {
-      sections.push(renderClientSection('Client - UBS Client'));
-    }
-    if (dataSubjectType.includes('Prospect')) {
-      sections.push(renderClientSection('Client - UBS Prospect'));
-    }
-    if (dataSubjectType.includes('CS Client')) {
-      sections.push(renderClientSection('Client - CS Client'));
-    }
-
-    return sections;
   };
 
   return (
     <Container>
-      {renderSections()}
+      <TabsWrapper>
+        {tabInfos.map(tab => (
+          <TabButton
+            type="button"
+            key={tab.label}
+            selected={activeTab === tab.label}
+            onClick={() => setActiveTab(tab.label)}
+            data-testid={`tab-${tab.label}`}
+          >
+            {tab.label}
+          </TabButton>
+        ))}
+      </TabsWrapper>
+      {tabInfos.filter(tab => tab.label === activeTab).map(tab => (
+        <React.Fragment key={tab.label}>{renderTabSection(tab)}</React.Fragment>
+      ))}
     </Container>
   );
 };
