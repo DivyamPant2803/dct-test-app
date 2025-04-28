@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useStaticContent, ContentItem } from '../contexts/StaticContentContext';
+import { Notification } from '../components/NotificationModal';
 
 const Layout = styled.div`
   display: flex;
@@ -66,7 +67,7 @@ const Card = styled.div`
   padding: 24px 18px;
   margin-bottom: 24px;
   width: 100%;
-  max-width: 600px;
+  max-width: 750px;
 `;
 
 const Form = styled.form`
@@ -115,7 +116,41 @@ const categories = [
   { key: 'training', label: 'Training Material' },
 ];
 
-const Administration = () => {
+interface AdministrationProps {
+  notifications: Notification[];
+  setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
+}
+
+const Collapsible: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ width: '100%', maxWidth: 750, marginBottom: 24 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          cursor: 'pointer',
+          background: '#e9e9e9',
+          borderRadius: '8px 8px 0 0',
+          padding: '12px 18px',
+          fontWeight: 600,
+          fontSize: '1.1rem',
+        }}
+        onClick={() => setOpen((prev) => !prev)}
+      >
+        <span style={{ marginRight: 12 }}>{open ? '▼' : '▶'}</span>
+        {title}
+      </div>
+      {open && (
+        <div style={{ border: '1px solid #e9e9e9', borderTop: 'none', borderRadius: '0 0 8px 8px', background: '#fff' }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const Administration: React.FC<AdministrationProps> = ({ notifications, setNotifications }) => {
   const [activeTile, setActiveTile] = useState('static');
   const [activeTab, setActiveTab] = useState<CategoryKey>('announcements');
   const { content, setContent } = useStaticContent();
@@ -130,11 +165,26 @@ const Administration = () => {
     e.preventDefault();
     setContent(prev => {
       const arr = [...prev[activeTab as CategoryKey]];
+      let action = '';
       if (editIdx !== null) {
         arr[editIdx] = { ...form };
+        action = 'updated';
       } else {
         arr.unshift({ ...form });
+        action = 'added';
       }
+      // Add notification
+      setNotifications(prevNotifs => [
+        {
+          id: `${Date.now()}`,
+          sender: 'Admin',
+          message: `${action === 'added' ? 'added' : 'updated'} static content: "${form.title}" in ${categories.find(c => c.key === activeTab)?.label}`,
+          timeAgo: 'just now',
+          read: false,
+          senderInitials: 'AD',
+        },
+        ...prevNotifs,
+      ]);
       return { ...prev, [activeTab as CategoryKey]: arr };
     });
     setForm({ title: '', body: '' });
@@ -177,14 +227,16 @@ const Administration = () => {
                 <Button type="submit">{editIdx!==null ? 'Update' : 'Add'} Content</Button>
               </Form>
             </Card>
-            {content[activeTab as CategoryKey].map((item: ContentItem, idx: number) => (
-              <Card key={idx}>
-                <h4>{item.title}</h4>
-                <p style={{whiteSpace:'pre-line'}}>{item.body.length > 120 ? item.body.slice(0,120)+'...' : item.body}</p>
-                <Button type="button" onClick={()=>handleEdit(idx)}>Edit</Button>
-                <Button type="button" style={{marginLeft:8,background:'#fff',color:'#222',border:'1px solid #222'}} onClick={()=>handleDelete(idx)}>Delete</Button>
-              </Card>
-            ))}
+            <Collapsible title={`View All ${categories.find(c => c.key === activeTab)?.label}`}> 
+              {content[activeTab as CategoryKey].map((item: ContentItem, idx: number) => (
+                <Card key={idx}>
+                  <h4>{item.title}</h4>
+                  <p style={{whiteSpace:'pre-line'}}>{item.body.length > 120 ? item.body.slice(0,120)+'...' : item.body}</p>
+                  <Button type="button" onClick={()=>handleEdit(idx)}>Edit</Button>
+                  <Button type="button" style={{marginLeft:8,background:'#fff',color:'#222',border:'1px solid #222'}} onClick={()=>handleDelete(idx)}>Delete</Button>
+                </Card>
+              ))}
+            </Collapsible>
           </>
         )}
       </MainContent>
@@ -192,4 +244,4 @@ const Administration = () => {
   );
 };
 
-export default Administration; 
+export { Administration }; 

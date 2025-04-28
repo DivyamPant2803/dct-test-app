@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import styled from 'styled-components';
+import NotificationIcon from './NotificationIcon';
 
 const NavBarContainer = styled.nav`
   width: 100%;
@@ -10,6 +11,16 @@ const NavBarContainer = styled.nav`
   align-items: center;
   height: 60px;
   z-index: 100;
+  position: relative;
+`;
+
+const RightSection = styled.div`
+  position: absolute;
+  right: 2rem;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
 `;
 
 const NavList = styled.ul`
@@ -38,7 +49,12 @@ const StyledNavLink = styled(NavLink)`
   }
 `;
 
-const NavBar = () => (
+interface NavBarProps {
+  unreadCount: number;
+  onNotificationClick: () => void;
+}
+
+const NavBar: React.FC<NavBarProps> = ({ unreadCount, onNotificationClick }) => (
   <NavBarContainer>
     <NavList>
       <li>
@@ -51,6 +67,9 @@ const NavBar = () => (
         <StyledNavLink to="/admin">Administration</StyledNavLink>
       </li>
     </NavList>
+    <RightSection>
+      <NotificationIcon unreadCount={unreadCount} onClick={onNotificationClick} />
+    </RightSection>
   </NavBarContainer>
 );
 

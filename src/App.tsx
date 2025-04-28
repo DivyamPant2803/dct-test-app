@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import styled from 'styled-components'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import Questionnaire from './components/Questionnaire'
 import ResultsTable from './components/ResultsTable'
 import './App.css'
 import { createGlobalStyle } from 'styled-components'
@@ -9,8 +8,9 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import NavBar from './components/NavBar'
 import Home from './pages/Home'
 import Guidance from './pages/Guidance'
-import Administration from './pages/Administration'
+import { Administration } from './pages/Administration'
 import { StaticContentProvider } from './contexts/StaticContentContext'
+import NotificationModal, { Notification } from './components/NotificationModal'
 
 const queryClient = new QueryClient()
 
@@ -179,25 +179,74 @@ const BackButton = styled.button`
   }
 `
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <GlobalStyle />
-    <BrowserRouter>
-      <StaticContentProvider>
-        <AppContainer>
-          <Header>Data Transfer Compliance Tool</Header>
-          <NavBar />
-          <Main>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/guidance" element={<Guidance />} />
-              <Route path="/admin" element={<Administration />} />
-            </Routes>
-          </Main>
-        </AppContainer>
-      </StaticContentProvider>
-    </BrowserRouter>
-  </QueryClientProvider>
-);
+const exampleNotifications: Notification[] = [
+  {
+    id: '1',
+    sender: 'Admin',
+    message: 'A Business Logic Flow mapping has been published for Stamford Branch on 27 April 2025',
+    timeAgo: 'a day ago',
+    read: false,
+    senderInitials: 'SP',
+  },
+  {
+    id: '2',
+    sender: 'Admin',
+    message: 'A Business Logic Flow mapping has been published for Real Estate Securities Inc. on 27 April 2025',
+    timeAgo: 'a day ago',
+    read: false,
+    senderInitials: 'SO',
+  },
+  {
+    id: '3',
+    sender: 'Admin',
+    message: 'A Legal Logic Flow mapping has been published for Securities Inc. on 27 April 2025',
+    timeAgo: '2 days ago',
+    read: true,
+    senderInitials: 'SW',
+  },
+];
+
+const App = () => {
+  const [notifications, setNotifications] = useState<Notification[]>(exampleNotifications);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  const handleNotificationClick = () => setModalOpen(true);
+  const handleModalClose = () => setModalOpen(false);
+  const handleMarkAllRead = () => setNotifications(notifications => notifications.map(n => ({ ...n, read: true })));
+  const handleNotificationItemClick = (id: string) => {
+    setNotifications(notifications => notifications.map(n => n.id === id ? { ...n, read: true } : n));
+    // Optionally close modal or trigger navigation/action here
+  };
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <GlobalStyle />
+      <BrowserRouter>
+        <StaticContentProvider>
+          <AppContainer>
+            <Header>Data Transfer Compliance Tool</Header>
+            <NavBar unreadCount={unreadCount} onNotificationClick={handleNotificationClick} />
+            <NotificationModal
+              open={modalOpen}
+              notifications={notifications.sort((a, b) => (a.read === b.read ? 0 : a.read ? 1 : -1))}
+              onClose={handleModalClose}
+              onMarkAllRead={handleMarkAllRead}
+              onNotificationClick={handleNotificationItemClick}
+            />
+            <Main>
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/guidance" element={<Guidance />} />
+                <Route path="/admin" element={<Administration notifications={notifications} setNotifications={setNotifications} />} />
+              </Routes>
+            </Main>
+          </AppContainer>
+        </StaticContentProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
+  );
+};
 
 export default App
