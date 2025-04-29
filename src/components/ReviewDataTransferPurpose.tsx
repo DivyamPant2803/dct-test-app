@@ -167,7 +167,6 @@ const getTabInfo = (type: string) => {
 };
 
 const ReviewDataTransferPurpose: React.FC<Props> = ({
-  informationCategory,
   dataSubjectType,
   recipientType,
   onChange

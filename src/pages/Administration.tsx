@@ -117,7 +117,6 @@ const categories = [
 ];
 
 interface AdministrationProps {
-  notifications: Notification[];
   setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
 }
 
@@ -150,7 +149,7 @@ const Collapsible: React.FC<{ title: string; children: React.ReactNode }> = ({ t
   );
 };
 
-const Administration: React.FC<AdministrationProps> = ({ notifications, setNotifications }) => {
+const Administration: React.FC<AdministrationProps> = ({ setNotifications }) => {
   const [activeTile, setActiveTile] = useState('static');
   const [activeTab, setActiveTab] = useState<CategoryKey>('announcements');
   const { content, setContent } = useStaticContent();
@@ -182,6 +181,7 @@ const Administration: React.FC<AdministrationProps> = ({ notifications, setNotif
           timeAgo: 'just now',
           read: false,
           senderInitials: 'AD',
+          category: 'other',
         },
         ...prevNotifs,
       ]);

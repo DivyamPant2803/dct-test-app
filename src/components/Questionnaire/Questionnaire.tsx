@@ -1,14 +1,11 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { useForm } from 'react-hook-form';
 import Flag from 'react-world-flags';
-import debounce from 'lodash/debounce';
 import { RECIPIENT_TYPES } from '../../types';
-import { fetchEntitiesForCountry, groupEntitiesByCategory, searchEntities } from '../../services/entityService';
 import EntitySelection from '../../components/EntitySelection/index';
 import ReviewDataTransferPurpose from '../../components/ReviewDataTransferPurpose';
-import { INITIAL_FORM_DATA, FormData } from '../../App';
-import type { Entity } from '../../types';
+import { INITIAL_FORM_DATA } from '../../App';
 
 const Form = styled.form`
   position: absolute;
@@ -211,14 +208,6 @@ const QuestionContainer = styled.div`
   }
 `;
 
-const QuestionText = styled.h3`
-  color: black;
-  margin: 0 0 2rem 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-  flex-shrink: 0;
-`;
-
 const OptionsContainer = styled.div`
   position: relative;
   display: grid;
@@ -305,57 +294,6 @@ const SubmitButton = styled.button`
 const ErrorMessage = styled.p`
   color: #000;
   margin-top: 0.5rem;
-`;
-
-const ReviewContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-`;
-
-const ReviewSection = styled.div`
-  background: white;
-  padding: 1rem;
-  border-radius: 8px;
-  border: 1px solid #eee;
-`;
-
-const ReviewSectionTitle = styled.h4`
-  color: #666;
-  margin: 0 0 0.5rem 0;
-  font-size: 0.9rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-`;
-
-const ReviewContent = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-`;
-
-const SelectedItem = styled.span`
-  background: #f8f8f8;
-  color: #000;
-  padding: 0.25rem 0.75rem;
-  border-radius: 16px;
-  font-size: 0.85rem;
-  border: 1px solid #eee;
-`;
-
-const EditButton = styled.button`
-  background: none;
-  border: none;
-  color: #000;
-  font-size: 0.85rem;
-  cursor: pointer;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  
-  &:hover {
-    background: #f8f8f8;
-  }
 `;
 
 const RegionsContainer = styled.div`
@@ -495,142 +433,6 @@ const CountBadge = styled.span`
   margin-left: 0.5rem;
 `;
 
-const RegionHeader = styled.div`
-  margin-bottom: 1rem;
-  color: #333;
-  font-weight: 500;
-  font-size: 1rem;
-`;
-
-const CountryCount = styled.div`
-  color: #666;
-  font-size: 0.85rem;
-  font-weight: normal;
-  margin-top: 0.25rem;
-`;
-
-const EntityContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  width: 100%;
-`;
-
-const SelectedEntitiesSection = styled.div<{ isExpanded: boolean }>`
-  width: 100%;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #eee;
-  overflow: hidden;
-  margin-bottom: 1rem;
-`;
-
-const SelectedEntitiesHeader = styled.div<{ isExpanded: boolean }>`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background: white;
-  cursor: pointer;
-  border-bottom: ${props => props.isExpanded ? '1px solid #eee' : 'none'};
-  transition: background-color 0.2s ease;
-
-  &:hover {
-    background: #f9f9f9;
-  }
-`;
-
-const SelectedEntitiesList = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 0.75rem;
-  padding: 1rem;
-  background: #f8f8f8;
-  max-height: 300px;
-  overflow-y: auto;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #ddd;
-    border-radius: 3px;
-  }
-`;
-
-const EntitySelectionArea = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #eee;
-  padding: 1.5rem;
-`;
-
-const EntitySelectionColumn = styled.div`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #eee;
-  padding: 1rem;
-`;
-
-const EntityList = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1rem;
-  overflow-y: auto;
-  padding-right: 0.5rem;
-  flex: 1;
-  
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: #f5f5f5;
-    border-radius: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #ddd;
-    border-radius: 4px;
-  }
-`;
-
-const SelectedEntityCard = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem;
-  background: white;
-  border-radius: 4px;
-  border: 1px solid #eee;
-  font-size: 0.9rem;
-
-  button {
-    background: none;
-    border: none;
-    color: #000;
-    cursor: pointer;
-    padding: 0.25rem;
-    
-    &:hover {
-      opacity: 0.8;
-    }
-  }
-`;
-
 const ExpandButton = styled.button<{ isExpanded: boolean }>`
   background: none;
   border: none;
@@ -643,124 +445,6 @@ const ExpandButton = styled.button<{ isExpanded: boolean }>`
   &:hover {
     color: #333;
   }
-`;
-
-const SelectedCount = styled.span`
-  background: #000;
-  color: white;
-  padding: 0.25rem 0.5rem;
-  border-radius: 12px;
-  font-size: 0.8rem;
-`;
-
-const EntityCard = styled.div<{ selected: boolean }>`
-  display: flex;
-  flex-direction: column;
-  padding: 1rem;
-  border: 2px solid ${props => props.selected ? '#000' : '#eee'};
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background-color: ${props => props.selected ? '#f8f8f8' : 'white'};
-  position: relative;
-
-  &:hover {
-    border-color: #000;
-    background-color: ${props => props.selected ? '#f8f8f8' : '#f9f9f9'};
-  }
-`;
-
-const EntityName = styled.div`
-  font-weight: 500;
-  font-size: 0.95rem;
-`;
-
-const EntityDescription = styled.div`
-  font-size: 0.85rem;
-  color: #666;
-`;
-
-const LoadingSpinner = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  color: #666;
-`;
-
-const EntityCategoryLabel = styled.span`
-  font-size: 0.8rem;
-  color: #666;
-  background: #f5f5f5;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  margin-top: 0.25rem;
-`;
-
-const CategoryTabs = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  padding: 0.5rem 0;
-  border-bottom: 2px solid #eee;
-  position: sticky;
-  top: 0;
-  background: white;
-  z-index: 1;
-`;
-
-const CategoryTab = styled.button.attrs<{ selected: boolean }>(props => ({
-  type: 'button',
-  'aria-selected': props.selected,
-}))`
-  padding: 0.5rem 1rem;
-  border: none;
-  background: ${props => props.selected ? '#000' : '#f0f0f0'};
-  color: ${props => props.selected ? 'white' : '#666'};
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  white-space: nowrap;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: ${props => props.selected ? '#000' : '#e0e0e0'};
-    color: ${props => props.selected ? 'white' : '#333'};
-  }
-`;
-
-const SearchBar = styled.input`
-  padding: 0.75rem;
-  border: 2px solid #eee;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  width: 100%;
-  margin-bottom: 1rem;
-  position: sticky;
-  top: 0;
-  background: white;
-  z-index: 1;
-
-  &:focus {
-    border-color: #000;
-    outline: none;
-  }
-`;
-
-const SectionHeader = styled.div`
-  padding: 1rem 1.5rem;
-  background: #f0f0f0;
-  font-weight: 500;
-  color: #333;
-  border-bottom: 1px solid #eee;
-`;
-
-const SelectedCountriesHeader = styled.div`
-  padding: 1rem 0;
-  font-weight: 500;
-  color: #333;
-  font-size: 0.95rem;
 `;
 
 const SearchContainer = styled.div`
@@ -829,14 +513,6 @@ const ContentHeader = styled.div`
   align-items: center;
   margin-bottom: 1rem;
   gap: 1rem;
-`;
-
-const QuestionTitle = styled.h2`
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #333;
-  margin: 0;
-  flex: 1;
 `;
 
 interface DataSubjectCategory {
@@ -975,14 +651,8 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [enabledSteps, setEnabledSteps] = useState<number[]>([0]); // Start with first step enabled
-  const selectedEntities = {};
   const [questions, setQuestions] = useState(baseQuestions);
-  const [selectedRegions, setSelectedRegions] = useState<Set<keyof typeof REGIONS>>(new Set());
-  const [entities, setEntities] = useState<Entity[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
-  const [isEntitiesExpanded, setIsEntitiesExpanded] = useState(false);
+
   const [isQuestionsExpanded, setIsQuestionsExpanded] = useState(true);
   const [isSubsequentExpanded, setIsSubsequentExpanded] = useState(true);
   const [isOutputExpanded, setIsOutputExpanded] = useState(true);
@@ -1004,35 +674,7 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
     const requiredStepIndices = [0, 1, 2, 3, 4, 5]; // All steps except review
     return requiredStepIndices.every(index => completedSteps.includes(index));
   }, [completedSteps]);
-
-  // Update the useEffect hook to prevent infinite updates
-  useEffect(() => {
-    const fetchEntities = async () => {
-      if (formValues.countries?.length > 0 && !loading) {
-        setLoading(true);
-        try {
-          const promises = formValues.countries.map((country: string) => {
-            const countryCode = Object.values(COUNTRIES_DATA)
-              .flat()
-              .find(c => c.name === country)?.code;
-            return countryCode ? fetchEntitiesForCountry(countryCode) : Promise.resolve([]);
-          });
-          
-          const results = await Promise.all(promises);
-          setEntities(results.flat());
-        } catch (error) {
-          console.error('Error fetching entities:', error);
-        } finally {
-          setLoading(false);
-        }
-      } else if (!formValues.countries?.length) {
-        setEntities([]);
-      }
-    };
-
-    fetchEntities();
-  }, [formValues.countries, loading]);
-
+  
   // Update data subject type options when information category changes
   useEffect(() => {
     const category = formValues.informationCategory || [];
@@ -1209,37 +851,6 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
     }
   };
 
-  // Update the review section to show all questions in order
-  const renderReviewSection = () => {
-    const allSelections = {
-      'Information Category': currentSelections.informationCategory,
-      'Data Subject Type': currentSelections.dataSubjectType,
-      'Countries': currentSelections.countries,
-      'Transfer Location': formValues.transferLocation || [],
-      'Recipient Type': currentSelections.recipientType,
-    };
-
-    return (
-      <ReviewContainer>
-        {Object.entries(allSelections).map(([section, selections], index) => (
-          <ReviewSection key={section}>
-            <ReviewSectionTitle>
-              {section}
-              <EditButton onClick={() => setCurrentStep(index)}>
-                Edit
-              </EditButton>
-            </ReviewSectionTitle>
-            <ReviewContent>
-              {selections.map((item: string) => (
-                <SelectedItem key={item}>{item}</SelectedItem>
-              ))}
-            </ReviewContent>
-          </ReviewSection>
-        ))}
-      </ReviewContainer>
-    );
-  };
-
   const getAllCountries = () => {
     return Object.values(COUNTRIES_DATA).flat();
   };
@@ -1269,24 +880,20 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
     const handleRegionClick = (region: keyof typeof REGIONS) => {
       const regionCountries = getCountriesForRegion(region);
       const regionCountryNames = regionCountries.map(country => country.name);
-      
-      setSelectedRegions(prev => {
-        const newSet = new Set(prev);
-        if (newSet.has(region)) {
-          newSet.delete(region);
-          const remainingSelected = selectedOptions.filter(
-            (country: string) => !regionCountryNames.includes(country)
-          );
-          setValue(currentQuestion.id, remainingSelected);
-        } else {
-          newSet.add(region);
-          const newSelected = Array.from(
-            new Set([...selectedOptions, ...regionCountryNames])
-          );
-          setValue(currentQuestion.id, newSelected);
-        }
-        return newSet;
-      });
+      const isRegionFullySelected = regionCountryNames.every(
+        countryName => selectedOptions.includes(countryName)
+      );
+      if (isRegionFullySelected) {
+        const remainingSelected = selectedOptions.filter(
+          (country: string) => !regionCountryNames.includes(country)
+        );
+        setValue(currentQuestion.id, remainingSelected);
+      } else {
+        const newSelected = Array.from(
+          new Set([...selectedOptions, ...regionCountryNames])
+        );
+        setValue(currentQuestion.id, newSelected);
+      }
     };
 
     return (
@@ -1350,23 +957,6 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
       </div>
     );
   };
-
-  // Memoize filtered and grouped entities
-  const filteredAndGroupedEntities = useMemo(() => {
-    let filtered = entities;
-    
-    if (searchTerm) {
-      filtered = searchEntities(filtered, searchTerm);
-    }
-    
-    const grouped = groupEntitiesByCategory(filtered);
-    return grouped;
-  }, [entities, searchTerm]);
-
-  // Debounced search handler
-  const handleSearch = debounce((term: string) => {
-    setSearchTerm(term);
-  }, 300);
 
   const renderEntitySelection = () => {
     const selectedValues = watch(currentQuestion.id) || [];
@@ -1548,7 +1138,6 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
   };
 
   const renderReviewDataTransferPurpose = () => {
-    const selectedValues = watch(currentQuestion.id) || [];
     const informationCategories = watch('informationCategory') || [];
     const dataSubjectTypes = watch('dataSubjectType') || [];
     const recipientTypes = watch('recipientType') || [];

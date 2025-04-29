@@ -1,7 +1,7 @@
 import styled from 'styled-components';
-import { FaBullhorn, FaFileAlt, FaBookOpen, FaStickyNote, FaInfoCircle } from 'react-icons/fa';
-import React, { useState } from 'react';
-import { useStaticContent, ContentItem } from '../contexts/StaticContentContext';
+import { FaBullhorn, FaFileAlt, FaBookOpen, FaStickyNote } from 'react-icons/fa';
+import { useState } from 'react';
+import { useStaticContent } from '../contexts/StaticContentContext';
 
 const Container = styled.div`
   max-width: 1100px;
@@ -69,17 +69,6 @@ const Button = styled.button`
   }
 `;
 
-const Collapsible = styled.details`
-  width: 100%;
-  margin-top: 16px;
-  summary {
-    font-weight: 500;
-    cursor: pointer;
-    outline: none;
-  }
-`;
-
-type Entry = { title: string; body: string; date: string };
 type CategoryKey = 'announcements' | 'releasenotes' | 'keynotes' | 'training';
 
 const categoryMeta = {

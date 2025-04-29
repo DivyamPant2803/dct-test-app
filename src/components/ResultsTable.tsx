@@ -11,111 +11,6 @@ const TableContainer = styled.div`
   background: white;
 `;
 
-const ExportButtonsContainer = styled.div`
-  display: flex;
-  gap: 0.5rem;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid #eee;
-`;
-
-const ExportButton = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  border: 1px solid #eee;
-  border-radius: 4px;
-  background: white;
-  color: #666;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: #f8f8f8;
-    border-color: #ddd;
-    color: #333;
-  }
-
-  svg {
-    width: 16px;
-    height: 16px;
-  }
-`;
-
-const FiltersContainer = styled.div`
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  flex-wrap: nowrap;
-  background: #f8f8f8;
-  padding: 1rem;
-  border-radius: 8px;
-  overflow-x: auto;
-
-  &::-webkit-scrollbar {
-    height: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: #f0f0f0;
-    border-radius: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #ddd;
-    border-radius: 4px;
-    
-    &:hover {
-      background: #ccc;
-    }
-  }
-`;
-
-const FilterGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  min-width: 180px;
-  flex-shrink: 0;
-`;
-
-const FilterLabel = styled.label`
-  font-size: 0.9rem;
-  color: #333;
-  font-weight: 500;
-`;
-
-const FilterSelect = styled.select`
-  padding: 0.75rem 1rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  color: #333;
-  background: white;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-  background-repeat: no-repeat;
-  background-position: right 1rem center;
-  background-size: 1em;
-
-  &:hover {
-    border-color: #999;
-  }
-
-  &:focus {
-    outline: none;
-    border-color: #ff0000;
-    box-shadow: 0 0 0 2px rgba(255, 0, 0, 0.1);
-  }
-
-  option {
-    padding: 0.5rem;
-  }
-`;
-
 const TableWrapper = styled.div`
   flex: 1;
   overflow: auto;
@@ -255,11 +150,6 @@ interface ResultsTableProps {
     entities: string[];
     recipientType: string[];
   };
-}
-
-interface StatusBadgeProps {
-  $status: 'allowed' | 'restricted' | 'prohibited';
-  children: React.ReactNode;
 }
 
 const getRequirementsByCategory = (category: string) => {
@@ -491,19 +381,8 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ formData }) => {
     });
   }, [initialData, appliedFilters, formData.countries]);
 
-  const handleFilterChange = (newFilters: Record<string, string>) => {
-    console.log('Applying new filters:', newFilters);
+  const handleFilterChange = (newFilters: Record<string, string[]>) => {
     setAppliedFilters(newFilters);
-  };
-
-  const handleExportPDF = () => {
-    // TODO: Implement PDF export
-    console.log('Exporting to PDF...');
-  };
-
-  const handleExportExcel = () => {
-    // TODO: Implement Excel export
-    console.log('Exporting to Excel...');
   };
 
   console.log('Rendering table with data:', {
@@ -516,6 +395,7 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ formData }) => {
     <TableContainer>
       <OutputHeader
         informationCategory={formData.informationCategory}
+        filters={appliedFilters}
         onFilterChange={handleFilterChange}
       />
       <TableWrapper>

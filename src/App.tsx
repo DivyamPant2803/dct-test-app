@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import styled from 'styled-components'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import ResultsTable from './components/ResultsTable'
 import './App.css'
 import { createGlobalStyle } from 'styled-components'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
@@ -145,40 +144,6 @@ const Main = styled.main`
   overflow: auto;
 `
 
-const Title = styled.h1`
-  color: black;
-  margin: 0;
-  font-size: 1.5rem;
-`
-
-const Subtitle = styled.p`
-  color: #666;
-  margin-top: 0.25rem;
-  font-size: 0.85rem;
-`
-
-const BackButton = styled.button`
-  position: absolute;
-  left: 1.5rem;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  color: #ff0000;
-  cursor: pointer;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  transition: background-color 0.3s;
-
-  &:hover {
-    background-color: #fff5f5;
-  }
-`
-
 const exampleNotifications: Notification[] = [
   {
     id: '1',
@@ -187,6 +152,7 @@ const exampleNotifications: Notification[] = [
     timeAgo: 'a day ago',
     read: false,
     senderInitials: 'SP',
+    category: 'business',
   },
   {
     id: '2',
@@ -195,6 +161,7 @@ const exampleNotifications: Notification[] = [
     timeAgo: 'a day ago',
     read: false,
     senderInitials: 'SO',
+    category: 'business',
   },
   {
     id: '3',
@@ -203,6 +170,7 @@ const exampleNotifications: Notification[] = [
     timeAgo: '2 days ago',
     read: true,
     senderInitials: 'SW',
+    category: 'legal',
   },
 ];
 
@@ -230,7 +198,6 @@ const App = () => {
             <NavBar unreadCount={unreadCount} onNotificationClick={handleNotificationClick} />
             <NotificationModal
               open={modalOpen}
-              notifications={notifications.sort((a, b) => (a.read === b.read ? 0 : a.read ? 1 : -1))}
               onClose={handleModalClose}
               onMarkAllRead={handleMarkAllRead}
               onNotificationClick={handleNotificationItemClick}
@@ -239,7 +206,7 @@ const App = () => {
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/guidance" element={<Guidance />} />
-                <Route path="/admin" element={<Administration notifications={notifications} setNotifications={setNotifications} />} />
+                <Route path="/admin" element={<Administration setNotifications={setNotifications} />} />
               </Routes>
             </Main>
           </AppContainer>

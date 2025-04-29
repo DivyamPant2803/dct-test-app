@@ -44,11 +44,13 @@ const ExportButton = styled.button`
 
 interface OutputHeaderProps {
   informationCategory: string[];
-  onFilterChange: (filters: Record<string, string>) => void;
+  filters: Record<string, string[]>;
+  onFilterChange: (filters: Record<string, string[]>) => void;
 }
 
 const OutputHeader: React.FC<OutputHeaderProps> = ({
   informationCategory,
+  filters,
   onFilterChange
 }) => {
   const handleExportPDF = () => {
@@ -86,6 +88,7 @@ const OutputHeader: React.FC<OutputHeaderProps> = ({
       </ExportButtonsContainer>
       <OutputFilters
         informationCategory={informationCategory}
+        filters={filters}
         onFilterChange={onFilterChange}
       />
     </HeaderContainer>

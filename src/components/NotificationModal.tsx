@@ -101,46 +101,6 @@ const NotificationList = styled.ul`
   overflow-y: auto;
 `;
 
-const NotificationItem = styled.li<{ unread: boolean }>`
-  display: flex;
-  align-items: flex-start;
-  gap: 0.50rem;
-  padding: 0.85rem 1.25rem;
-  background: ${({ unread }) => (unread ? 'rgba(255,0,0,0.07)' : 'transparent')};
-  font-weight: ${({ unread }) => (unread ? 600 : 400)};
-  cursor: pointer;
-  border-bottom: 1px solid #f5f5f5;
-  &:hover {
-    background: #fff5f5;
-  }
-`;
-
-const Avatar = styled.div`
-  width: 100px;
-  height: 36px;
-  border-radius: 50%;
-  background: #eee;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  color: #222;
-  font-size: 1.1rem;
-  overflow: hidden;
-`;
-
-const Message = styled.div`
-  flex: 1;
-  font-size: 0.98rem;
-  font-weight: 600;
-`;
-
-const TimeAgo = styled.div`
-  color: #888;
-  font-size: 0.85rem;
-  margin-top: 2px;
-`;
-
 const ViewAll = styled.div`
   text-align: center;
   padding: 0.7rem 0;
@@ -158,14 +118,6 @@ const ViewAllLink = styled.button`
     text-decoration: underline;
   }
 `;
-
-// Simple user SVG icon
-const UserIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="12" cy="8" r="4" fill="#bbb" />
-    <rect x="4" y="16" width="16" height="5" rx="2.5" fill="#bbb" />
-  </svg>
-);
 
 // Sample notifications for demo/testing
 const sampleNotifications: Notification[] = [
@@ -235,7 +187,7 @@ const sampleNotifications: Notification[] = [
   },
 ];
 
-const NotificationModal: React.FC<NotificationModalProps> = ({ open, onClose, onMarkAllRead, onNotificationClick }) => {
+const NotificationModal: React.FC<NotificationModalProps> = ({ open, onClose, onNotificationClick }) => {
   const [expanded, setExpanded] = React.useState(false);
   const [activeCategory, setActiveCategory] = React.useState<'all' | NotificationCategory>('all');
   const [notifications, setNotifications] = React.useState<Notification[]>(sampleNotifications);
@@ -296,7 +248,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ open, onClose, on
                       }}
                     >
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 600 }}>{n.message}</div>
+                        <div style={{ fontWeight: 400 }}>{n.message}</div>
                         <div style={{ fontSize: 12, color: '#888', fontWeight: 400 }}>{n.timeAgo}</div>
                       </div>
                     </li>

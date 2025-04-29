@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import styled from 'styled-components';
 import { FiX, FiSearch, FiCheck, FiChevronDown, FiChevronRight } from 'react-icons/fi';
-import Flag from 'react-world-flags';
 
 const Container = styled.div`
   display: flex;
@@ -163,14 +162,6 @@ const EntityCard = styled.div<{ selected: boolean }>`
   }
 `;
 
-const FlagContainer = styled.div`
-  width: 24px;
-  height: 16px;
-  border-radius: 2px;
-  overflow: hidden;
-  flex-shrink: 0;
-`;
-
 const EntityInfo = styled.div`
   flex: 1;
   min-width: 0;
@@ -253,15 +244,6 @@ type EntityCategory =
   | 'Employee'  // Add Employee type for existing logic
   | 'Client';   // Add Client type for existing logic
 
-// Add a type for API response
-interface ApiEntity {
-  id: string;
-  name: string;
-  category: string;
-  countryCode: string;
-  description?: string;
-}
-
 // Update the Entity interface
 interface Entity {
   id: string;
@@ -340,7 +322,6 @@ const ENTITY_CATEGORIES = [
 
 const EntitySelection: React.FC<Props> = ({
   selectedCountries,
-  informationCategory,
   selectedEntities,
   onEntitySelect
 }) => {

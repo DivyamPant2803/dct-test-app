@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 import { FiFilter, FiX, FiCheck, FiChevronDown, FiChevronRight } from 'react-icons/fi';
 
@@ -205,23 +205,17 @@ interface FilterOption {
 
 interface OutputFiltersProps {
   informationCategory: string[];
-  onFilterChange: (filters: Record<string, string>) => void;
+  filters: Record<string, string[]>;
+  onFilterChange: (filters: Record<string, string[]>) => void;
 }
 
 const OutputFilters: React.FC<OutputFiltersProps> = ({
-  informationCategory,
+  filters: rawFilters,
   onFilterChange
 }) => {
+  const filters = rawFilters || {};
   const [isOpen, setIsOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['informationCategory']));
-  const [selectedFilters, setSelectedFilters] = useState<Record<string, string>>({
-    informationCategory: '',
-    purposeTypes: '',
-    countryScope: '',
-    recipientTypes: '',
-    clientPurposes: '',
-    scopeOfTransfer: ''
-  });
 
   const filterOptions: Record<string, { title: string; options: FilterOption[] }> = {
     informationCategory: {
@@ -266,12 +260,17 @@ const OutputFilters: React.FC<OutputFiltersProps> = ({
   };
 
   const handleFilterToggle = (option: FilterOption) => {
-    setSelectedFilters(prev => {
-      const group = option.group;
-      return {
-        ...prev,
-        [group]: prev[group] === option.id ? '' : option.id
-      };
+    const group = option.group;
+    const current = filters[group] || [];
+    let newGroup: string[];
+    if (current.includes(option.id)) {
+      newGroup = current.filter(id => id !== option.id);
+    } else {
+      newGroup = [...current, option.id];
+    }
+    onFilterChange({
+      ...filters,
+      [group]: newGroup
     });
   };
 
@@ -287,12 +286,8 @@ const OutputFilters: React.FC<OutputFiltersProps> = ({
     });
   };
 
-  useEffect(() => {
-    onFilterChange(selectedFilters);
-  }, [selectedFilters, onFilterChange]);
-
   const getActiveFiltersCount = () => {
-    return Object.values(selectedFilters).filter(Boolean).length;
+    return Object.values(filters).reduce((acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 0);
   };
 
   return (
@@ -327,14 +322,12 @@ const OutputFilters: React.FC<OutputFiltersProps> = ({
 
         {getActiveFiltersCount() > 0 && (
           <ActiveFiltersBar>
-            {Object.entries(selectedFilters).map(([group, filterId]) => {
-              if (!filterId) return null;
-              const option = filterOptions[group]?.options.find(opt => opt.id === filterId);
-              if (!option) return null;
+            {Object.entries(filters).map(([group, filterIds]) => {
+              if (filterIds.length === 0) return null;
               return (
-                <ActiveChip key={filterId}>
-                  {option.label}
-                  <button onClick={() => handleFilterToggle(option)}>
+                <ActiveChip key={group}>
+                  {group}
+                  <button onClick={() => handleFilterToggle({ id: '', label: group, group })}>
                     <FiX size={14} />
                   </button>
                 </ActiveChip>
@@ -358,11 +351,11 @@ const OutputFilters: React.FC<OutputFiltersProps> = ({
                 {section.options.map(option => (
                   <Chip
                     key={option.id}
-                    isSelected={selectedFilters[option.group] === option.id}
+                    isSelected={(filters[option.group] || []).includes(option.id)}
                     onClick={() => handleFilterToggle(option)}
                   >
                     {option.label}
-                    {selectedFilters[option.group] === option.id && (
+                    {filters[option.group] && filters[option.group].includes(option.id) && (
                       <FiCheck size={14} />
                     )}
                   </Chip>

@@ -11,11 +11,6 @@ const Container = styled.div`
   padding: 2rem;
 `;
 
-const Title = styled.h2`
-  color: #222;
-  margin-bottom: 1rem;
-`;
-
 const BackButton = styled.button`
   margin-bottom: 1rem;
   background: none;
