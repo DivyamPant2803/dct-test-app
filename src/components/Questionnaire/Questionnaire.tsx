@@ -6,6 +6,9 @@ import { RECIPIENT_TYPES } from '../../types';
 import EntitySelection from '../../components/EntitySelection/index';
 import ReviewDataTransferPurpose from '../../components/ReviewDataTransferPurpose';
 import { INITIAL_FORM_DATA } from '../../App';
+import QuestionnaireTabs from './QuestionnaireTabs';
+import AzureCloudHostingLocations from './AzureCloudHostingLocations';
+import AccessLocations from './AccessLocations';
 
 const Form = styled.form`
   position: absolute;
@@ -657,6 +660,8 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
   const [isSubsequentExpanded, setIsSubsequentExpanded] = useState(true);
   const [isOutputExpanded, setIsOutputExpanded] = useState(true);
   const [countrySearchTerm, setCountrySearchTerm] = useState('');
+  const [isAzureExpanded, setIsAzureExpanded] = useState(false);
+  const [activeAzureTab, setActiveAzureTab] = useState<'cloud' | 'access' | null>(null);
 
   const formValues = watch();
   const currentQuestion = questions[currentStep];
@@ -719,7 +724,7 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
                          index <= currentStep + 1; // Allow accessing next step
     
     if (canAccessStep) {
-      console.log('Navigating to step:', index);
+      setActiveAzureTab(null); // Reset Azure tab when switching to main questionnaire
       setCurrentStep(index);
     }
   }, [enabledSteps, completedSteps, questions.length, isAllStepsCompleted, currentStep]);
@@ -1160,170 +1165,67 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
       }
       handleSubmit(onSubmit)(e);
     }}>
-      <TabsContainer>
-        <TabGroup>
-          <TabGroupHeader 
-            isExpanded={isQuestionsExpanded}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsQuestionsExpanded(!isQuestionsExpanded);
-            }}
-          >
-            <span>Preliminary Questions</span>
-            <ExpandButton isExpanded={isQuestionsExpanded}>▼</ExpandButton>
-          </TabGroupHeader>
-          <TabGroupContent isExpanded={isQuestionsExpanded}>
-            {questions.slice(0, 6).map((question, index) => {
-              const isDisabled = !enabledSteps.includes(index) && 
-                               !completedSteps.includes(index);
-              
-              return (
-                <Tab
-                  key={question.id}
-                  isActive={currentStep === index}
-                  disabled={isDisabled}
-                  isNextEnabled={enabledSteps.includes(index) && !completedSteps.includes(index)}
-                  onClick={() => handleTabClick(index)}
-                >
-                  <ProgressIndicator 
-                    status={
-                      completedSteps.includes(index) 
-                        ? 'completed' 
-                        : currentStep === index 
-                          ? 'current' 
-                          : 'pending'
-                    }
-                  >
-                    <StepNumber
-                      status={
-                        completedSteps.includes(index) 
-                          ? 'completed' 
-                          : currentStep === index 
-                            ? 'current' 
-                            : 'pending'
-                      }
-                    >
-                      {index + 1}
-                    </StepNumber>
-                  </ProgressIndicator>
-                  {question.text}
-                </Tab>
-              );
-            })}
-          </TabGroupContent>
-        </TabGroup>
-
-        <TabGroup>
-          <TabGroupHeader 
-            isExpanded={isSubsequentExpanded}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsSubsequentExpanded(!isSubsequentExpanded);
-            }}
-          >
-            <span>Subsequent Questions</span>
-            <ExpandButton isExpanded={isSubsequentExpanded}>▼</ExpandButton>
-          </TabGroupHeader>
-          <TabGroupContent isExpanded={isSubsequentExpanded}>
-            <Tab
-              isActive={currentStep === 6}
-              disabled={!isAllStepsCompleted()}
-              isNextEnabled={isAllStepsCompleted()}
-              onClick={() => {
-                console.log('Review Data Transfer Purpose clicked');
-                if (isAllStepsCompleted()) {
-                  handleTabClick(6);
-                }
-              }}
-            >
-              <ProgressIndicator 
-                status={isAllStepsCompleted() ? 'completed' : 'pending'}
-              >
-                <StepNumber
-                  status={isAllStepsCompleted() ? 'completed' : 'pending'}
-                >
-                  6
-                </StepNumber>
-              </ProgressIndicator>
-              Review Data Transfer Purpose
-            </Tab>
-          </TabGroupContent>
-        </TabGroup>
-
-        <TabGroup>
-          <TabGroupHeader 
-            isExpanded={isOutputExpanded}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsOutputExpanded(!isOutputExpanded);
-            }}
-          >
-            <span>Output</span>
-            <ExpandButton isExpanded={isOutputExpanded}>▼</ExpandButton>
-          </TabGroupHeader>
-          <TabGroupContent isExpanded={isOutputExpanded}>
-            <Tab
-              isActive={false}
-              disabled={!isAllStepsCompleted()}
-              isNextEnabled={false}
-              onClick={() => {}}
-            >
-              <ProgressIndicator 
-                status={isAllStepsCompleted() ? 'completed' : 'pending'}
-              >
-                <StepNumber
-                  status={isAllStepsCompleted() ? 'completed' : 'pending'}
-                >
-                  7
-                </StepNumber>
-              </ProgressIndicator>
-              Results 
-            </Tab>
-          </TabGroupContent>
-        </TabGroup>
-      </TabsContainer>
-
+      <QuestionnaireTabs
+        currentStep={currentStep}
+        enabledSteps={enabledSteps}
+        completedSteps={completedSteps}
+        handleTabClick={handleTabClick}
+        questions={questions}
+        isQuestionsExpanded={isQuestionsExpanded}
+        setIsQuestionsExpanded={setIsQuestionsExpanded}
+        isSubsequentExpanded={isSubsequentExpanded}
+        setIsSubsequentExpanded={setIsSubsequentExpanded}
+        isOutputExpanded={isOutputExpanded}
+        setIsOutputExpanded={setIsOutputExpanded}
+        isAllStepsCompleted={isAllStepsCompleted}
+        isAzureExpanded={isAzureExpanded}
+        setIsAzureExpanded={setIsAzureExpanded}
+        onAzureCloudTabClick={() => setActiveAzureTab('cloud')}
+        onAzureAccessTabClick={() => setActiveAzureTab('access')}
+      />
       <ContentContainer>
-        <QuestionContainer>
-          <>
-            <ContentHeader>
-              {currentQuestion.id !== 'entities' && (
-                <SelectAllButton
-                  selected={isAllSelected()}
-                  onClick={handleSelectAll}
-                >
-                  {isAllSelected() ? 'Deselect All' : 'Select All'}
-                </SelectAllButton>
+        {activeAzureTab === 'cloud' ? (
+          <AzureCloudHostingLocations />
+        ) : activeAzureTab === 'access' ? (
+          <AccessLocations />
+        ) : (
+          <QuestionContainer>
+            <>
+              <ContentHeader>
+                {currentQuestion.id !== 'entities' && (
+                  <SelectAllButton
+                    selected={isAllSelected()}
+                    onClick={handleSelectAll}
+                  >
+                    {isAllSelected() ? 'Deselect All' : 'Select All'}
+                  </SelectAllButton>
+                )}
+              </ContentHeader>
+
+              {currentQuestion.id === 'countries' ? (
+                renderCountryOptions()
+              ) : currentQuestion.id === 'entities' ? (
+                renderEntitySelection()
+              ) : currentQuestion.id === 'dataSubjectType' ? (
+                (currentQuestion.options as DataSubjectCategory[]).map(option => renderDataSubjectOptionPanel(option))
+              ) : currentQuestion.id === 'recipientType' ? (
+                <OptionsContainer>
+                  {RECIPIENT_TYPES.map(option => renderBasicOptionPanel(option))}
+                </OptionsContainer>
+              ) : currentQuestion.id === 'reviewDataTransferPurpose' ? (
+                renderReviewDataTransferPurpose()
+              ) : (
+                <OptionsContainer>
+                  {(currentQuestion.options as string[]).map(option => renderBasicOptionPanel(option))}
+                </OptionsContainer>
               )}
-            </ContentHeader>
-
-            {currentQuestion.id === 'countries' ? (
-              renderCountryOptions()
-            ) : currentQuestion.id === 'entities' ? (
-              renderEntitySelection()
-            ) : currentQuestion.id === 'dataSubjectType' ? (
-              (currentQuestion.options as DataSubjectCategory[]).map(option => renderDataSubjectOptionPanel(option))
-            ) : currentQuestion.id === 'recipientType' ? (
-              <OptionsContainer>
-                {RECIPIENT_TYPES.map(option => renderBasicOptionPanel(option))}
-              </OptionsContainer>
-            ) : currentQuestion.id === 'reviewDataTransferPurpose' ? (
-              renderReviewDataTransferPurpose()
-            ) : (
-              <OptionsContainer>
-                {(currentQuestion.options as string[]).map(option => renderBasicOptionPanel(option))}
-              </OptionsContainer>
-            )}
-            {errors[currentQuestion.id] && (
-              <ErrorMessage>Please select at least one option</ErrorMessage>
-            )}
-          </>
-        </QuestionContainer>
-
-        {currentStep === questions.length - 1 && (
+              {errors[currentQuestion.id] && (
+                <ErrorMessage>Please select at least one option</ErrorMessage>
+              )}
+            </>
+          </QuestionContainer>
+        )}
+        {activeAzureTab === null && currentStep === questions.length - 1 && (
           <SubmitButton type="submit">View Output</SubmitButton>
         )}
       </ContentContainer>

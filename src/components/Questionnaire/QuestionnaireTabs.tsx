@@ -24,6 +24,10 @@ interface QuestionnaireTabsProps {
   isOutputExpanded: boolean;
   setIsOutputExpanded: (v: boolean) => void;
   isAllStepsCompleted: () => boolean;
+  isAzureExpanded: boolean;
+  setIsAzureExpanded: (v: boolean) => void;
+  onAzureCloudTabClick: () => void;
+  onAzureAccessTabClick: () => void;
 }
 
 const QuestionnaireTabs: React.FC<QuestionnaireTabsProps> = ({
@@ -38,7 +42,11 @@ const QuestionnaireTabs: React.FC<QuestionnaireTabsProps> = ({
   setIsSubsequentExpanded,
   isOutputExpanded,
   setIsOutputExpanded,
-  isAllStepsCompleted
+  isAllStepsCompleted,
+  isAzureExpanded,
+  setIsAzureExpanded,
+  onAzureCloudTabClick,
+  onAzureAccessTabClick
 }) => (
   <TabsContainer>
     <TabGroup>
@@ -156,6 +164,39 @@ const QuestionnaireTabs: React.FC<QuestionnaireTabsProps> = ({
             </StepNumber>
           </ProgressIndicator>
           Results 
+        </Tab>
+      </TabGroupContent>
+    </TabGroup>
+    <TabGroup>
+      <TabGroupHeader 
+        isExpanded={isAzureExpanded}
+        onClick={e => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsAzureExpanded(!isAzureExpanded);
+        }}
+      >
+        <span>Azure Cloud Hosting/Access Locations</span>
+        <ExpandButton isExpanded={isAzureExpanded}>▼</ExpandButton>
+      </TabGroupHeader>
+      <TabGroupContent isExpanded={isAzureExpanded}>
+        <Tab
+          isActive={false}
+          disabled={false}
+          isNextEnabled={false}
+          onClick={onAzureCloudTabClick}
+        >
+          Azure Cloud Hosting Locations
+        </Tab>
+      </TabGroupContent>
+      <TabGroupContent isExpanded={isAzureExpanded}>
+        <Tab
+          isActive={false}
+          disabled={false}
+          isNextEnabled={false}
+          onClick={onAzureAccessTabClick}
+        >
+          Access Locations
         </Tab>
       </TabGroupContent>
     </TabGroup>
