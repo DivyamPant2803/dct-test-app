@@ -7,6 +7,12 @@ import { FiChevronDown, FiChevronRight, FiSearch } from 'react-icons/fi';
 import { VariableSizeList as List, ListChildComponentProps } from 'react-window';
 
 // --- Entity and Category Logic (from EntitySelection/index.tsx) ---
+const DATA_CENTERS = [
+  { code: 'SAS', name: 'South East Asia (SAS) - Singapore' },
+  { code: 'EAS', name: 'East Asia (EAS) - Hong Kong' },
+  { code: 'NCH', name: 'Switzerland North (NCH) - Switzerland' }
+];
+
 const ENTITY_CATEGORIES = [
   'IB GM', 'IB GB', 'IB', 'GWM', 'NCL', 'AM', 'P&C', 'AM ICC/REPM', 'AM WCC', 'Employee'
 ] as const;
@@ -68,13 +74,12 @@ const generateEntities = (countries: string[]): Entity[] => {
 
 // Generate mock hosting locations for each entity/division
 const generateHostingLocations = (entity: Entity) => {
-  // Simulate 10-30 locations per division
-  const count = 10 + Math.floor(Math.random() * 20);
-  return Array.from({ length: count }).map((_, i) => {
+  // Assign each entity to all three data centers
+  return DATA_CENTERS.map((dc, i) => {
     const longText = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. '.repeat(4) + `Condition details for ${entity.name} ${entity.category} #${i+1}`;
     return {
       id: `${entity.id}-${entity.category}-loc${i+1}`,
-      location: `Data Center ${i+1}`,
+      location: dc.name,
       entity: entity.name,
       businessDivision: entity.category,
       approvalStatus: i % 3 === 0 ? APPROVAL_STATUSES.Approved : i % 3 === 1 ? APPROVAL_STATUSES.Pending : APPROVAL_STATUSES.Rejected,
@@ -99,34 +104,81 @@ const Container = styled.div`
 `;
 const FilterBar = styled.div`
   display: flex;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
   flex-wrap: wrap;
+  align-items: center;
+  background: #f6f8fa;
+  padding: 1rem 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
 `;
 const FilterSelect = styled.select`
-  padding: 0.5rem 1rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  font-size: 0.95rem;
+  padding: 0.6rem 2.2rem 0.6rem 1.2rem;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  transition: border 0.2s, box-shadow 0.2s;
+  outline: none;
+  color: #222;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url('data:image/svg+xml;utf8,<svg fill="%23666" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 0.8rem center;
+  background-size: 1.1rem;
+  &:hover, &:focus {
+    border-color: #0070f3;
+    box-shadow: 0 2px 8px rgba(0,112,243,0.08);
+  }
 `;
 const SearchBar = styled.div`
   position: relative;
-  width: 250px;
+  width: 260px;
+  min-width: 200px;
+  display: flex;
+  align-items: center;
 `;
 const SearchInput = styled.input`
   width: 100%;
-  padding: 0.5rem 1.5rem 0.5rem 2.5rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  font-size: 0.95rem;
-  background: #f8f8f8;
+  padding: 0.6rem 2.5rem 0.6rem 2.5rem;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  transition: border 0.2s, box-shadow 0.2s;
+  outline: none;
+  &:hover, &:focus {
+    border-color: #0070f3;
+    box-shadow: 0 2px 8px rgba(0,112,243,0.08);
+  }
 `;
 const SearchIcon = styled(FiSearch)`
   position: absolute;
-  left: 0.75rem;
+  left: 0.9rem;
   top: 50%;
   transform: translateY(-50%);
   color: #666;
+  font-size: 1.2rem;
+`;
+const ClearButton = styled.button`
+  position: absolute;
+  right: 0.7rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0;
+  &:hover {
+    color: #0070f3;
+  }
 `;
 const Accordion = styled.div`
   border-radius: 8px;
@@ -180,10 +232,16 @@ const Td = styled.td`
   overflow-wrap: break-word;
   overflow: hidden;
   text-overflow: ellipsis;
-  &.entity { width: 28%; }
+  &.entity {
+    width: 38%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 0;
+  }
   &.division { width: 12%; text-align: center; }
   &.status { width: 24%; text-align: center; }
-  &.conditions { width: 36%; }
+  &.conditions { width: 26%; }
 `;
 const StatusBadge = styled.span<{ status: string }>`
   display: inline-block;
@@ -312,6 +370,11 @@ const AzureCloudHostingLocations: React.FC = () => {
     return COLLAPSED_ROW_HEIGHT;
   }, [groupedByLocation, expanded]);
 
+  // Calculate total height so all data centers are visible when one is expanded
+  const totalListHeight = useMemo(() => {
+    return groupedByLocation.reduce((sum, _, idx) => sum + getItemSize(idx), 0);
+  }, [groupedByLocation, getItemSize]);
+
   // --- Render ---
   return (
     <Container>
@@ -360,6 +423,9 @@ const AzureCloudHostingLocations: React.FC = () => {
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
+          {search && (
+            <ClearButton onClick={() => setSearch(' ')} title="Clear search">&times;</ClearButton>
+          )}
         </SearchBar>
       </FilterBar>
       {groupedByLocation.length === 0 && (
@@ -367,7 +433,7 @@ const AzureCloudHostingLocations: React.FC = () => {
       )}
       <List
         ref={listRef}
-        height={Math.min(8, groupedByLocation.length) * COLLAPSED_ROW_HEIGHT + 2}
+        height={totalListHeight}
         itemCount={groupedByLocation.length}
         itemSize={getItemSize}
         width={"100%"}
@@ -413,7 +479,7 @@ const AzureCloudHostingLocations: React.FC = () => {
                           const row = rows[index];
                           return (
                             <tr key={row.id}>
-                              <Td className="entity">{row.entity}</Td>
+                              <Td className="entity" title={row.entity}>{row.entity}</Td>
                               <Td className="division">{row.businessDivision}</Td>
                               <Td className="status">
                                 <StatusBadge status={row.approvalStatus}>{row.approvalStatus}</StatusBadge>
