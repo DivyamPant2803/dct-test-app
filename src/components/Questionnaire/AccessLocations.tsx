@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import styled from 'styled-components';
 import { FiChevronDown, FiChevronRight, FiSearch } from 'react-icons/fi';
-import { COUNTRIES_DATA } from './Questionnaire.data';
 
 // --- Mock Data Types ---
 interface AccessLocationRecord {
@@ -177,8 +176,8 @@ const ExpandTd = styled.td`
 `;
 const Badge = styled.span`
   display: inline-block;
-  background: #e0f2ff;
-  color: #0070f3;
+  background:rgb(246, 210, 210);
+  color:rgb(6, 3, 3);
   border-radius: 12px;
   padding: 0.2rem 0.7rem;
   font-size: 0.95rem;
