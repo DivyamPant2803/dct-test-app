@@ -378,7 +378,6 @@ const AzureCloudHostingLocations: React.FC = () => {
   // --- Render ---
   return (
     <Container>
-      <h2 style={{ marginBottom: '1.5rem' }}>Azure Cloud Hosting Locations</h2>
       <FilterBar>
         <FilterSelect
           value={locationFilter}
