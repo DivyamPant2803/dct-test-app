@@ -184,14 +184,22 @@ const Badge = styled.span`
   margin-right: 0.4rem;
   margin-bottom: 0.2rem;
 `;
-const ExposureListRow = styled.tr`
-  background: #f9fbfd;
-`;
-const ExposureListTd = styled.td`
-  padding: 1rem 1.5rem 1rem 3.5rem;
-  border-bottom: 1px solid #f0f0f0;
-  font-size: 1rem;
-  color: #333;
+const BadgeScrollContainer = styled.div`
+  display: flex;
+  overflow-x: auto;
+  gap: 0.4rem;
+  max-width: 340px;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: #e0e0e0 #fff;
+  &::-webkit-scrollbar {
+    height: 6px;
+    background: #fff;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #e0e0e0;
+    border-radius: 4px;
+  }
 `;
 const Flag = styled.span<{ code: string }>`
   display: inline-block;
@@ -279,41 +287,22 @@ const AccessLocations: React.FC = () => {
           </thead>
           <tbody>
             {filtered.map(row => (
-              <React.Fragment key={row.id}>
-                <Tr>
-                  <Td><Flag code={row.countryCode} />{row.country}</Td>
-                  <Td>{row.businessDivision}</Td>
-                  <Td>{row.id}</Td>
-                  <Td>{row.entity}</Td>
-                  <Td>
-                    {row.exposureAllowedTo.length > 0 && (
-                      <>
-                        <Badge title={row.exposureAllowedTo.join(', ')}>
-                          {row.exposureAllowedTo.length} destination{row.exposureAllowedTo.length > 1 ? 's' : ''}
-                        </Badge>
-                      </>
-                    )}
-                  </Td>
-                  <ExpandTd onClick={() => setExpanded(expanded === row.id ? null : row.id)}>
-                    {row.exposureAllowedTo.length > 0 && (
-                      expanded === row.id ? <FiChevronDown /> : <FiChevronRight />
-                    )}
-                  </ExpandTd>
-                </Tr>
-                {expanded === row.id && (
-                  <ExposureListRow>
-                    <ExposureListTd colSpan={6}>
-                      {row.exposureAllowedTo.map(dest => (
-                        <Badge key={dest} title={dest}>{dest}</Badge>
-                      ))}
-                    </ExposureListTd>
-                  </ExposureListRow>
-                )}
-              </React.Fragment>
+              <Tr key={row.id}>
+                <Td><Flag code={row.countryCode} />{row.country}</Td>
+                <Td>{row.businessDivision}</Td>
+                <Td>{row.id}</Td>
+                <Td>{row.entity}</Td>
+                <Td>
+                  {row.exposureAllowedTo.length > 0 && (
+                    <span>{row.exposureAllowedTo.join(', ')}</span>
+                  )}
+                </Td>
+                <ExpandTd />
+              </Tr>
             ))}
             {filtered.length === 0 && (
               <Tr>
-                <Td colSpan={6} style={{ textAlign: 'center', color: '#888', padding: '2rem' }}>
+                <Td colSpan={6} style={{ color: '#888', padding: '2rem' }}>
                   No records found.
                 </Td>
               </Tr>
