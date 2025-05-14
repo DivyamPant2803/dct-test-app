@@ -1,6 +1,7 @@
 import React, { useState, useCallback, Suspense } from 'react';
 import styled from 'styled-components';
 import OutputHeader from '../../components/OutputHeader';
+import ApprovedChannels from '../../components/ApprovedChannels';
 
 const PageContainer = styled.div`
   display: flex;
@@ -42,6 +43,14 @@ const Output: React.FC = () => {
     scopeOfTransfer: []
   });
 
+  // Modal state for ApprovedChannels
+  const [showApprovedChannels, setShowApprovedChannels] = useState(false);
+  const handleOpenApprovedChannels = () => {
+    console.log('Approved Channels button clicked');
+    setShowApprovedChannels(true);
+  };
+  const handleCloseApprovedChannels = () => setShowApprovedChannels(false);
+
   // Memoize the handler to prevent infinite loop
   const handleFilterChange = useCallback((newFilters: Record<string, string[]>) => {
     setFilters(newFilters);
@@ -70,8 +79,17 @@ const Output: React.FC = () => {
         informationCategory={['client', 'employee']}
         filters={filters}
         onFilterChange={handleFilterChange}
+        onApprovedChannelsClick={handleOpenApprovedChannels}
       />
-      
+      {showApprovedChannels && (
+        console.log('Rendering ApprovedChannels modal'),
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.3)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'white', borderRadius: 8, boxShadow: '0 2px 16px rgba(0,0,0,0.2)', minWidth: 400, minHeight: 300, maxWidth: '90vw', maxHeight: '90vh', overflow: 'auto', position: 'relative' }}>
+            <ApprovedChannels />
+            <button onClick={handleCloseApprovedChannels} style={{ position: 'absolute', top: 12, right: 12, background: 'transparent', border: 'none', fontSize: 24, cursor: 'pointer' }}>&times;</button>
+          </div>
+        </div>
+      )}
       <ContentContainer>
         {loading ? (
           <Spinner />

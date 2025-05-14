@@ -230,6 +230,33 @@ const NoEntities = styled.div`
   border-radius: 8px;
 `;
 
+const SectionGroup = styled.div`
+  background: #f8f8f8;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  padding: 1rem 1.5rem 1.2rem 1.5rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+`;
+
+const SectionHeader = styled.div`
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  font-size: 1.05rem;
+  margin-bottom: 0.5rem;
+`;
+
+const CompactTabsContainer = styled(TabsContainer)`
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  background: none;
+`;
+
+const CompactTab = styled(Tab)`
+  padding: 0.5rem 0.8rem;
+  font-size: 0.88rem;
+`;
+
 // Add a type for the specific categories
 type EntityCategory = 
   | 'IB GM'
@@ -257,23 +284,23 @@ interface Entity {
 const getCategoryDisplayName = (category: EntityCategory): string => {
   switch (category) {
     case 'IB GM':
-      return 'Investment Banking Global Markets';
+      return 'Investment Banking Global Markets (IB GM)';
     case 'IB GB':
-      return 'Investment Banking Global Banking';
+      return 'Investment Banking Global Banking (IB GB)';
     case 'IB':
-      return 'Investment Banking';
+      return 'Investment Banking (IB)';
     case 'GWM':
-      return 'Global Wealth Management';
+      return 'Global Wealth Management (GWM)';
     case 'NCL':
-      return 'Non-Core and Legacy';
+      return 'Non-Core and Legacy (NCL)';
     case 'AM':
-      return 'Asset Management';
+      return 'Asset Management (AM)';
     case 'P&C':
-      return 'Personal & Corporate Banking';
+      return 'Personal & Corporate Banking (PNC)';
     case 'AM ICC/REPM':
-      return 'Asset Management ICC/REPM';
+      return 'Asset Management ICC/REPM (AM ICC/REPM)';
     case 'AM WCC':
-      return 'Asset Management WCC';
+      return 'Asset Management WCC (AM WCC)';
     case 'Employee':
       return 'Employee';
     case 'Client':
@@ -320,6 +347,8 @@ const ENTITY_CATEGORIES = [
   'Employee'
 ] as const;
 
+const EMPLOYEE_CATEGORY = 'Employee';
+
 const EntitySelection: React.FC<Props> = ({
   selectedCountries,
   selectedEntities,
@@ -355,13 +384,19 @@ const EntitySelection: React.FC<Props> = ({
     );
   }, [entities, searchTerm]);
 
-  const categorizedEntities = useMemo(() => {
+  const categorizedBusinessEntities = useMemo(() => {
     const grouped = new Map<string, Entity[]>();
     filteredEntities.forEach(entity => {
-      const existing = grouped.get(entity.category) || [];
-      grouped.set(entity.category, [...existing, entity]);
+      if (entity.category !== EMPLOYEE_CATEGORY) {
+        const existing = grouped.get(entity.category) || [];
+        grouped.set(entity.category, [...existing, entity]);
+      }
     });
     return grouped;
+  }, [filteredEntities]);
+
+  const categorizedEmployeeEntities = useMemo(() => {
+    return filteredEntities.filter(entity => entity.category === EMPLOYEE_CATEGORY);
   }, [filteredEntities]);
 
   const selectedEntitiesList = useMemo(() => {
@@ -410,22 +445,43 @@ const EntitySelection: React.FC<Props> = ({
           )}
         </SelectedEntitiesContent>
       </SelectedEntitiesSection>
-      <TabsContainer>
-        {Array.from(categorizedEntities.entries())
-          .sort(([catA], [catB]) => 
-            getCategorySortOrder(catA as EntityCategory) - getCategorySortOrder(catB as EntityCategory)
-          )
-          .map(([category, categoryEntities]) => (
-            <Tab
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              selected={selectedCategory === category}
+      {/* Business Divisions Section */}
+      <SectionGroup>
+        <SectionHeader>Business Divisions</SectionHeader>
+        <CompactTabsContainer>
+          {Array.from(categorizedBusinessEntities.entries())
+            .sort(([catA], [catB]) => 
+              getCategorySortOrder(catA as EntityCategory) - getCategorySortOrder(catB as EntityCategory)
+            )
+            .map(([category, categoryEntities]) => (
+              <CompactTab
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                selected={selectedCategory === category}
+              >
+                {getCategoryDisplayName(category as EntityCategory)}
+                <span>{categoryEntities.length}</span>
+              </CompactTab>
+            ))}
+        </CompactTabsContainer>
+      </SectionGroup>
+
+      {/* Employee Section (only if present) */}
+      {categorizedEmployeeEntities.length > 0 && (
+        <SectionGroup>
+          <SectionHeader>Employee Data</SectionHeader>
+          <CompactTabsContainer>
+            <CompactTab
+              key={EMPLOYEE_CATEGORY}
+              onClick={() => setSelectedCategory(EMPLOYEE_CATEGORY)}
+              selected={selectedCategory === EMPLOYEE_CATEGORY}
             >
-              {getCategoryDisplayName(category as EntityCategory)}
-              <span>{categoryEntities.length}</span>
-            </Tab>
-          ))}
-      </TabsContainer>
+              {getCategoryDisplayName(EMPLOYEE_CATEGORY as EntityCategory)}
+              <span>{categorizedEmployeeEntities.length}</span>
+            </CompactTab>
+          </CompactTabsContainer>
+        </SectionGroup>
+      )}
 
       {selectedCategory && (
         <Modal onClick={() => setSelectedCategory(null)}>
@@ -440,21 +496,24 @@ const EntitySelection: React.FC<Props> = ({
             </ModalHeader>
             <ModalBody>
               <EntityGrid>
-                {categorizedEntities.get(selectedCategory)?.map(entity => (
-                  <EntityCard
-                    key={entity.id}
-                    selected={selectedEntities.includes(entity.id)}
-                    onClick={() => onEntitySelect(entity.id)}
-                  >
-                    <EntityInfo>
-                      <EntityName>{entity.name}</EntityName>
-                      <EntityCountry>{entity.countryCode}</EntityCountry>
-                    </EntityInfo>
-                    {selectedEntities.includes(entity.id) && (
-                      <FiCheck size={18} />
-                    )}
-                  </EntityCard>
-                ))}
+                {(selectedCategory === EMPLOYEE_CATEGORY
+                  ? categorizedEmployeeEntities
+                  : categorizedBusinessEntities.get(selectedCategory) || [])
+                  .map(entity => (
+                    <EntityCard
+                      key={entity.id}
+                      selected={selectedEntities.includes(entity.id)}
+                      onClick={() => onEntitySelect(entity.id)}
+                    >
+                      <EntityInfo>
+                        <EntityName>{entity.name}</EntityName>
+                        <EntityCountry>{entity.countryCode}</EntityCountry>
+                      </EntityInfo>
+                      {selectedEntities.includes(entity.id) && (
+                        <FiCheck size={18} />
+                      )}
+                    </EntityCard>
+                  ))}
               </EntityGrid>
             </ModalBody>
           </ModalContent>

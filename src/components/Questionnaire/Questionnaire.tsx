@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { useForm } from 'react-hook-form';
-import Flag from 'react-world-flags';
 import { RECIPIENT_TYPES } from '../../types';
 import EntitySelection from '../../components/EntitySelection/index';
 import ReviewDataTransferPurpose from '../../components/ReviewDataTransferPurpose';
@@ -9,6 +8,7 @@ import { INITIAL_FORM_DATA } from '../../App';
 import QuestionnaireTabs from './QuestionnaireTabs';
 import AzureCloudHostingLocations from './AzureCloudHostingLocations';
 import AccessLocations from './AccessLocations';
+import CountrySelector from './CountrySelector';
 
 const Form = styled.form`
   position: absolute;
@@ -111,14 +111,6 @@ const OptionDescription = styled.span`
   line-height: 1.3;
 `;
 
-const HiddenCheckbox = styled.input`
-  position: absolute;
-  opacity: 0;
-  cursor: pointer;
-  height: 0;
-  width: 0;
-`;
-
 const SubmitButton = styled.button`
   background-color: #000;
   color: white;
@@ -143,168 +135,6 @@ const SubmitButton = styled.button`
 const ErrorMessage = styled.p`
   color: #000;
   margin-top: 0.5rem;
-`;
-
-const RegionsContainer = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  flex: 1;
-  overflow-x: auto;
-
-  &::-webkit-scrollbar {
-    height: 4px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: #f1f1f1;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #ddd;
-    border-radius: 2px;
-  }
-`;
-
-const RegionChip = styled.button<{ selected: boolean }>`
-  display: flex;
-  align-items: center;
-  padding: 0.5rem 1rem;
-  border: 2px solid ${props => props.selected ? '#000' : '#eee'};
-  border-radius: 20px;
-  background: ${props => props.selected ? '#f8f8f8' : 'white'};
-  color: ${props => props.selected ? '#000' : '#666'};
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-
-  &:hover {
-    border-color: #000;
-    background: #f8f8f8;
-    color: #000;
-  }
-`;
-
-const CountryGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
-  width: 100%;
-  flex: 1;
-  overflow-y: auto;
-  padding-right: 0.5rem;
-  align-content: start;
-
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 4px;
-  }
-`;
-
-const CountryOption = styled.label<{ selected: boolean }>`
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem;
-  border: 2px solid ${props => props.selected ? '#000' : '#eee'};
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  background-color: ${props => props.selected ? '#f8f8f8' : 'white'};
-  height: 60px;
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-
-  &:hover {
-    border-color: #000;
-    transform: translateY(-2px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  }
-`;
-
-const FlagContainer = styled.div`
-  width: 30px;
-  height: 20px;
-  overflow: hidden;
-  border-radius: 2px;
-  flex-shrink: 0;
-  
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-`;
-
-const CountryInfo = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 0;
-  flex: 1;
-`;
-
-const CountryName = styled.span`
-  font-weight: 500;
-  font-size: 0.95rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-`;
-
-const CountryRegion = styled.span`
-  font-size: 0.8rem;
-  color: #666;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-`;
-
-const CountBadge = styled.span`
-  background: #000;
-  color: white;
-  font-size: 0.75rem;
-  padding: 0.1rem 0.4rem;
-  border-radius: 10px;
-  margin-left: 0.5rem;
-`;
-
-const SearchContainer = styled.div`
-  flex-shrink: 0;
-  width: 300px;
-  margin-left: 1rem;
-`;
-
-const SearchInput = styled.input`
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  border: 2px solid #eee;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  transition: all 0.2s ease;
-  height: 36px;
-
-  &:focus {
-    outline: none;
-    border-color: #000;
-  }
-
-  &::placeholder {
-    color: #999;
-  }
 `;
 
 const CategorySection = styled.div`
@@ -375,14 +205,6 @@ const DATA_SUBJECT_TYPES = {
     category: 'Person',
     options: ['Employee', 'Candidate', 'CS Employee'] as string[]
   }
-} as const;
-
-// Updated country data organized by business regions
-const REGIONS = {
-  APAC: 'APAC',
-  EMEA: 'EMEA',
-  CH: 'CH',
-  US: 'United States',
 } as const;
 
 const COUNTRIES_DATA = {
@@ -482,7 +304,7 @@ interface Country {
 }
 
 export default function Questionnaire({ onComplete }: { onComplete: (data: any) => void }) {
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm();
+  const { handleSubmit, watch, setValue, formState: { errors } } = useForm();
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [enabledSteps, setEnabledSteps] = useState<number[]>([0]); // Start with first step enabled
@@ -491,7 +313,6 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
   const [isQuestionsExpanded, setIsQuestionsExpanded] = useState(true);
   const [isSubsequentExpanded, setIsSubsequentExpanded] = useState(true);
   const [isOutputExpanded, setIsOutputExpanded] = useState(true);
-  const [countrySearchTerm, setCountrySearchTerm] = useState('');
   const [isAzureExpanded, setIsAzureExpanded] = useState(false);
   const [activeAzureTab, setActiveAzureTab] = useState<'cloud' | 'access' | null>(null);
 
@@ -692,109 +513,6 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
     return Object.values(COUNTRIES_DATA).flat();
   };
 
-  const getCountriesForRegion = (region: keyof typeof REGIONS) => {
-    return COUNTRIES_DATA[region];
-  };
-
-  const renderCountryOptions = () => {
-    const allCountries = getAllCountries();
-    const selectedOptions = watch(currentQuestion.id) || [];
-
-    // Filter countries based on search term
-    const filteredCountries = allCountries.filter(country =>
-      country.name.toLowerCase().includes(countrySearchTerm.toLowerCase())
-    );
-
-    // Sort countries to show selected ones at the top
-    const sortedCountries = [...filteredCountries].sort((a, b) => {
-      const aSelected = selectedOptions.includes(a.name);
-      const bSelected = selectedOptions.includes(b.name);
-      if (aSelected && !bSelected) return -1;
-      if (!aSelected && bSelected) return 1;
-      return 0;
-    });
-
-    const handleRegionClick = (region: keyof typeof REGIONS) => {
-      const regionCountries = getCountriesForRegion(region);
-      const regionCountryNames = regionCountries.map(country => country.name);
-      const isRegionFullySelected = regionCountryNames.every(
-        countryName => selectedOptions.includes(countryName)
-      );
-      if (isRegionFullySelected) {
-        const remainingSelected = selectedOptions.filter(
-          (country: string) => !regionCountryNames.includes(country)
-        );
-        setValue(currentQuestion.id, remainingSelected);
-      } else {
-        const newSelected = Array.from(
-          new Set([...selectedOptions, ...regionCountryNames])
-        );
-        setValue(currentQuestion.id, newSelected);
-      }
-    };
-
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
-          <RegionsContainer>
-            {Object.entries(REGIONS).map(([key, label]) => {
-              const regionCountries = COUNTRIES_DATA[key as keyof typeof REGIONS];
-              const regionCountryNames = regionCountries.map(country => country.name);
-              const isRegionFullySelected = regionCountryNames.every(
-                countryName => selectedOptions.includes(countryName)
-              );
-              
-              return (
-                <RegionChip
-                  key={key}
-                  selected={isRegionFullySelected}
-                  onClick={() => handleRegionClick(key as keyof typeof REGIONS)}
-                  type="button"
-                >
-                  {label}
-                  <CountBadge>
-                    {regionCountries.length}
-                  </CountBadge>
-                </RegionChip>
-              );
-            })}
-          </RegionsContainer>
-
-          <SearchContainer>
-            <SearchInput
-              type="text"
-              placeholder="Search countries..."
-              value={countrySearchTerm}
-              onChange={(e) => setCountrySearchTerm(e.target.value)}
-            />
-          </SearchContainer>
-        </div>
-
-        <CountryGrid>
-          {sortedCountries.map(country => (
-            <CountryOption
-              key={country.code}
-              selected={selectedOptions.includes(country.name)}
-            >
-              <HiddenCheckbox
-                type="checkbox"
-                value={country.name}
-                {...register(currentQuestion.id)}
-              />
-              <FlagContainer>
-                <Flag code={country.code} />
-              </FlagContainer>
-              <CountryInfo>
-                <CountryName>{country.name}</CountryName>
-                <CountryRegion>{country.region}</CountryRegion>
-              </CountryInfo>
-            </CountryOption>
-          ))}
-        </CountryGrid>
-      </div>
-    );
-  };
-
   const renderEntitySelection = () => {
     const selectedValues = watch(currentQuestion.id) || [];
     const selectedCountries = watch('countries') || [];
@@ -921,14 +639,10 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
         break;
 
       case 'countries':
-        const filteredCountries = getAllCountries()
-          .filter((country: Country) => 
-            country.name.toLowerCase().includes(countrySearchTerm.toLowerCase())
-          )
-          .map((country: Country) => country.name);
-        newValues = currentValues.length === filteredCountries.length
-          ? currentValues.filter((country: string) => !filteredCountries.includes(country))
-          : [...new Set([...currentValues, ...filteredCountries])];
+        const allCountryNames = getAllCountries().map((country: Country) => country.name);
+        newValues = currentValues.length === allCountryNames.length
+          ? []
+          : [...allCountryNames];
         break;
 
       case 'recipientType':
@@ -959,12 +673,8 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
         return currentValues.length === allOptions.length;
 
       case 'countries':
-        const filteredCountries = getAllCountries()
-          .filter((country: Country) => 
-            country.name.toLowerCase().includes(countrySearchTerm.toLowerCase())
-          )
-          .map((country: Country) => country.name);
-        return currentValues.length === filteredCountries.length;
+        const allCountryNames = getAllCountries().map((country: Country) => country.name);
+        return currentValues.length === allCountryNames.length;
 
       case 'recipientType':
         return currentValues.length === RECIPIENT_TYPES.length;
@@ -1035,7 +745,11 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
               </ContentHeader>
 
               {currentQuestion.id === 'countries' ? (
-                renderCountryOptions()
+                <CountrySelector
+                  selectedCountries={watch('countries') || []}
+                  onChange={selected => setValue('countries', selected, { shouldValidate: true, shouldDirty: true })}
+                  error={!!errors.countries}
+                />
               ) : currentQuestion.id === 'entities' ? (
                 renderEntitySelection()
               ) : currentQuestion.id === 'dataSubjectType' ? (
