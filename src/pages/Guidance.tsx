@@ -1,8 +1,10 @@
 import styled from 'styled-components';
 import { useState } from 'react';
 import Questionnaire from '../components/Questionnaire/Questionnaire';
-import ResultsTable from '../components/ResultsTable';
+import OutputCards from '../components/OutputCards';
 import { INITIAL_FORM_DATA, FormData } from '../App';
+import { transformFormDataForCards } from '../components/Questionnaire/Questionnaire.utils';
+import OutputRedesign from './OutputRedesign';
 
 const Container = styled.div`
   width: 100%;
@@ -43,31 +45,17 @@ const Guidance = () => {
     setShowResults(true);
   };
 
-  const transformFormDataForTable = (data: FormData) => {
-    const allEntities = data.countries.reduce((acc: string[], country: string) => {
-      const countryEntities = data.entities[country] || [];
-      return [...acc, ...countryEntities];
-    }, []);
-    return {
-      informationCategory: data.informationCategory || [],
-      dataSubjectType: data.dataSubjectType || [],
-      countries: data.countries || [],
-      entities: allEntities,
-      recipientType: data.recipientType || []
-    };
-  };
-
   return (
     <Container>
-      {showResults && (
+      {/*{showResults && (
         <BackButton onClick={() => setShowResults(false)}>
           ← Back to Questionnaire
         </BackButton>
-      )}
+      )}*/}
       {!showResults ? (
         <Questionnaire onComplete={handleQuestionnaireComplete} />
       ) : (
-        <ResultsTable formData={transformFormDataForTable(formData)} />
+        <OutputRedesign/>
       )}
     </Container>
   );

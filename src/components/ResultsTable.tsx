@@ -397,6 +397,7 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ formData }) => {
         informationCategory={formData.informationCategory}
         filters={appliedFilters}
         onFilterChange={handleFilterChange}
+        onApprovedChannelsClick={() => {}}
       />
       <TableWrapper>
         <Table>

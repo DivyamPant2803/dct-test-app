@@ -3,6 +3,8 @@ import styled from 'styled-components';
 import Flag from 'react-world-flags';
 import { REGIONS, COUNTRIES_DATA } from './Questionnaire.data';
 import { FiChevronDown, FiChevronRight, FiX } from 'react-icons/fi';
+import { useAppDispatch } from '../../hooks/useRedux';
+import { setCountries } from './questionnaireSlice';
 
 const RegionsContainer = styled.div`
   display: flex;
@@ -204,6 +206,7 @@ interface CountrySelectorProps {
 }
 
 const CountrySelector: React.FC<CountrySelectorProps> = ({ selectedCountries, onChange, error, disabled }) => {
+  const dispatch = useAppDispatch();
   const regionKeys = Object.keys(REGIONS) as (keyof typeof REGIONS)[];
   const [selectedRegion, setSelectedRegion] = useState<keyof typeof REGIONS>(regionKeys[0]);
   const [countrySearchTerm, setCountrySearchTerm] = useState('');
@@ -223,11 +226,14 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ selectedCountries, on
 
   const handleCountryToggle = (countryName: string) => {
     if (disabled) return;
+    let newSelected: string[];
     if (selectedCountries.includes(countryName)) {
-      onChange(selectedCountries.filter(name => name !== countryName));
+      newSelected = selectedCountries.filter(name => name !== countryName);
     } else {
-      onChange([...selectedCountries, countryName]);
+      newSelected = [...selectedCountries, countryName];
     }
+    onChange(newSelected);
+    dispatch(setCountries(newSelected));
   };
 
   // Gather all selected country objects from all regions

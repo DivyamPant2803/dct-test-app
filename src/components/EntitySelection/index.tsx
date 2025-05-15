@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import styled from 'styled-components';
 import { FiX, FiSearch, FiCheck, FiChevronDown, FiChevronRight } from 'react-icons/fi';
+import { useAppDispatch } from '../../hooks/useRedux';
+import { addEntityToCategory, removeEntityFromCategory, addEntityToCountry, removeEntityFromCountry } from '../Questionnaire/questionnaireSlice';
 
 const Container = styled.div`
   display: flex;
@@ -357,6 +359,7 @@ const EntitySelection: React.FC<Props> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isSelectedExpanded, setIsSelectedExpanded] = useState(false);
+  const dispatch = useAppDispatch();
 
   const entities: Entity[] = useMemo(() => {
     const mockEntities: Entity[] = [];
@@ -403,6 +406,19 @@ const EntitySelection: React.FC<Props> = ({
     return entities.filter(entity => selectedEntities.includes(entity.id));
   }, [entities, selectedEntities]);
 
+  const handleEntitySelect = (entityId: string) => {
+    onEntitySelect(entityId);
+    const entity = entities.find(e => e.id === entityId);
+    if (!entity) return;
+    if (selectedEntities.includes(entityId)) {
+      dispatch(removeEntityFromCategory({ category: entity.category, entityId }));
+      dispatch(removeEntityFromCountry({ country: entity.countryCode, entityId }));
+    } else {
+      dispatch(addEntityToCategory({ category: entity.category, entityId }));
+      dispatch(addEntityToCountry({ country: entity.countryCode, entityId }));
+    }
+  };
+
   return (
     <Container>
       <SearchBar>
@@ -430,7 +446,7 @@ const EntitySelection: React.FC<Props> = ({
                 <EntityCard
                   key={entity.id}
                   selected={true}
-                  onClick={() => onEntitySelect(entity.id)}
+                  onClick={() => handleEntitySelect(entity.id)}
                 >
                   <EntityInfo>
                     <EntityName>{entity.name}</EntityName>
@@ -503,7 +519,7 @@ const EntitySelection: React.FC<Props> = ({
                     <EntityCard
                       key={entity.id}
                       selected={selectedEntities.includes(entity.id)}
-                      onClick={() => onEntitySelect(entity.id)}
+                      onClick={() => handleEntitySelect(entity.id)}
                     >
                       <EntityInfo>
                         <EntityName>{entity.name}</EntityName>

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import { useAppDispatch } from '../hooks/useRedux';
+import { setReviewDataTransferPurpose } from './Questionnaire/questionnaireSlice';
 
 const Container = styled.div`
   max-width: 100%;
@@ -172,6 +174,7 @@ const ReviewDataTransferPurpose: React.FC<Props> = ({
   onChange
 }) => {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const dispatch = useAppDispatch();
 
   const scopeData = ['Personal Data', 'Sensitive Personal Data', 'Criminal Data'];
   
@@ -224,7 +227,8 @@ const ReviewDataTransferPurpose: React.FC<Props> = ({
     });
 
     setSelectedItems(allItems);
-  }, [dataSubjectType, recipientType]);
+    dispatch(setReviewDataTransferPurpose(Array.from(allItems)));
+  }, [dataSubjectType, recipientType, dispatch]);
 
   useEffect(() => {
     // If the available tabs change, update the active tab if needed
@@ -243,6 +247,7 @@ const ReviewDataTransferPurpose: React.FC<Props> = ({
         newSet.add(id);
       }
       onChange?.(newSet);
+      dispatch(setReviewDataTransferPurpose(Array.from(newSet)));
       return newSet;
     });
   };

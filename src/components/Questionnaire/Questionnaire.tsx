@@ -9,6 +9,24 @@ import QuestionnaireTabs from './QuestionnaireTabs';
 import AzureCloudHostingLocations from './AzureCloudHostingLocations';
 import AccessLocations from './AccessLocations';
 import CountrySelector from './CountrySelector';
+import { useAppSelector, useAppDispatch } from '../../hooks/useRedux';
+import {
+  setCurrentStep,
+  setCompletedSteps,
+  setEnabledSteps,
+  addCompletedStep,
+  addEnabledStep,
+  resetQuestionnaire,
+  setInformationCategory,
+  setDataSubjectType,
+  setCountries,
+  addEntityToCategory,
+  removeEntityFromCategory,
+  setTransferLocation,
+  setRecipientType,
+  setReviewDataTransferPurpose,
+} from './questionnaireSlice';
+import { RootState } from '../../store';
 
 const Form = styled.form`
   position: absolute;
@@ -305,9 +323,10 @@ interface Country {
 
 export default function Questionnaire({ onComplete }: { onComplete: (data: any) => void }) {
   const { handleSubmit, watch, setValue, formState: { errors } } = useForm();
-  const [currentStep, setCurrentStep] = useState(0);
-  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
-  const [enabledSteps, setEnabledSteps] = useState<number[]>([0]); // Start with first step enabled
+  const dispatch = useAppDispatch();
+  const currentStep = useAppSelector((state: RootState) => state.questionnaire.currentStep);
+  const completedSteps = useAppSelector((state: RootState) => state.questionnaire.completedSteps);
+  const enabledSteps = useAppSelector((state: RootState) => state.questionnaire.enabledSteps);
   const [questions, setQuestions] = useState(baseQuestions);
 
   const [isQuestionsExpanded, setIsQuestionsExpanded] = useState(true);
@@ -360,11 +379,11 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
         ) as Question[]
       );
       
-      setEnabledSteps(prev => [...new Set([...prev, 1])]);
-      setCompletedSteps(prev => [...new Set([...prev, 0])]);
+      dispatch(addEnabledStep(1));
+      dispatch(addCompletedStep(0));
       setValue('dataSubjectType', []);
     }
-  }, [formValues.informationCategory, setValue]);
+  }, [formValues.informationCategory, setValue, dispatch]);
 
   // Debug log for tab click
   const handleTabClick = useCallback((index: number) => {
@@ -378,9 +397,9 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
     
     if (canAccessStep) {
       setActiveAzureTab(null); // Reset Azure tab when switching to main questionnaire
-      setCurrentStep(index);
+      dispatch(setCurrentStep(index));
     }
-  }, [enabledSteps, completedSteps, questions.length, isAllStepsCompleted, currentStep]);
+  }, [enabledSteps, completedSteps, questions.length, isAllStepsCompleted, currentStep, dispatch]);
 
   // Debug log for rendering
   useEffect(() => {
@@ -391,19 +410,11 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
   // Step completion and enabling logic
   const updateStepStatus = useCallback((stepIndex: number, values: string[]) => {
     if (values.length > 0) {
-      setCompletedSteps(prev => {
-        const newCompleted = [...new Set([...prev, stepIndex])];
-        console.log('Completed steps updated:', newCompleted);
-        return newCompleted;
-      });
-      
-      setEnabledSteps(prev => {
-        const newEnabled = [...new Set([...prev, stepIndex, stepIndex + 1])];
-        console.log('Enabled steps updated:', newEnabled);
-        return newEnabled;
-      });
+      dispatch(addCompletedStep(stepIndex));
+      dispatch(addEnabledStep(stepIndex));
+      dispatch(addEnabledStep(stepIndex + 1));
     }
-  }, []);
+  }, [dispatch]);
 
   // Watch for changes in form values and update step status
   useEffect(() => {
@@ -427,12 +438,11 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
 
   // Update entity selection effect
   useEffect(() => {
-    const selectedValues = watch(currentQuestion.id) || [];
-    if (currentQuestion.id === 'entities' && selectedValues.length > 0) {
-      updateStepStatus(3, selectedValues);
-      setEnabledSteps(prev => [...new Set([...prev, 4])]);
+    if (currentQuestion.id === 'entities' && (watch(currentQuestion.id) || []).length > 0) {
+      updateStepStatus(3, watch(currentQuestion.id));
+      dispatch(addEnabledStep(4));
     }
-  }, [currentQuestion.id, watch, updateStepStatus]);
+  }, [currentQuestion.id, watch, updateStepStatus, dispatch]);
 
   // Debug log for step state changes
   useEffect(() => {
@@ -445,24 +455,24 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
   useEffect(() => {
     if (currentSelections.transferLocation.length > 0) {
       updateStepStatus(4, currentSelections.transferLocation);
-      setEnabledSteps(prev => [...new Set([...prev, 5])]); // Enable recipient type step
+      dispatch(addEnabledStep(5));
     }
-  }, [currentSelections.transferLocation.toString(), updateStepStatus]);
+  }, [currentSelections.transferLocation.toString(), updateStepStatus, dispatch]);
 
   // Update the step enabling logic for recipient type
   useEffect(() => {
     if (currentSelections.recipientType.length > 0) {
       updateStepStatus(5, currentSelections.recipientType);
-      setEnabledSteps(prev => [...new Set([...prev, 6])]); // Enable review data transfer purpose step
+      dispatch(addEnabledStep(6));
     }
-  }, [currentSelections.recipientType.toString(), updateStepStatus]);
+  }, [currentSelections.recipientType.toString(), updateStepStatus, dispatch]);
 
   // Ensure the review data transfer purpose step is enabled when all previous steps are completed
   useEffect(() => {
     if (isAllStepsCompleted()) {
-      setEnabledSteps(prev => [...new Set([...prev, 6])]);
+      dispatch(addEnabledStep(6));
     }
-  }, [isAllStepsCompleted]);
+  }, [isAllStepsCompleted, dispatch]);
 
   const onSubmit = (data: any) => {
     console.log('Raw form data:', data);
@@ -526,7 +536,7 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
 
       if (newValues.length > 0) {
         updateStepStatus(3, ['entities']);
-        setEnabledSteps(prev => [...new Set([...prev, 4])]);
+        dispatch(addEnabledStep(4));
       }
     };
 
@@ -545,18 +555,18 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
     const entitySelections = watch('entities') || [];
     if (entitySelections.length > 0) {
       updateStepStatus(3, ['entities']);
-      setEnabledSteps(prev => [...new Set([...prev, 4])]);
+      dispatch(addEnabledStep(4));
     }
-  }, [watch('entities'), updateStepStatus]);
+  }, [watch('entities'), updateStepStatus, dispatch]);
 
   // Handle recipient type selection
   useEffect(() => {
     const recipientTypes = watch('recipientType') || [];
     if (recipientTypes.length > 0) {
       updateStepStatus(5, recipientTypes);
-      setEnabledSteps(prev => [...new Set([...prev, 6])]); // Enable review step
+      dispatch(addEnabledStep(6));
     }
-  }, [watch('recipientType'), updateStepStatus]);
+  }, [watch('recipientType'), updateStepStatus, dispatch]);
 
   const handleOptionSelect = (e: React.MouseEvent, option: string) => {
     e.preventDefault();
@@ -567,11 +577,32 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
       ? currentValues.filter((value: string) => value !== option)
       : [...currentValues, option];
     setValue(currentQuestion.id, newValues);
-
+    
+    switch (currentQuestion.id) {
+      case 'informationCategory':
+        dispatch(setInformationCategory(newValues));
+        break;
+      case 'dataSubjectType':
+        dispatch(setDataSubjectType(newValues));
+        break;
+      case 'countries':
+        dispatch(setCountries(newValues));
+        break;
+      case 'transferLocation':
+        dispatch(setTransferLocation(newValues));
+        break;
+      case 'recipientType':
+        dispatch(setRecipientType(newValues));
+        break;
+      case 'reviewDataTransferPurpose':
+        dispatch(setReviewDataTransferPurpose(newValues));
+        break;
+    }
+    
     // Update step status and enable next step if needed
     if (newValues.length > 0) {
       updateStepStatus(currentStep, newValues);
-      setEnabledSteps(prev => [...new Set([...prev, currentStep + 1])]);
+      dispatch(addEnabledStep(currentStep + 1));
     }
   };
 
@@ -618,10 +649,8 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
   const handleSelectAll = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
     const currentValues = watch(currentQuestion.id) || [];
     let newValues: string[] = [];
-
     switch (currentQuestion.id) {
       case 'informationCategory':
       case 'transferLocation':
@@ -629,7 +658,6 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
           ? []
           : [...currentQuestion.options as string[]];
         break;
-
       case 'dataSubjectType':
         const allOptions = (currentQuestion.options as DataSubjectCategory[])
           .flatMap(category => category.options);
@@ -637,25 +665,42 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
           ? []
           : allOptions;
         break;
-
       case 'countries':
         const allCountryNames = getAllCountries().map((country: Country) => country.name);
         newValues = currentValues.length === allCountryNames.length
           ? []
           : [...allCountryNames];
         break;
-
       case 'recipientType':
         newValues = currentValues.length === RECIPIENT_TYPES.length
           ? []
           : [...RECIPIENT_TYPES];
         break;
     }
-
     setValue(currentQuestion.id, newValues);
+    switch (currentQuestion.id) {
+      case 'informationCategory':
+        dispatch(setInformationCategory(newValues));
+        break;
+      case 'dataSubjectType':
+        dispatch(setDataSubjectType(newValues));
+        break;
+      case 'countries':
+        dispatch(setCountries(newValues));
+        break;
+      case 'transferLocation':
+        dispatch(setTransferLocation(newValues));
+        break;
+      case 'recipientType':
+        dispatch(setRecipientType(newValues));
+        break;
+      case 'reviewDataTransferPurpose':
+        dispatch(setReviewDataTransferPurpose(newValues));
+        break;
+    }
     if (newValues.length > 0) {
       updateStepStatus(currentStep, newValues);
-      setEnabledSteps(prev => [...new Set([...prev, currentStep + 1])]);
+      dispatch(addEnabledStep(currentStep + 1));
     }
   };
 
@@ -747,7 +792,10 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
               {currentQuestion.id === 'countries' ? (
                 <CountrySelector
                   selectedCountries={watch('countries') || []}
-                  onChange={selected => setValue('countries', selected, { shouldValidate: true, shouldDirty: true })}
+                  onChange={selected => {
+                    setValue('countries', selected);
+                    dispatch(setCountries(selected));
+                  }}
                   error={!!errors.countries}
                 />
               ) : currentQuestion.id === 'entities' ? (
