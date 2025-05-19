@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
+import { FiSearch } from 'react-icons/fi';
 import styled from 'styled-components';
-import { FiChevronDown, FiChevronRight, FiSearch } from 'react-icons/fi';
 
 // --- Mock Data Types ---
 interface AccessLocationRecord {
@@ -18,7 +18,7 @@ const MOCK_ACCESS_LOCATIONS: AccessLocationRecord[] = [
     id: '1',
     country: 'Germany',
     countryCode: 'DE',
-    businessDivision: 'Wealth',
+    businessDivision: 'GWM',
     entity: 'DE Wealth Entity 1',
     exposureAllowedTo: ['France', 'United Kingdom', 'United States'],
   },
@@ -26,15 +26,15 @@ const MOCK_ACCESS_LOCATIONS: AccessLocationRecord[] = [
     id: '2',
     country: 'Germany',
     countryCode: 'DE',
-    businessDivision: 'Banking',
-    entity: 'DE Banking Entity 2',
+    businessDivision: 'P&C',
+    entity: 'DE P&C Entity 2',
     exposureAllowedTo: ['Switzerland', 'United States'],
   },
   {
     id: '3',
     country: 'France',
     countryCode: 'FR',
-    businessDivision: 'Wealth',
+    businessDivision: 'GWM',
     entity: 'FR Wealth Entity 1',
     exposureAllowedTo: ['Germany', 'United Kingdom'],
   },
@@ -42,8 +42,8 @@ const MOCK_ACCESS_LOCATIONS: AccessLocationRecord[] = [
     id: '4',
     country: 'United Kingdom',
     countryCode: 'GB',
-    businessDivision: 'Insurance',
-    entity: 'UK Insurance Entity 1',
+    businessDivision: 'P&C',
+    entity: 'UK P&C Entity 1',
     exposureAllowedTo: ['France', 'Germany'],
   },
   // ...add more mock records for demonstration
@@ -174,33 +174,7 @@ const ExpandTd = styled.td`
   cursor: pointer;
   background: #fff;
 `;
-const Badge = styled.span`
-  display: inline-block;
-  background:rgb(246, 210, 210);
-  color:rgb(6, 3, 3);
-  border-radius: 12px;
-  padding: 0.2rem 0.7rem;
-  font-size: 0.95rem;
-  margin-right: 0.4rem;
-  margin-bottom: 0.2rem;
-`;
-const BadgeScrollContainer = styled.div`
-  display: flex;
-  overflow-x: auto;
-  gap: 0.4rem;
-  max-width: 340px;
-  padding-bottom: 2px;
-  scrollbar-width: thin;
-  scrollbar-color: #e0e0e0 #fff;
-  &::-webkit-scrollbar {
-    height: 6px;
-    background: #fff;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: #e0e0e0;
-    border-radius: 4px;
-  }
-`;
+
 const Flag = styled.span<{ code: string }>`
   display: inline-block;
   width: 24px;
@@ -219,7 +193,6 @@ const AccessLocations: React.FC = () => {
   const [division, setDivision] = useState('');
   const [entity, setEntity] = useState('');
   const [search, setSearch] = useState('');
-  const [expanded, setExpanded] = useState<string | null>(null);
 
   // --- Filtered Data ---
   const filtered = useMemo(() => {

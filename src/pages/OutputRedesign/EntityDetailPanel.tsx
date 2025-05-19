@@ -97,6 +97,20 @@ const MetaValue = styled.div`
   font-weight: 600;
   font-size: 1em;
 `;
+const StatusChip = styled.span<{ status: string }>`
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.95em;
+  background: ${({ status }) =>
+    status === 'Approved' ? '#d1fae5' : status === 'Approved with predefined conditions' ? '#fef3c7' : '#fee2e2'};
+  color: ${({ status }) =>
+    status === 'Approved' ? '#065f46' : status === 'Approved with predefined conditions' ? '#92400e' : '#991b1b'};
+  font-weight: 500;
+  white-space: normal;
+  word-break: break-word;
+  text-align: left;
+`;
 
 interface EntityDetailPanelProps {
   entity: string;
@@ -108,14 +122,77 @@ interface EntityDetailPanelProps {
     contactPerson?: string;
     dateGenerated?: string;
     versionDate?: string;
+    cloudHostingLocations?: string;
+    accessLocations?: string;
   };
+  showAzureHostingLocations?: boolean;
+  selectedBusinessDivision?: string | null;
 }
 
-const EntityDetailPanel: React.FC<EntityDetailPanelProps> = ({ entity, details = {} }) => {
+interface AzureHostingLocation {
+  region: string;
+  approvalStatus: 'Approved' | 'Approved with predefined conditions' | 'Not approved';
+  conditions?: string;
+}
+
+function getMockAzureHostingLocations(entity: string): AzureHostingLocation[] {
+  return [
+    {
+      region: 'South East Asia (SAS) - Singapore',
+      approvalStatus: 'Approved',
+    },
+    {
+      region: 'East Asia (EAS) - Hong Kong',
+      approvalStatus: 'Approved with predefined conditions',
+      conditions: `Predefined conditions for ${entity} in Hong Kong: Data must be encrypted at rest and in transit. Access restricted to approved personnel only.`,
+    },
+    {
+      region: 'Switzerland North (NCH) - Switzerland',
+      approvalStatus: 'Not approved',
+    },
+  ];
+}
+
+interface AccessLocationRecord {
+  id: string;
+  country: string;
+  countryCode: string;
+  businessDivision: string;
+  entity: string;
+  exposureAllowedTo: string[];
+}
+
+function getMockAccessLocations(entity: string, selectedBusinessDivision: string | null): AccessLocationRecord[] {
+  if (selectedBusinessDivision === 'GWM') {
+    return [{
+      id: '1',
+      country: 'Germany',
+      countryCode: 'DE',
+      businessDivision: 'GWM',
+      entity,
+      exposureAllowedTo: ['France', 'United Kingdom', 'United States'],
+    }];
+  }
+  if (selectedBusinessDivision === 'P&C') {
+    return [{
+      id: '2',
+      country: 'Germany',
+      countryCode: 'DE',
+      businessDivision: 'P&C',
+      entity,
+      exposureAllowedTo: ['Switzerland', 'United States'],
+    }];
+  }
+  return [];
+}
+
+const EntityDetailPanel: React.FC<EntityDetailPanelProps> = ({ entity, details = {}, showAzureHostingLocations = true, selectedBusinessDivision }) => {
   const [open, setOpen] = useState({
     legal: false,
     actions: false,
     remediation: false,
+    cloudHostingLocations: false,
+    accessLocations: false,
   });
 
   const toggle = (key: keyof typeof open) => setOpen(o => ({ ...o, [key]: !o[key] }));
@@ -147,6 +224,71 @@ const EntityDetailPanel: React.FC<EntityDetailPanelProps> = ({ entity, details =
         </SectionHeader>
         {open.remediation && <SectionContent>{details.remediation || '--'}</SectionContent>}
       </CollapsibleSection>
+      {showAzureHostingLocations && (
+        <CollapsibleSection>
+          <SectionHeader onClick={() => toggle('cloudHostingLocations')}>
+            Azure Cloud Hosting Locations <span style={{ fontWeight: 400, fontSize: '0.95em', color: '#64748b' }}>{open.cloudHostingLocations ? '▲' : '▼'}</span>
+          </SectionHeader>
+          {open.cloudHostingLocations && (
+            <SectionContent>
+              <table style={{ width: '100%', borderCollapse: 'collapse', background: 'none' }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '1px solid #e5e7eb' }}>Region</th>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '1px solid #e5e7eb' }}>Approval Status</th>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '1px solid #e5e7eb' }}>Conditions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {getMockAzureHostingLocations(entity).map((loc, idx) => (
+                    <tr key={loc.region} style={{ background: idx % 2 === 0 ? '#f8fafc' : 'transparent' }}>
+                      <td style={{ padding: '10px 12px', textAlign: 'left', verticalAlign: 'top' }}>{loc.region}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'left', verticalAlign: 'top' }}>
+                        <StatusChip status={loc.approvalStatus}>{loc.approvalStatus}</StatusChip>
+                      </td>
+                      <td style={{ padding: '10px 12px', textAlign: 'left', verticalAlign: 'top' }}>
+                        {loc.approvalStatus === 'Approved with predefined conditions' ? (
+                          <span>{loc.conditions}</span>
+                        ) : (
+                          <span style={{ color: '#bbb' }}>—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </SectionContent>
+          )}
+        </CollapsibleSection>
+      )}
+      {
+        showAzureHostingLocations && (
+          <CollapsibleSection>
+            <SectionHeader onClick={() => toggle('accessLocations')}>
+              Access Locations <span style={{ fontWeight: 400, fontSize: '0.95em', color: '#64748b' }}>{open.accessLocations ? '▲' : '▼'}</span>
+            </SectionHeader>
+            {open.accessLocations && (
+              <SectionContent style={{ textAlign: 'left' }}>
+                {
+                  (() => {
+                    if (selectedBusinessDivision === 'GWM' || selectedBusinessDivision === 'P&C') {
+                      const records = getMockAccessLocations(entity, selectedBusinessDivision);
+                      const match = records[0];
+                      if (match && match.exposureAllowedTo.length > 0) {
+                        return match.exposureAllowedTo.join(', ');
+                      } else {
+                        return <span style={{ color: '#bbb' }}>—</span>;
+                      }
+                    } else {
+                      return <span style={{ color: '#bbb' }}>—</span>;
+                    }
+                  })()
+                }
+              </SectionContent>
+            )}
+          </CollapsibleSection>
+        )
+      }
       <MetaSection>
         <MetaItem>
           <MetaLabel>Contact Person</MetaLabel>

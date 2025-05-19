@@ -86,6 +86,10 @@ interface CombinationsSidebarProps {
   onBusinessDivisionSelect?: (division: string) => void;
   selectedInfoCategory?: string | null;
   onInfoCategorySelect?: (cat: string) => void;
+  selectedGuidance?: string | null;
+  setSelectedGuidance?: (g: string) => void;
+  selectedRecipientTypes?: string | null;
+  setSelectedRecipientTypes?: (r: string) => void;
 }
 
 const getCategoryDisplayName = (category: string) => {
@@ -103,11 +107,11 @@ const getCategoryDisplayName = (category: string) => {
   }
 };
 
-const CombinationsSidebar: React.FC<CombinationsSidebarProps> = ({selectedBusinessDivision, onBusinessDivisionSelect, selectedInfoCategory, onInfoCategorySelect }) => {
+const CombinationsSidebar: React.FC<CombinationsSidebarProps> = ({selectedBusinessDivision, onBusinessDivisionSelect, selectedInfoCategory, onInfoCategorySelect, selectedGuidance, setSelectedGuidance, selectedRecipientTypes, setSelectedRecipientTypes }) => {
   const [openMenus, setOpenMenus] = useState<string[]>(categories.map(cat => cat.key)); // all open by default
-  const [selectedGuidance, setSelectedGuidance] = useState<string | null>(null);
+  const [internalSelectedGuidance, internalSetSelectedGuidance] = useState<string | null>(null);
   const [selectedDataSubjectType, setSelectedDataSubjectType] = useState<string | null>(null);
-  const [selectedRecipientTypes, setSelectedRecipientTypes] = useState<string | null>(null);
+  const [internalSelectedRecipientTypes, internalSetSelectedRecipientTypes] = useState<string | null>(null);
   const [selectedPurpose, setSelectedPurpose] = useState<string | null>(null);
   const [selectedScope, setSelectedScope] = useState<string | null>(null);
   const [selectedTransferLocation, setSelectedTransferLocation] = useState<string | null>(null);
@@ -132,7 +136,8 @@ const CombinationsSidebar: React.FC<CombinationsSidebarProps> = ({selectedBusine
 
   // Handler for chip selection
   const handleGuidanceSelect = (type: string) => {
-    setSelectedGuidance(type);
+    if (setSelectedGuidance) setSelectedGuidance(type);
+    else internalSetSelectedGuidance(type);
   };
 
   // Handler for info category chip selection
@@ -149,7 +154,8 @@ const CombinationsSidebar: React.FC<CombinationsSidebarProps> = ({selectedBusine
   };
 
   const handleRecipientTypesSelect = (type: string) => {
-    setSelectedRecipientTypes(type);
+    if (setSelectedRecipientTypes) setSelectedRecipientTypes(type);
+    else internalSetSelectedRecipientTypes(type);
   }
 
   const handlePurposeSelect = (purpose: string) => {
@@ -210,6 +216,10 @@ const CombinationsSidebar: React.FC<CombinationsSidebarProps> = ({selectedBusine
     purposeChips = reviewDataTransferPurpose[selectedInfoCategory][selectedDataSubjectType][selectedRecipientTypes];
   }
 
+  // Use prop or internal state for selectedGuidance/selectedRecipientTypes
+  const effectiveSelectedGuidance = selectedGuidance !== undefined ? selectedGuidance : internalSelectedGuidance;
+  const effectiveSelectedRecipientTypes = selectedRecipientTypes !== undefined ? selectedRecipientTypes : internalSelectedRecipientTypes;
+
   return (
     <Sidebar>
       {categories.map(cat => (
@@ -225,7 +235,7 @@ const CombinationsSidebar: React.FC<CombinationsSidebarProps> = ({selectedBusine
                   <>
                     {showLegal && (
                       <Chip
-                        selected={selectedGuidance === 'Legal Guidance'}
+                        selected={effectiveSelectedGuidance === 'Legal Guidance'}
                         onClick={() => handleGuidanceSelect('Legal Guidance')}
                       >
                         Legal Guidance
@@ -233,7 +243,7 @@ const CombinationsSidebar: React.FC<CombinationsSidebarProps> = ({selectedBusine
                     )}
                     {showBusiness && (
                       <Chip
-                        selected={selectedGuidance === 'Business Guidance'}
+                        selected={effectiveSelectedGuidance === 'Business Guidance'}
                         onClick={() => handleGuidanceSelect('Business Guidance')}
                       >
                         Business Guidance
@@ -320,7 +330,7 @@ const CombinationsSidebar: React.FC<CombinationsSidebarProps> = ({selectedBusine
                         {recipientTypeChips.map((type: string) => (
                           <Chip
                            key={type}
-                           selected={selectedRecipientTypes === type}
+                           selected={effectiveSelectedRecipientTypes === type}
                            onClick={() => handleRecipientTypesSelect(type)}
                           >
                             {type}

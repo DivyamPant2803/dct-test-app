@@ -19,6 +19,8 @@ const OutputRedesign: React.FC = () => {
   const [selectedEntity, setSelectedEntity] = useState('entityA');
   const [selectedBusinessDivision, setSelectedBusinessDivision] = useState<string | null>(null);
   const [selectedInfoCategory, setSelectedInfoCategory] = useState<string | null>(null);
+  const [selectedGuidance, setSelectedGuidance] = useState<string | null>(null);
+  const [selectedRecipientTypes, setSelectedRecipientTypes] = useState<string | null>(null);
   
   const selectedDataSubjectType : string | null = null;
   const selectedRecipientType : string | null = null;
@@ -52,6 +54,13 @@ const OutputRedesign: React.FC = () => {
     });
   }, [selectedEntity, selectedInfoCategory, selectedDataSubjectType, selectedRecipientType]);
 
+  // Compute showAzureHostingLocations
+  const showAzureHostingLocations =
+    selectedGuidance === 'Business Guidance' &&
+    selectedInfoCategory === 'CID' &&
+    selectedRecipientTypes === 'Service Provider' &&
+    (selectedBusinessDivision === 'P&C' || selectedBusinessDivision === 'GWM');
+
   return (
     <Layout>
       <CombinationsSidebar
@@ -59,9 +68,13 @@ const OutputRedesign: React.FC = () => {
         onBusinessDivisionSelect={setSelectedBusinessDivision}
         selectedInfoCategory={selectedInfoCategory}
         onInfoCategorySelect={setSelectedInfoCategory}
+        selectedGuidance={selectedGuidance}
+        setSelectedGuidance={setSelectedGuidance}
+        selectedRecipientTypes={selectedRecipientTypes}
+        setSelectedRecipientTypes={setSelectedRecipientTypes}
       />
       <EntitiesSidebar selectedEntity={selectedEntity} onSelect={setSelectedEntity} entities={filteredEntities} />
-      {selectedEntity && <EntityDetailPanel entity={selectedEntity} details={details} />}
+      {selectedEntity && <EntityDetailPanel entity={selectedEntity} details={details} showAzureHostingLocations={showAzureHostingLocations} selectedBusinessDivision={selectedBusinessDivision} />}
     </Layout>
   );
 };
