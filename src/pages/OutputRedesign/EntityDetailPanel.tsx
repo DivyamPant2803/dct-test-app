@@ -10,6 +10,7 @@ const DetailPanel = styled.div`
   border-radius: 0;
   box-shadow: none;
   margin: 24px 0 24px 0;
+  overflow-y: auto;
 `;
 const DetailTitle = styled.div`
   font-size: 1.25em;
