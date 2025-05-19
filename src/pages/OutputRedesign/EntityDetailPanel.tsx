@@ -4,70 +4,70 @@ import styled from 'styled-components';
 const DetailPanel = styled.div`
   flex: 1;
   background: #fff;
-  padding: 36px 44px 32px 44px;
+  padding: 32px 32px 24px 32px;
   display: flex;
   flex-direction: column;
-  border-radius: 18px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.07);
-  margin: 24px 32px 24px 32px;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 24px 0 24px 0;
 `;
 const DetailTitle = styled.div`
-  font-size: 1.6em;
-  font-weight: 800;
-  margin-bottom: 28px;
+  font-size: 1.25em;
+  font-weight: 700;
+  margin-bottom: 18px;
   color: #1e293b;
   letter-spacing: 0.01em;
 `;
 const CollapsibleSection = styled.div`
-  background: #f6f8fa;
-  border-radius: 12px;
-  margin-bottom: 22px;
-  box-shadow: 0 1px 4px rgba(30,41,59,0.04);
-  overflow: hidden;
-  border: 1px solid #e5e7eb;
+  background: none;
+  border-radius: 0;
+  margin-bottom: 16px;
+  box-shadow: none;
+  border-bottom: 1px solid #e5e7eb;
+  overflow: visible;
 `;
 const SectionHeader = styled.div`
-  padding: 20px 22px;
+  padding: 14px 0 10px 0;
   cursor: pointer;
-  font-weight: 700;
-  background: #f1f5f9;
-  border-bottom: 1px solid #e5e7eb;
+  font-weight: 600;
+  background: none;
+  border-bottom: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 1.13em;
+  font-size: 1em;
   color: #334155;
   transition: background 0.18s;
   &:hover {
-    background: #e0e7ef;
+    background: #f6f8fa;
   }
 `;
 const SectionContent = styled.div`
-  padding: 20px 22px;
-  font-size: 1.08em;
+  padding: 10px 0 16px 0;
+  font-size: 0.98em;
   color: #222;
-  background: #f9fafb;
+  background: none;
 `;
 const OutputChip = styled.span<{ type: string }>`
   display: inline-block;
-  padding: 3px 18px;
-  border-radius: 16px;
-  font-weight: 700;
-  font-size: 1.08em;
+  padding: 2px 12px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.98em;
   color: #fff;
   background: ${({ type }) =>
     type === 'OK' ? '#22c55e' :
     type === 'OKC' ? '#fbbf24' :
     type === 'NOK' ? '#ef4444' : '#64748b'};
-  margin-left: 12px;
+  margin-left: 8px;
 `;
 const MetaSection = styled.div`
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  background: none;
+  border: none;
+  border-radius: 0;
   margin-top: 8px;
   margin-bottom: 0;
-  padding: 10px 18px 8px 18px;
+  padding: 0;
   display: flex;
   align-items: center;
   gap: 0;
@@ -79,22 +79,22 @@ const MetaSpacer = styled.div`
 const MetaItem = styled.div`
   display: flex;
   align-items: center;
-  margin-right: 32px;
-  font-size: 0.98em;
+  margin-right: 24px;
+  font-size: 0.95em;
   &:not(:last-child) {
     border-right: 1px solid #e5e7eb;
-    padding-right: 24px;
+    padding-right: 18px;
   }
 `;
 const MetaLabel = styled.div`
   color: #64748b;
-  font-weight: 600;
-  margin-right: 6px;
-  font-size: 0.97em;
+  font-weight: 500;
+  margin-right: 4px;
+  font-size: 0.95em;
 `;
 const MetaValue = styled.div`
   color: #222;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 1em;
 `;
 

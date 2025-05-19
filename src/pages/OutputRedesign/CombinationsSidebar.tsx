@@ -3,46 +3,50 @@ import styled from 'styled-components';
 import { useAppSelector } from '../../hooks/useRedux';
 
 const Sidebar = styled.div`
-  width: 180px;
+  width: 170px;
   background: #fff;
-  border-right: 1px solid #eee;
+  border-right: 1px solid #f3f4f6;
   display: flex;
   flex-direction: column;
   max-height: 100vh;
   overflow-y: auto;
   overflow-x: hidden;
+  padding-top: 8px;
 `;
 const MenuHeader = styled.div`
-  font-weight: 500;
-  padding: 4px 8px;
+  font-weight: 400;
+  padding: 6px 10px 2px 10px;
   cursor: pointer;
-  background: #f5f5f5;
-  border-bottom: 1px solid #eee;
-  font-size: 0.91em;
+  background: none;
+  border-bottom: none;
+  font-size: 0.93em;
+  color: #64748b;
+  letter-spacing: 0.01em;
 `;
 const MenuContent = styled.div`
-  padding: 0 12px 8px 12px;
+  padding: 0 10px 6px 10px;
   background: #fff;
   color: #222;
 `;
 const Chip = styled.span<{ selected?: boolean }>`
   display: inline-block;
-  background: ${({ selected }) => selected ? '#111' : '#faf5f5'};
-  color: ${({ selected }) => selected ? '#fff' : '#111'};
-  border-radius: 14px;
-  padding: 2px 6px;
-  font-size: 0.83em;
+  background: ${({ selected }) => selected ? '#111' : '#f3f4f6'};
+  color: ${({ selected }) => selected ? '#fff' : '#222'};
+  border-radius: 10px;
+  padding: 2px 8px;
+  font-size: 0.82em;
   margin-right: 4px;
   margin-bottom: 4px;
   cursor: pointer;
   border: none;
-  font-weight: 500;
+  font-weight: 400;
   transition: background 0.18s, color 0.18s;
-  max-width: 98%;
+  box-shadow: none;
+  line-height: 1.2;
+  min-width: 0;
   white-space: normal;
   word-break: break-word;
   text-align: left;
-  line-height: 1.2;
   overflow-wrap: break-word;
   box-sizing: border-box;
 `;
@@ -50,7 +54,7 @@ const Chip = styled.span<{ selected?: boolean }>`
 const ChipContainer = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 4px;
+  gap: 2px 2px;
   margin-bottom: 2px;
   width: 100%;
 `;

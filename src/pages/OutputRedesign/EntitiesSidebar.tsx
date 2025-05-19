@@ -1,31 +1,31 @@
 import styled from 'styled-components';
 
 const Sidebar = styled.div`
-  width: 240px;
+  width: 210px;
   background: #fff;
-  border-right: 1px solid #eee;
+  border-right: 1px solid #f3f4f6;
   display: flex;
   flex-direction: column;
-  border-radius: 16px 0 0 16px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
-  margin: 24px 0 24px 24px;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
 `;
 const SidebarTitle = styled.div`
-  font-weight: 700;
-  font-size: 1.13em;
-  padding: 22px 22px 10px 22px;
+  font-weight: 600;
+  font-size: 1.05em;
+  padding: 18px 18px 8px 18px;
   color: #1e293b;
 `;
 const SidebarItem = styled.div<{ selected?: boolean }>`
-  padding: 14px 22px;
+  padding: 10px 18px;
   cursor: pointer;
-  background: ${({ selected }) => selected ? '#f1f5f9' : 'transparent'};
-  font-weight: ${({ selected }) => selected ? 700 : 500};
+  background: ${({ selected }) => selected ? '#f8fafc' : 'transparent'};
+  font-weight: ${({ selected }) => selected ? 600 : 400};
   color: ${({ selected }) => selected ? '#111' : '#334155'};
-  border-left: ${({ selected }) => selected ? '4px solid #111' : '4px solid transparent'};
-  border-radius: 8px;
-  margin-bottom: 4px;
-  font-size: 1.07em;
+  border-left: ${({ selected }) => selected ? '3px solid #111' : '3px solid transparent'};
+  border-radius: 0;
+  margin-bottom: 2px;
+  font-size: 1em;
   transition: background 0.16s, color 0.16s, border 0.16s;
   &:hover {
     background: #f3f4f6;
@@ -33,15 +33,15 @@ const SidebarItem = styled.div<{ selected?: boolean }>`
   }
 `;
 const SidebarSearch = styled.input`
-  margin: 0 22px 14px 22px;
-  padding: 8px 14px;
-  border-radius: 8px;
+  margin: 0 18px 10px 18px;
+  padding: 7px 12px;
+  border-radius: 6px;
   border: 1px solid #e0e0e0;
-  font-size: 1em;
+  font-size: 0.98em;
   background: #f8fafc;
   color: #222;
   outline: none;
-  margin-bottom: 18px;
+  margin-bottom: 12px;
 `;
 
 interface EntitySidebarProps {
