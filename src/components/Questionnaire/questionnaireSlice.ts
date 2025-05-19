@@ -13,13 +13,18 @@ interface QuestionnaireState {
   completedSteps: number[];
   enabledSteps: number[];
   informationCategory: string[];
-  dataSubjectType: string[];
+  /**
+   * dataSubjectType can be either:
+   * - string[] (legacy)
+   * - { Client: string[], Employee: string[] } (categorized)
+   */
+  dataSubjectType: string[] | { CID: string[]; ED: string[] };
   countries: string[];
   entities: CategorizedEntities;
   entitiesByCountry: EntitiesByCountry;
   transferLocation: string[];
   recipientType: string[];
-  reviewDataTransferPurpose: string[];
+  reviewDataTransferPurpose: { [infoCat: string]: { [dataSubjectType: string]: { [recipientType: string]: string[] } } };
 }
 
 const initialState: QuestionnaireState = {
@@ -27,13 +32,13 @@ const initialState: QuestionnaireState = {
   completedSteps: [],
   enabledSteps: [0],
   informationCategory: [],
-  dataSubjectType: [],
+  dataSubjectType: [], // default to legacy format for backward compatibility
   countries: [],
   entities: {},
   entitiesByCountry: {},
   transferLocation: [],
   recipientType: [],
-  reviewDataTransferPurpose: [],
+  reviewDataTransferPurpose: {},
 };
 
 const questionnaireSlice = createSlice({
@@ -70,32 +75,42 @@ const questionnaireSlice = createSlice({
       state.entitiesByCountry = {};
       state.transferLocation = [];
       state.recipientType = [];
-      state.reviewDataTransferPurpose = [];
+      state.reviewDataTransferPurpose = {};
     },
     setInformationCategory(state, action: PayloadAction<string[]>) {
       state.informationCategory = action.payload;
     },
-    setDataSubjectType(state, action: PayloadAction<string[]>) {
-      state.dataSubjectType = action.payload;
+    setDataSubjectType(state, action: PayloadAction<string[] | { CID: string[]; ED: string[] }>) {
+      // Accept both legacy array and new categorized object
+      if (Array.isArray(action.payload)) {
+        state.dataSubjectType = action.payload;
+      } else if (
+        typeof action.payload === 'object' &&
+        action.payload !== null &&
+        ('CID' in action.payload || 'ED' in action.payload)
+      ) {
+        state.dataSubjectType = {
+          CID: action.payload.CID || [],
+          ED: action.payload.ED || []
+        };
+      } else {
+        // fallback: set as empty array
+        state.dataSubjectType = [];
+      }
     },
     setCountries(state, action: PayloadAction<string[]>) {
       state.countries = action.payload;
     },
-    setEntities(state, action: PayloadAction<string[]>) {
-      // This is kept for backwards compatibility
-      const flatEntities = action.payload;
-      // We don't change the categorized structure here
-    },
     setCategorizedEntities(state, action: PayloadAction<CategorizedEntities>) {
       state.entities = action.payload;
     },
-    addEntityToCategory(state, action: PayloadAction<{category: string, entityId: string}>) {
-      const { category, entityId } = action.payload;
+    addEntityToCategory(state, action: PayloadAction<{category: string, entityId: string, name: string}>) {
+      const { category, name } = action.payload;
       if (!state.entities[category]) {
         state.entities[category] = [];
       }
-      if (!state.entities[category].includes(entityId)) {
-        state.entities[category].push(entityId);
+      if (!state.entities[category].includes(name)) {
+        state.entities[category].push(name);
       }
     },
     removeEntityFromCategory(state, action: PayloadAction<{category: string, entityId: string}>) {
@@ -108,13 +123,13 @@ const questionnaireSlice = createSlice({
         }
       }
     },
-    addEntityToCountry(state, action: PayloadAction<{country: string, entityId: string}>) {
-      const { country, entityId } = action.payload;
+    addEntityToCountry(state, action: PayloadAction<{country: string, entityId: string, name: string}>) {
+      const { country, name } = action.payload;
       if (!state.entitiesByCountry[country]) {
         state.entitiesByCountry[country] = [];
       }
-      if (!state.entitiesByCountry[country].includes(entityId)) {
-        state.entitiesByCountry[country].push(entityId);
+      if (!state.entitiesByCountry[country].includes(name)) {
+        state.entitiesByCountry[country].push(name);
       }
     },
     removeEntityFromCountry(state, action: PayloadAction<{country: string, entityId: string}>) {
@@ -132,7 +147,7 @@ const questionnaireSlice = createSlice({
     setRecipientType(state, action: PayloadAction<string[]>) {
       state.recipientType = action.payload;
     },
-    setReviewDataTransferPurpose(state, action: PayloadAction<string[]>) {
+    setReviewDataTransferPurpose(state, action: PayloadAction<{ [infoCat: string]: { [dataSubjectType: string]: { [recipientType: string]: string[] } } }>) {
       state.reviewDataTransferPurpose = action.payload;
     },
   },
@@ -148,7 +163,6 @@ export const {
   setInformationCategory,
   setDataSubjectType,
   setCountries,
-  setEntities,
   setCategorizedEntities,
   addEntityToCategory,
   removeEntityFromCategory,

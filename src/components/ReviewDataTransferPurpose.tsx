@@ -1,7 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { useAppDispatch } from '../hooks/useRedux';
+import { useAppDispatch, useAppSelector } from '../hooks/useRedux';
 import { setReviewDataTransferPurpose } from './Questionnaire/questionnaireSlice';
+import {
+  INFO_CATEGORY_CID,
+  INFO_CATEGORY_ED,
+  DATA_SUBJECT_TYPES_CLIENT,
+  DATA_SUBJECT_TYPES_EMPLOYEE,
+  SCOPE_PERSONAL_DATA,
+  SCOPE_SENSITIVE_PERSONAL_DATA,
+  SCOPE_CRIMINAL_DATA,
+  DATA_SUBJECT_TYPE_EMPLOYEE,
+  DATA_SUBJECT_TYPE_CS_CLIENT,
+  DATA_SUBJECT_TYPE_U_EMPLOYEE,
+  DATA_SUBJECT_TYPE_U_CANDIDATE,
+  DATA_SUBJECT_TYPE_CS_EMPLOYEE,
+  DATA_SUBJECT_TYPE_U_CLIENT,
+  DATA_SUBJECT_TYPE_PROSPECT,
+  DATA_SUBJECT_TYPE_CLIENT,
+  DATA_SUBJECT_TYPE_CANDIDATE
+} from '../constants';
 
 const Container = styled.div`
   max-width: 100%;
@@ -151,32 +169,34 @@ interface Props {
 // Helper to map dataSubjectType to display label and section type
 const getTabInfo = (type: string) => {
   switch (type) {
-    case 'Employee':
-      return { label: 'UBS Employee', section: 'employee', fullType: 'Employee - UBS Employee' };
-    case 'Candidate':
-      return { label: 'UBS Candidate', section: 'employee', fullType: 'Employee - UBS Candidate' };
-    case 'CS Employee':
-      return { label: 'CS Employee', section: 'employee', fullType: 'Employee - CS Employee' };
-    case 'Client':
-      return { label: 'UBS Client', section: 'client', fullType: 'Client - UBS Client' };
-    case 'Prospect':
-      return { label: 'UBS Prospect', section: 'client', fullType: 'Client - UBS Prospect' };
-    case 'CS Client':
-      return { label: 'CS Client', section: 'client', fullType: 'Client - CS Client' };
+    case DATA_SUBJECT_TYPE_EMPLOYEE:
+      return { label: DATA_SUBJECT_TYPE_U_EMPLOYEE, section: INFO_CATEGORY_ED, fullType: 'ED - Employee' };
+    case DATA_SUBJECT_TYPE_CANDIDATE:
+      return { label: DATA_SUBJECT_TYPE_U_CANDIDATE, section: INFO_CATEGORY_ED, fullType: 'ED - Candidate' };
+    case DATA_SUBJECT_TYPE_CS_EMPLOYEE:
+      return { label: DATA_SUBJECT_TYPE_CS_EMPLOYEE, section: INFO_CATEGORY_ED, fullType: 'ED - CS Employee' };
+    case DATA_SUBJECT_TYPE_CLIENT:
+      return { label: DATA_SUBJECT_TYPE_U_CLIENT, section: INFO_CATEGORY_CID, fullType: 'CID - Client' };
+    case DATA_SUBJECT_TYPE_PROSPECT:
+      return { label: DATA_SUBJECT_TYPE_PROSPECT, section: INFO_CATEGORY_CID, fullType: 'CID - Prospect' };
+    case DATA_SUBJECT_TYPE_CS_CLIENT:
+      return { label: DATA_SUBJECT_TYPE_CS_CLIENT, section: INFO_CATEGORY_CID, fullType: 'CID - CS Client' };
     default:
-      return { label: type, section: 'client', fullType: type };
+      return { label: type, section: INFO_CATEGORY_CID, fullType: type };
   }
 };
 
 const ReviewDataTransferPurpose: React.FC<Props> = ({
   dataSubjectType,
   recipientType,
-  onChange
+  onChange,
+  informationCategory
 }) => {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const dispatch = useAppDispatch();
+  const reviewDataTransferPurpose = useAppSelector(state => state.questionnaire.reviewDataTransferPurpose);
 
-  const scopeData = ['Personal Data', 'Sensitive Personal Data', 'Criminal Data'];
+  const scopeData = [SCOPE_PERSONAL_DATA, SCOPE_SENSITIVE_PERSONAL_DATA, SCOPE_CRIMINAL_DATA];
   
   const employeePurposes = {
     'Entity': ['Facilitation of Outsourcing/Nearshoring/Offshoring', 'Administration of Employment Contract', 'Monitoring'],
@@ -192,43 +212,92 @@ const ReviewDataTransferPurpose: React.FC<Props> = ({
     'External Authorities': ['Compliance with Legal or Regulatory Obligations', 'Compliance with Voluntary Disclosure']
   };
 
+  const clientDSTypes = new Set(DATA_SUBJECT_TYPES_CLIENT);
+  const employeeDSTypes = new Set(DATA_SUBJECT_TYPES_EMPLOYEE);
+
   // Build tabs dynamically from selected dataSubjectType
   const tabInfos = dataSubjectType.map(getTabInfo);
   const [activeTab, setActiveTab] = useState<string>(tabInfos[0]?.label || '');
 
+  // Helper to build categorizedPurpose from selectedItems
+  const buildCategorizedPurpose = (selectedItemsSet: Set<string>) => {
+    const infoCats = Array.isArray(informationCategory) ? informationCategory : [informationCategory];
+    const categorizedPurpose: { [infoCat: string]: { [dsType: string]: { [recipientType: string]: string[] } } } = {};
+    infoCats.forEach(infoCat => {
+      categorizedPurpose[infoCat] = {};
+      let allowedDSTypes: Set<string>;
+      if (infoCat === INFO_CATEGORY_CID) {
+        allowedDSTypes = clientDSTypes;
+      } else if (infoCat === INFO_CATEGORY_ED) {
+        allowedDSTypes = employeeDSTypes;
+      } else {
+        allowedDSTypes = new Set();
+      }
+      dataSubjectType.forEach(dsType => {
+        if (allowedDSTypes.has(dsType)) {
+          categorizedPurpose[infoCat][dsType] = {};
+          // Include 'Scope' as a recipient type
+          const allRecipientTypes = [...recipientType, 'Scope'];
+          allRecipientTypes.forEach(recType => {
+            const relevant = Array.from(selectedItemsSet)
+              .filter(item => {
+                // Split the item to extract the exact infoCat, dsType, and recType
+                // Example: "CID - CS Client-Entity-Facilitation of Outsourcing/Nearshoring/Offshoring"
+                const [itemInfoCat, itemDsType, itemRecipient] = item.split('-').map(s => s.trim());
+                return (
+                  itemInfoCat === infoCat &&
+                  itemDsType === dsType &&
+                  itemRecipient === recType
+                );
+              })
+              .map(item => {
+                const parts = item.split('-');
+                return parts[parts.length - 1].trim();
+              });
+            categorizedPurpose[infoCat][dsType][recType] = relevant;
+          });
+        }
+      });
+    });
+    console.log("ReviewDataTransferPurpose: categorizedPurpose: "+JSON.stringify(categorizedPurpose));
+    return categorizedPurpose;
+  };
+
+  // Initialize selectedItems only once on mount
   useEffect(() => {
     const allItems = new Set<string>();
 
     // Add all possible items to the set
     dataSubjectType.forEach(type => {
-      const prefix = type.includes('Employee') || type === 'Candidate' ? 'Employee - ' : 'Client - ';
-      const suffix = type === 'Employee' ? 'UBS Employee' :
-                    type === 'Candidate' ? 'UBS Candidate' :
-                    type === 'CS Employee' ? 'CS Employee' :
-                    type === 'Client' ? 'UBS Client' :
-                    type === 'Prospect' ? 'UBS Prospect' : 'CS Client';
-      const fullType = `${prefix}${suffix}`;
+      // Determine infoCat for this type
+      let infoCat;
+      if (type === DATA_SUBJECT_TYPE_CS_EMPLOYEE || type === DATA_SUBJECT_TYPE_U_EMPLOYEE || type === 'Candidate') {
+        infoCat = 'ED';
+      } else {
+        infoCat = 'CID';
+      }
 
-      if (type === 'Employee' || type === 'Candidate' || type === 'CS Employee') {
+      if (type === 'Employee' || type === 'Candidate' || type === DATA_SUBJECT_TYPE_CS_EMPLOYEE) {
         scopeData.forEach(item => {
-          allItems.add(`${fullType}-scope-${item}`);
+          allItems.add(`${infoCat}-${type}-Scope-${item}`);
         });
       }
 
       recipientType.forEach(recipient => {
-        const purposes = (type === 'Employee' || type === 'Candidate' || type === 'CS Employee')
+        const purposes = (type === 'Employee' || type === 'Candidate' || type === DATA_SUBJECT_TYPE_CS_EMPLOYEE)
           ? employeePurposes[recipient as RecipientType] || []
           : clientPurposes[recipient as RecipientType] || [];
-        
         purposes.forEach(purpose => {
-          allItems.add(`${fullType}-${recipient}-${purpose}`);
+          allItems.add(`${infoCat}-${type}-${recipient}-${purpose}`);
         });
       });
     });
 
     setSelectedItems(allItems);
-    dispatch(setReviewDataTransferPurpose(Array.from(allItems)));
-  }, [dataSubjectType, recipientType, dispatch]);
+    const categorizedPurpose = buildCategorizedPurpose(allItems);
+    dispatch(setReviewDataTransferPurpose(categorizedPurpose));
+    // eslint-disable-next-line
+  }, []); // Only run on mount
 
   useEffect(() => {
     // If the available tabs change, update the active tab if needed
@@ -247,10 +316,16 @@ const ReviewDataTransferPurpose: React.FC<Props> = ({
         newSet.add(id);
       }
       onChange?.(newSet);
-      dispatch(setReviewDataTransferPurpose(Array.from(newSet)));
       return newSet;
     });
   };
+
+  // Dispatch categorizedPurpose whenever selectedItems changes
+  useEffect(() => {
+    const categorizedPurpose = buildCategorizedPurpose(selectedItems);
+    dispatch(setReviewDataTransferPurpose(categorizedPurpose));
+    // eslint-disable-next-line
+  }, [selectedItems]);
 
   const renderChips = (items: string[], prefix: string) => (
     <ChipsContainer>
@@ -266,31 +341,52 @@ const ReviewDataTransferPurpose: React.FC<Props> = ({
     </ChipsContainer>
   );
 
-  const renderEmployeeSection = (type: string) => (
-    <CategoryContainer>
-      <CategoryHeader>
-        <CategoryTitle>{type}</CategoryTitle>
-      </CategoryHeader>
-      <TableContainer>
-        <Table>
-          <tbody>
-            <TableRow>
-              <TableCell>Scope of Data</TableCell>
-              <TableCell>{renderChips(scopeData, `${type}-scope`)}</TableCell>
-            </TableRow>
-            {recipientType.map(recipient => (
-              <TableRow key={recipient}>
-                <TableCell>{recipient}</TableCell>
+  const renderEmployeeSection = (type: string) => {
+    // Determine infoCat for this type
+    let infoCat;
+    if (type === DATA_SUBJECT_TYPE_CS_EMPLOYEE || type === DATA_SUBJECT_TYPE_U_EMPLOYEE || type === 'Candidate') {
+      infoCat = 'ED';
+    } else {
+      infoCat = 'CID';
+    }
+    return (
+      <CategoryContainer>
+        <CategoryHeader>
+          <CategoryTitle>{type}</CategoryTitle>
+        </CategoryHeader>
+        <TableContainer>
+          <Table>
+            <tbody>
+              <TableRow>
+                <TableCell>Scope of Data</TableCell>
                 <TableCell>
-                  {renderChips(employeePurposes[recipient as RecipientType] || [], `${type}-${recipient}`)}
+                  {renderChips(
+                    (reviewDataTransferPurpose[infoCat] &&
+                      reviewDataTransferPurpose[infoCat][type] &&
+                      reviewDataTransferPurpose[infoCat][type]['Scope']) || [],
+                    `${infoCat}-${type}-Scope`
+                  )}
                 </TableCell>
               </TableRow>
-            ))}
-          </tbody>
-        </Table>
-      </TableContainer>
-    </CategoryContainer>
-  );
+              {recipientType.map(recipient => (
+                <TableRow key={recipient}>
+                  <TableCell>{recipient}</TableCell>
+                  <TableCell>
+                    {renderChips(
+                      (reviewDataTransferPurpose[infoCat] &&
+                        reviewDataTransferPurpose[infoCat][type] &&
+                        reviewDataTransferPurpose[infoCat][type][recipient]) || [],
+                      `${infoCat}-${type}-${recipient}`
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </tbody>
+          </Table>
+        </TableContainer>
+      </CategoryContainer>
+    );
+  };
 
   const renderClientSection = (type: string) => (
     <CategoryContainer>
@@ -304,7 +400,7 @@ const ReviewDataTransferPurpose: React.FC<Props> = ({
               <TableRow key={recipient}>
                 <TableCell>{recipient}</TableCell>
                 <TableCell>
-                  {renderChips(clientPurposes[recipient as RecipientType] || [], `${type}-${recipient}`)}
+                  {renderChips(clientPurposes[recipient as RecipientType] || [], `CID-${type}-${recipient}`)}
                 </TableCell>
               </TableRow>
             ))}
@@ -316,10 +412,10 @@ const ReviewDataTransferPurpose: React.FC<Props> = ({
 
   // Render a single section based on tab info
   const renderTabSection = (tab: { label: string; section: string; fullType: string }) => {
-    if (tab.section === 'employee') {
-      return renderEmployeeSection(tab.fullType);
+    if (tab.section === INFO_CATEGORY_ED) {
+      return renderEmployeeSection(tab.label);
     } else {
-      return renderClientSection(tab.fullType);
+      return renderClientSection(tab.label);
     }
   };
 

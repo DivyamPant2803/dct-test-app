@@ -414,8 +414,8 @@ const EntitySelection: React.FC<Props> = ({
       dispatch(removeEntityFromCategory({ category: entity.category, entityId }));
       dispatch(removeEntityFromCountry({ country: entity.countryCode, entityId }));
     } else {
-      dispatch(addEntityToCategory({ category: entity.category, entityId }));
-      dispatch(addEntityToCountry({ country: entity.countryCode, entityId }));
+      dispatch(addEntityToCategory({ category: entity.category, entityId, name: entity.name }));
+      dispatch(addEntityToCountry({ country: entity.countryCode, entityId, name: entity.name }));
     }
   };
 

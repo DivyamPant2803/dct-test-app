@@ -12,16 +12,11 @@ import CountrySelector from './CountrySelector';
 import { useAppSelector, useAppDispatch } from '../../hooks/useRedux';
 import {
   setCurrentStep,
-  setCompletedSteps,
-  setEnabledSteps,
   addCompletedStep,
   addEnabledStep,
-  resetQuestionnaire,
   setInformationCategory,
   setDataSubjectType,
   setCountries,
-  addEntityToCategory,
-  removeEntityFromCategory,
   setTransferLocation,
   setRecipientType,
   setReviewDataTransferPurpose,
@@ -267,7 +262,7 @@ const baseQuestions = [
     id: 'informationCategory',
     text: 'Select Information Category',
     type: 'multiple',
-    options: ['Client', 'Employee'],
+    options: ['CID', 'ED'],
   },
   {
     id: 'dataSubjectType',
@@ -321,6 +316,9 @@ interface Country {
   region: string;
 }
 
+const clientSet = new Set(["Client", "Prospect", "CS Client"]);
+const employeeSet = new Set(["Employee", "Candidate", "CS Employee"]);
+
 export default function Questionnaire({ onComplete }: { onComplete: (data: any) => void }) {
   const { handleSubmit, watch, setValue, formState: { errors } } = useForm();
   const dispatch = useAppDispatch();
@@ -358,13 +356,13 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
     if (category.length > 0) {
       const dataSubjectOptions: DataSubjectCategory[] = [];
       
-      if (category.includes('Client')) {
+      if (category.includes('CID')) {
         dataSubjectOptions.push({
           category: DATA_SUBJECT_TYPES.CLIENT.category,
           options: [...DATA_SUBJECT_TYPES.CLIENT.options]
         });
       }
-      if (category.includes('Employee')) {
+      if (category.includes('ED')) {
         dataSubjectOptions.push({
           category: DATA_SUBJECT_TYPES.PERSON.category,
           options: [...DATA_SUBJECT_TYPES.PERSON.options]
@@ -499,7 +497,7 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
   const getOptionDescription = (option: string) => {
     switch (currentQuestion.id) {
       case 'informationCategory':
-        return option === 'Employee' 
+        return option === 'ED' 
           ? 'Data related to employees, candidates, or contractors'
           : 'Data related to clients and their employees';
       case 'dataSubjectType':
@@ -582,9 +580,15 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
       case 'informationCategory':
         dispatch(setInformationCategory(newValues));
         break;
-      case 'dataSubjectType':
-        dispatch(setDataSubjectType(newValues));
+      case 'dataSubjectType': {
+        // Categorize before dispatching
+        const categorized = {
+          CID: newValues.filter((t: string) => clientSet.has(t)),
+          ED: newValues.filter((t: string) => employeeSet.has(t))
+        };
+        dispatch(setDataSubjectType(categorized));
         break;
+      }
       case 'countries':
         dispatch(setCountries(newValues));
         break;
@@ -595,7 +599,11 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
         dispatch(setRecipientType(newValues));
         break;
       case 'reviewDataTransferPurpose':
-        dispatch(setReviewDataTransferPurpose(newValues));
+        // Only dispatch if newValues is already the correct object structure
+        if (typeof newValues === 'object' && !Array.isArray(newValues)) {
+          dispatch(setReviewDataTransferPurpose(newValues));
+        }
+        // else, ignore or handle conversion if needed
         break;
     }
     
@@ -658,13 +666,17 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
           ? []
           : [...currentQuestion.options as string[]];
         break;
-      case 'dataSubjectType':
-        const allOptions = (currentQuestion.options as DataSubjectCategory[])
-          .flatMap(category => category.options);
-        newValues = currentValues.length === allOptions.length
+      case 'dataSubjectType': {
+        // Categorize before dispatching
+        const categorized = {
+          Client: currentValues.filter((t: string) => clientSet.has(t)),
+          Employee: currentValues.filter((t: string) => employeeSet.has(t))
+        };
+        newValues = currentValues.length === Object.keys(categorized).length
           ? []
-          : allOptions;
+          : Object.values(categorized).flat();
         break;
+      }
       case 'countries':
         const allCountryNames = getAllCountries().map((country: Country) => country.name);
         newValues = currentValues.length === allCountryNames.length
@@ -682,9 +694,15 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
       case 'informationCategory':
         dispatch(setInformationCategory(newValues));
         break;
-      case 'dataSubjectType':
-        dispatch(setDataSubjectType(newValues));
+      case 'dataSubjectType': {
+        // Categorize before dispatching
+        const categorized = {
+          CID: newValues.filter((t: string) => clientSet.has(t)),
+          ED: newValues.filter((t: string) => employeeSet.has(t))
+        };
+        dispatch(setDataSubjectType(categorized));
         break;
+      }
       case 'countries':
         dispatch(setCountries(newValues));
         break;
@@ -695,7 +713,11 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
         dispatch(setRecipientType(newValues));
         break;
       case 'reviewDataTransferPurpose':
-        dispatch(setReviewDataTransferPurpose(newValues));
+        // Only dispatch if newValues is already the correct object structure
+        if (typeof newValues === 'object' && !Array.isArray(newValues)) {
+          dispatch(setReviewDataTransferPurpose(newValues));
+        }
+        // else, ignore or handle conversion if needed
         break;
     }
     if (newValues.length > 0) {
