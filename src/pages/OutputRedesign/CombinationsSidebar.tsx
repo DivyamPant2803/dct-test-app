@@ -288,7 +288,7 @@ const CombinationsSidebar: React.FC<CombinationsSidebarProps> = ({selectedBusine
                     )}
                   </>
                 )
-                : cat.key === 'businessDivision' && selectedInfoCategory === 'CID' ? (
+                : selectedGuidance === 'Business Guidance' && cat.key === 'businessDivision' ? (
                   selectedInfoCategory === 'CID' && !Array.isArray(selectedInfoCategory) ? (
                     <>
                       {Object.keys(entities)
@@ -303,7 +303,7 @@ const CombinationsSidebar: React.FC<CombinationsSidebarProps> = ({selectedBusine
                           </Chip> 
                         ))}
                     </>
-                  ) : null
+                  ) : null 
                 )
                  : cat.key === 'transferLocation' ? (
                   <>

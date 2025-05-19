@@ -1,9 +1,7 @@
 import styled from 'styled-components';
 import { useState } from 'react';
 import Questionnaire from '../components/Questionnaire/Questionnaire';
-import OutputCards from '../components/OutputCards';
 import { INITIAL_FORM_DATA, FormData } from '../App';
-import { transformFormDataForCards } from '../components/Questionnaire/Questionnaire.utils';
 import OutputRedesign from './OutputRedesign';
 
 const Container = styled.div`
@@ -13,24 +11,9 @@ const Container = styled.div`
   padding: 2rem;
 `;
 
-const BackButton = styled.button`
-  margin-bottom: 1rem;
-  background: none;
-  border: none;
-  color: #ff0000;
-  cursor: pointer;
-  font-size: 1rem;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  transition: background-color 0.3s;
-  &:hover {
-    background-color: #fff5f5;
-  }
-`;
-
 const Guidance = () => {
   const [showResults, setShowResults] = useState<boolean>(false);
-  const [formData, setFormData] = useState<FormData>(INITIAL_FORM_DATA);
+  const [_, setFormData] = useState<FormData>(INITIAL_FORM_DATA);
 
   const handleQuestionnaireComplete = (data: Partial<FormData>) => {
     const processedData = {
