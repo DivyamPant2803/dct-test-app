@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
+import ApprovedChannels from './ApprovedChannels';
 
 const DetailPanel = styled.div`
   flex: 1;
@@ -125,6 +126,7 @@ interface EntityDetailPanelProps {
     versionDate?: string;
     cloudHostingLocations?: string;
     accessLocations?: string;
+    approvedChannels?: string;
   };
   showAzureHostingLocations?: boolean;
   selectedBusinessDivision?: string | null;
@@ -194,6 +196,7 @@ const EntityDetailPanel: React.FC<EntityDetailPanelProps> = ({ entity, details =
     remediation: false,
     cloudHostingLocations: false,
     accessLocations: false,
+    approvedChannels: false,
   });
 
   const toggle = (key: keyof typeof open) => setOpen(o => ({ ...o, [key]: !o[key] }));
@@ -290,6 +293,17 @@ const EntityDetailPanel: React.FC<EntityDetailPanelProps> = ({ entity, details =
           </CollapsibleSection>
         )
       }
+      <CollapsibleSection>
+        <SectionHeader onClick={() => toggle('approvedChannels')}
+         style={{ cursor: 'default', justifyContent: 'space-between' }}>
+          Approved Channels <span style={{ fontWeight: 400, fontSize: '0.95em', color: '#64748b' }}>{open.approvedChannels ? '▲' : '▼'}</span>
+        </SectionHeader>
+        {open.approvedChannels && (
+          <SectionContent>
+            <ApprovedChannels />
+          </SectionContent>
+        )}
+      </CollapsibleSection>
       <MetaSection>
         <MetaItem>
           <MetaLabel>Contact Person</MetaLabel>

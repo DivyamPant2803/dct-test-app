@@ -46,14 +46,12 @@ interface OutputHeaderProps {
   informationCategory: string[];
   filters: Record<string, string[]>;
   onFilterChange: (filters: Record<string, string[]>) => void;
-  onApprovedChannelsClick: () => void;
 }
 
 const OutputHeader: React.FC<OutputHeaderProps> = ({
   informationCategory,
   filters,
   onFilterChange,
-  onApprovedChannelsClick
 }) => {
   const handleExportPDF = () => {
     // TODO: Implement PDF export
@@ -86,10 +84,6 @@ const OutputHeader: React.FC<OutputHeaderProps> = ({
             <line x1="10" y1="9" x2="14" y2="9"/>
           </svg>
           Excel
-        </ExportButton>
-        <ExportButton onClick={onApprovedChannelsClick} title="View Approved Channels">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          Approved Channels
         </ExportButton>
       </ExportButtonsContainer>
       <OutputFilters
