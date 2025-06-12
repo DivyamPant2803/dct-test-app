@@ -1,7 +1,6 @@
 import styled from 'styled-components';
-import { FaBullhorn, FaFileAlt, FaBookOpen, FaStickyNote } from 'react-icons/fa';
 import { useState } from 'react';
-import { useStaticContent } from '../contexts/StaticContentContext';
+import { useStaticContent, StaticContentProvider } from '../contexts/StaticContentContext';
 
 const Container = styled.div`
   max-width: 1100px;
@@ -34,12 +33,6 @@ const CardHeader = styled.div`
   margin-bottom: 10px;
 `;
 
-const IconWrapper = styled.div`
-  font-size: 1.3rem;
-  margin-bottom: 0;
-  color:rgb(0, 0, 0);
-`;
-
 const CardTitle = styled.h3`
   margin: 0;
   font-size: 1.15rem;
@@ -69,18 +62,9 @@ const Button = styled.button`
   }
 `;
 
-type CategoryKey = 'announcements' | 'releasenotes' | 'keynotes' | 'training';
-
-const categoryMeta = {
-  announcements: { icon: <FaBullhorn aria-hidden="true" />, label: 'Important Announcements' },
-  releasenotes: { icon: <FaFileAlt aria-hidden="true" />, label: 'Release Notes' },
-  keynotes: { icon: <FaStickyNote aria-hidden="true" />, label: 'Key Notes' },
-  training: { icon: <FaBookOpen aria-hidden="true" />, label: 'Training Materials' },
-};
-
 const ExpandedPanel = styled.div`
   background: #fafbfc;
-  border-radius: 8px;
+  border-radius: 8px; 
   border: 1px solid #e0e0e0;
   margin-top: 18px;
   padding: 18px 14px 8px 14px;
@@ -94,31 +78,44 @@ const ExpandedPanel = styled.div`
   }
 `;
 
-const EntryTitle = styled.div`
-  font-weight: 600;
-  margin-bottom: 2px;
-`;
-const EntryDate = styled.div`
-  font-size: 0.92rem;
-  color: #888;
-  margin-bottom: 4px;
-`;
 const EntryBody = styled.div`
   margin-bottom: 12px;
   color: #333;
-  white-space: pre-line;
+
+  ul, ol {
+    margin: 0.5em 0 0.5em 1.5em;
+    padding: 0;
+  }
+  li {
+    margin: 0.25em 0;
+    list-style: disc inside;
+  }
+  p {
+    margin: 0.5em 0;
+  }
+  a {
+    color: #3366cc;
+    text-decoration: underline;
+    &:hover {
+      color: #003399;
+    }
+  }
+  strong {
+    font-weight: 600;
+  }
 `;
 const Divider = styled.div`
   border-bottom: 1px solid #ececec;
   margin: 10px 0 12px 0;
 `;
 
-const Home = () => {
-  const [expanded, setExpanded] = useState<CategoryKey|null>(null);
+// Inner content that uses the context
+const HomeContentInner = () => {
+  const [expanded, setExpanded] = useState<number|null>(null);
   const { content } = useStaticContent();
 
-  const handleExpand = (key: CategoryKey) => {
-    setExpanded(prev => (prev === key ? null : key));
+  const handleExpand = (idx: number) => {
+    setExpanded(prev => (prev === idx ? null : idx));
   };
 
   return (
@@ -127,43 +124,42 @@ const Home = () => {
         The Data Transfer Compliance Tool helps you ensure compliance for all your data transfer activities.
       </Summary>
       <Grid>
-        {(Object.keys(content) as CategoryKey[]).map((key) => {
-          const entries = content[key];
-          const meta = categoryMeta[key];
-          return (
-            <Card key={key}>
-              <CardHeader>
-                <IconWrapper>{meta.icon}</IconWrapper>
-                <CardTitle>{meta.label}</CardTitle>
-              </CardHeader>
-              {expanded === key ? (
-                <>
-                  <Button onClick={() => handleExpand(key)} aria-expanded={expanded===key} aria-controls={`${key}-panel`}>
-                    Hide Details
-                  </Button>
-                  <ExpandedPanel id={`${key}-panel`}>
-                    <div style={{fontWeight:500, marginBottom:10}}>▼ All {meta.label}</div>
-                    {entries.map((entry, idx) => (
-                      <div key={idx}>
-                        <EntryTitle>{entry.title}</EntryTitle>
-                        <EntryDate>{entry.date ? entry.date : ''}</EntryDate>
-                        <EntryBody>{entry.body}</EntryBody>
-                        {idx < entries.length-1 && <Divider />}
-                      </div>
-                    ))}
-                  </ExpandedPanel>
-                </>
-              ) : (
-                <Button onClick={() => handleExpand(key)} aria-expanded={expanded===key} aria-controls={`${key}-panel`}>
-                  View Details
+        {content.map((section, idx) => (
+          <Card key={idx}>
+            <CardHeader>
+              <CardTitle>{section.title}</CardTitle>
+            </CardHeader>
+            {expanded === idx ? (
+              <>
+                <Button onClick={() => handleExpand(idx)} aria-expanded={expanded===idx} aria-controls={`panel-${idx}`}>
+                  Hide Details
                 </Button>
-              )}
-            </Card>
-          );
-        })}
+                <ExpandedPanel id={`panel-${idx}`}>
+                  <EntryBody>{section.body}</EntryBody>
+                </ExpandedPanel>
+              </>
+            ) : (
+              <Button onClick={() => handleExpand(idx)} aria-expanded={expanded===idx} aria-controls={`panel-${idx}`}>
+                View Details
+              </Button>
+            )}
+          </Card>
+        ))}
       </Grid>
     </Container>
   );
 };
+
+// HomeContent receives the HTML as a prop and provides it to the context
+const HomeContent = ({ homeContentHtml }: { homeContentHtml: string }) => (
+  <StaticContentProvider rawHtml={homeContentHtml}>
+    <HomeContentInner />
+  </StaticContentProvider>
+);
+
+// Home receives the HTML as a prop and passes it down
+const Home = ({ homeContentHtml }: { homeContentHtml: string }) => (
+  <HomeContent homeContentHtml={homeContentHtml} />
+);
 
 export default Home; 

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import ApprovedChannels from './ApprovedChannels';
+import { FiUser, FiDownload, FiFileText } from 'react-icons/fi';
+import { exportOutputToExcel, ApprovedChannelRow } from './exportOutputToExcel';
 
 const DetailPanel = styled.div`
   flex: 1;
@@ -113,6 +115,48 @@ const StatusChip = styled.span<{ status: string }>`
   word-break: break-word;
   text-align: left;
 `;
+const ContactPersonCard = styled.div`
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  font-size: 1.05em;
+  font-weight: 500;
+  color: #1e293b;
+  box-shadow: none;
+`;
+const ContactIcon = styled.span`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 10px;
+  font-size: 1.3em;
+  color: #64748b;
+`;
+const ExportButtonGroup = styled.div`
+  display: flex;
+  gap: 10px;
+  margin: 0;
+`;
+const ExportButton = styled.button`
+  background: #f1f5f9;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.98em;
+  color: #334155;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.18s;
+  &:hover {
+    background: #e0e7ef;
+  }
+`;
 
 interface EntityDetailPanelProps {
   entity: string;
@@ -199,14 +243,46 @@ const EntityDetailPanel: React.FC<EntityDetailPanelProps> = ({ entity, details =
     approvedChannels: false,
   });
 
+  const handleExportPDF = () => {
+    // TODO: Implement export to PDF
+    alert('Export to PDF clicked!');
+  };
+  const handleExportExcel = () => {
+    // Prepare Output Data (single row as an array)
+    const outputData = [
+      {
+        'Entity Name': entity,
+        Output: details.output || '',
+        'Legal/Business Requirements': details.legalBusinessRequirements || '',
+        'End User Actions': details.endUserActions || '',
+        Remediation: details.remediation || '',
+        'Contact Person': details.contactPerson || '',
+        'Date Generated': details.dateGenerated || '',
+        'Version Date': details.versionDate || '',
+        // Add more fields as needed
+      }
+    ];
+    // Azure Cloud Hosting Locations
+    const azureCloudHosting = getMockAzureHostingLocations(entity);
+    // Access Locations
+    const accessLocations = getMockAccessLocations(entity, selectedBusinessDivision ?? null);
+    // Approved Channels (replace with real data if available)
+    const approvedChannels: ApprovedChannelRow[] = [];
+    exportOutputToExcel(outputData, azureCloudHosting, accessLocations, approvedChannels, entity + '_output');
+  };
+
   const toggle = (key: keyof typeof open) => setOpen(o => ({ ...o, [key]: !o[key] }));
 
   return (
     <DetailPanel>
       <DetailTitle>{entity}</DetailTitle>
+      <ContactPersonCard>
+        <ContactIcon><FiUser /></ContactIcon>
+        <span>Contact Person: <b>{details.contactPerson || '--'}</b></span>
+      </ContactPersonCard>
       <CollapsibleSection>
         <SectionHeader style={{ cursor: 'default', background: '#f1f5f9', color: '#334155', justifyContent: 'space-between' }}>
-          <span>Output:</span>
+          <span>Result:</span>
           <OutputChip type={details.output || ''}>{details.output || '--'}</OutputChip>
         </SectionHeader>
       </CollapsibleSection>
@@ -305,10 +381,14 @@ const EntityDetailPanel: React.FC<EntityDetailPanelProps> = ({ entity, details =
         )}
       </CollapsibleSection>
       <MetaSection>
-        <MetaItem>
-          <MetaLabel>Contact Person</MetaLabel>
-          <MetaValue>{details.contactPerson || '--'}</MetaValue>
-        </MetaItem>
+        <ExportButtonGroup>
+          <ExportButton onClick={handleExportPDF} title="Export to PDF">
+            <FiFileText /> PDF
+          </ExportButton>
+          <ExportButton onClick={handleExportExcel} title="Export to Excel">
+            <FiDownload /> Excel
+          </ExportButton>
+        </ExportButtonGroup>
         <MetaSpacer />
         <MetaItem>
           <MetaLabel>Date Generated</MetaLabel>

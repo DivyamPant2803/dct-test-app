@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 
 const Sidebar = styled.div`
-  width: 210px;
+  width: 300px;
   background: #fff;
   border-right: 1px solid #f3f4f6;
   display: flex;

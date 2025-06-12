@@ -8,8 +8,9 @@ import NavBar from './components/NavBar'
 import Home from './pages/Home'
 import Guidance from './pages/Guidance'
 import { Administration } from './pages/Administration'
-import { StaticContentProvider } from './contexts/StaticContentContext'
 import NotificationModal, { Notification } from './components/NotificationModal'
+import HomeTwoPanel from './pages/HomeTwoPanel'
+import homeContentHtml from './static/homeContentHtml'
 
 const queryClient = new QueryClient()
 
@@ -192,25 +193,23 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <GlobalStyle />
       <BrowserRouter>
-        <StaticContentProvider>
-          <AppContainer>
-            <Header>Data Transfer Compliance Tool</Header>
-            <NavBar unreadCount={unreadCount} onNotificationClick={handleNotificationClick} />
-            <NotificationModal
-              open={modalOpen}
-              onClose={handleModalClose}
-              onMarkAllRead={handleMarkAllRead}
-              onNotificationClick={handleNotificationItemClick}
-            />
-            <Main>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/guidance" element={<Guidance />} />
-                <Route path="/admin" element={<Administration setNotifications={setNotifications} />} />
-              </Routes>
-            </Main>
-          </AppContainer>
-        </StaticContentProvider>
+        <AppContainer>
+          <Header>Data Transfer Compliance Tool</Header>
+          <NavBar unreadCount={unreadCount} onNotificationClick={handleNotificationClick} />
+          <NotificationModal
+            open={modalOpen}
+            onClose={handleModalClose}
+            onMarkAllRead={handleMarkAllRead}
+            onNotificationClick={handleNotificationItemClick}
+          />
+          <Main>
+            <Routes>
+              <Route path="/" element={<Home homeContentHtml={homeContentHtml} />} />
+              <Route path="/guidance" element={<Guidance />} />
+              <Route path="/admin" element={<Administration setNotifications={setNotifications} />} />
+            </Routes>
+          </Main>
+        </AppContainer>
       </BrowserRouter>
     </QueryClientProvider>
   );
