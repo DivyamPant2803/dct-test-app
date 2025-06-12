@@ -1,4 +1,4 @@
-# dct-test-app
+# Data Compliance Application
 
 ## Project Overview
 
