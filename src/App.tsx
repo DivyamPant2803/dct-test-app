@@ -9,8 +9,14 @@ import Home from './pages/Home'
 import Guidance from './pages/Guidance'
 import { Administration } from './pages/Administration'
 import NotificationModal, { Notification } from './components/NotificationModal'
-import HomeTwoPanel from './pages/HomeTwoPanel'
 import homeContentHtml from './static/homeContentHtml'
+import EndUserDashboard from './components/EndUserDashboard'
+import AdminDashboard from './components/AdminDashboard'
+import LegalReview from './components/LegalReview'
+import LegalContentDashboard from './components/LegalContentDashboard'
+import AdminCRDashboard from './components/AdminCRDashboard'
+import RequirementDetails from './components/RequirementDetails'
+import SupportChatbotPanel from './components/SupportChatbotPanel'
 
 const queryClient = new QueryClient()
 
@@ -173,11 +179,30 @@ const exampleNotifications: Notification[] = [
     senderInitials: 'SW',
     category: 'legal',
   },
+  {
+    id: '4',
+    sender: 'Legal Team',
+    message: 'New change request submitted for GDPR Data Processing Agreement',
+    timeAgo: '2 hours ago',
+    read: false,
+    senderInitials: 'LT',
+    category: 'legal',
+  },
+  {
+    id: '5',
+    sender: 'Admin',
+    message: 'Your change request for CCPA Consumer Rights Compliance has been approved',
+    timeAgo: '1 hour ago',
+    read: false,
+    senderInitials: 'AD',
+    category: 'legal',
+  },
 ];
 
 const App = () => {
   const [notifications, setNotifications] = useState<Notification[]>(exampleNotifications);
   const [modalOpen, setModalOpen] = useState(false);
+  const [chatbotOpen, setChatbotOpen] = useState(false);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -188,6 +213,8 @@ const App = () => {
     setNotifications(notifications => notifications.map(n => n.id === id ? { ...n, read: true } : n));
     // Optionally close modal or trigger navigation/action here
   };
+  const handleChatbotClick = () => setChatbotOpen(true);
+  const handleChatbotClose = () => setChatbotOpen(false);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -195,7 +222,11 @@ const App = () => {
       <BrowserRouter>
         <AppContainer>
           <Header>Data Transfer Compliance Tool</Header>
-          <NavBar unreadCount={unreadCount} onNotificationClick={handleNotificationClick} />
+          <NavBar 
+            unreadCount={unreadCount} 
+            onNotificationClick={handleNotificationClick}
+            onChatbotClick={handleChatbotClick}
+          />
           <NotificationModal
             open={modalOpen}
             onClose={handleModalClose}
@@ -207,8 +238,19 @@ const App = () => {
               <Route path="/" element={<Home homeContentHtml={homeContentHtml} />} />
               <Route path="/guidance" element={<Guidance />} />
               <Route path="/admin" element={<Administration setNotifications={setNotifications} />} />
+              <Route path="/my-transfers" element={<EndUserDashboard />} />
+              <Route path="/dct" element={<AdminDashboard />} />
+              <Route path="/legal" element={<LegalReview />} />
+              <Route path="/legal-content" element={<LegalContentDashboard />} />
+              <Route path="/admin-cr" element={<AdminCRDashboard />} />
+              <Route path="/requirement/:id" element={<RequirementDetails requirementId="req-1" />} />
             </Routes>
           </Main>
+          
+          <SupportChatbotPanel
+            isOpen={chatbotOpen}
+            onClose={handleChatbotClose}
+          />
         </AppContainer>
       </BrowserRouter>
     </QueryClientProvider>

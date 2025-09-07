@@ -95,6 +95,12 @@ interface CombinationsSidebarProps {
   setSelectedGuidance?: (g: string) => void;
   selectedRecipientTypes?: string | null;
   setSelectedRecipientTypes?: (r: string) => void;
+  selectedDataSubjectType?: string | null;
+  setSelectedDataSubjectType?: (t: string) => void;
+  selectedTransferLocation?: string | null;
+  setSelectedTransferLocation?: (t: string) => void;
+  selectedPurpose?: string | null;
+  setSelectedPurpose?: (p: string) => void;
 }
 
 const getCategoryDisplayName = (category: string) => {
@@ -112,14 +118,26 @@ const getCategoryDisplayName = (category: string) => {
   }
 };
 
-const CombinationsSidebar: React.FC<CombinationsSidebarProps> = ({selectedBusinessDivision, onBusinessDivisionSelect, selectedInfoCategory, onInfoCategorySelect, selectedGuidance, setSelectedGuidance, selectedRecipientTypes, setSelectedRecipientTypes }) => {
+const CombinationsSidebar: React.FC<CombinationsSidebarProps> = ({
+  selectedBusinessDivision,
+  onBusinessDivisionSelect,
+  selectedInfoCategory,
+  onInfoCategorySelect,
+  selectedGuidance,
+  setSelectedGuidance,
+  selectedRecipientTypes,
+  setSelectedRecipientTypes,
+  selectedDataSubjectType,
+  setSelectedDataSubjectType,
+  selectedTransferLocation,
+  setSelectedTransferLocation,
+  selectedPurpose,
+  setSelectedPurpose
+}) => {
   const [openMenus, setOpenMenus] = useState<string[]>(categories.map(cat => cat.key)); // all open by default
   const [internalSelectedGuidance, internalSetSelectedGuidance] = useState<string | null>(null);
-  const [selectedDataSubjectType, setSelectedDataSubjectType] = useState<string | null>(null);
   const [internalSelectedRecipientTypes, internalSetSelectedRecipientTypes] = useState<string | null>(null);
-  const [selectedPurpose, setSelectedPurpose] = useState<string | null>(null);
   const [selectedScope, setSelectedScope] = useState<string | null>(null);
-  const [selectedTransferLocation, setSelectedTransferLocation] = useState<string | null>(null);
   // Redux state
   const informationCategory = useAppSelector(state => state.questionnaire.informationCategory);
   const dataSubjectType = useAppSelector(state => state.questionnaire.dataSubjectType);
@@ -150,12 +168,12 @@ const CombinationsSidebar: React.FC<CombinationsSidebarProps> = ({selectedBusine
     if (onInfoCategorySelect) {
       onInfoCategorySelect(cat);
     }
-    setSelectedDataSubjectType(null); // reset data subject type selection when info category changes
+    if (setSelectedDataSubjectType) setSelectedDataSubjectType(''); // reset data subject type selection when info category changes
   };
 
   // Handler for data subject type chip selection
   const handleDataSubjectTypeSelect = (type: string) => {
-    setSelectedDataSubjectType(type);
+    if (setSelectedDataSubjectType) setSelectedDataSubjectType(type);
   };
 
   const handleRecipientTypesSelect = (type: string) => {
@@ -164,7 +182,7 @@ const CombinationsSidebar: React.FC<CombinationsSidebarProps> = ({selectedBusine
   }
 
   const handlePurposeSelect = (purpose: string) => {
-    setSelectedPurpose(purpose);
+    if (setSelectedPurpose) setSelectedPurpose(purpose);
   }
 
   const handleScopeSelect = (scope: string) => {
@@ -172,7 +190,7 @@ const CombinationsSidebar: React.FC<CombinationsSidebarProps> = ({selectedBusine
   }
 
   const handleTransferLocationSelect = (loc: string) => {
-    setSelectedTransferLocation(loc);
+    if (setSelectedTransferLocation) setSelectedTransferLocation(loc);
   }
 
   const handleBusinessDivisionSelect = (division: string) => {

@@ -5,6 +5,7 @@ import { REGIONS, COUNTRIES_DATA } from './Questionnaire.data';
 import { FiChevronDown, FiChevronRight, FiX } from 'react-icons/fi';
 import { useAppDispatch } from '../../hooks/useRedux';
 import { setCountries } from './questionnaireSlice';
+import TooltipWrapper from '../common/TooltipWrapper';
 
 const RegionsContainer = styled.div`
   display: flex;
@@ -43,6 +44,14 @@ const CountBadge = styled.span`
   padding: 0.1rem 0.4rem;
   border-radius: 10px;
   margin-left: 0.5rem;
+`;
+
+const RegionCheckbox = styled.input`
+  margin-left: 0.5rem;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: #000;
 `;
 const SearchContainer = styled.div`
   flex-shrink: 0;
@@ -224,6 +233,17 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ selectedCountries, on
     return 0;
   });
 
+  // Helper function to get filtered count for a region
+  const getFilteredCount = (regionKey: keyof typeof REGIONS) => {
+    const regionCountries = COUNTRIES_DATA[regionKey];
+    if (!countrySearchTerm) {
+      return regionCountries.length;
+    }
+    return regionCountries.filter(country =>
+      country.name.toLowerCase().includes(countrySearchTerm.toLowerCase())
+    ).length;
+  };
+
   const handleCountryToggle = (countryName: string) => {
     if (disabled) return;
     let newSelected: string[];
@@ -234,6 +254,37 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ selectedCountries, on
     }
     onChange(newSelected);
     dispatch(setCountries(newSelected));
+  };
+
+  const handleRegionToggle = (regionKey: keyof typeof REGIONS, event: React.ChangeEvent<HTMLInputElement>) => {
+    if (disabled) return;
+    
+    const regionCountryNames = COUNTRIES_DATA[regionKey].map(country => country.name);
+    const allRegionCountriesSelected = regionCountryNames.every(name => selectedCountries.includes(name));
+    
+    let newSelected: string[];
+    if (allRegionCountriesSelected) {
+      // Deselect all countries in this region
+      newSelected = selectedCountries.filter(name => !regionCountryNames.includes(name));
+    } else {
+      // Select all countries in this region (add only those not already selected)
+      const countriesToAdd = regionCountryNames.filter(name => !selectedCountries.includes(name));
+      newSelected = [...selectedCountries, ...countriesToAdd];
+    }
+    
+    onChange(newSelected);
+    dispatch(setCountries(newSelected));
+  };
+
+  const isRegionFullySelected = (regionKey: keyof typeof REGIONS) => {
+    const regionCountryNames = COUNTRIES_DATA[regionKey].map(country => country.name);
+    return regionCountryNames.every(name => selectedCountries.includes(name));
+  };
+
+  const isRegionPartiallySelected = (regionKey: keyof typeof REGIONS) => {
+    const regionCountryNames = COUNTRIES_DATA[regionKey].map(country => country.name);
+    const selectedInRegion = regionCountryNames.filter(name => selectedCountries.includes(name));
+    return selectedInRegion.length > 0 && selectedInRegion.length < regionCountryNames.length;
   };
 
   // Gather all selected country objects from all regions
@@ -285,8 +336,19 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ selectedCountries, on
             >
               {REGIONS[key]}
               <CountBadge>
-                {COUNTRIES_DATA[key].length}
+                {getFilteredCount(key)}
               </CountBadge>
+              <RegionCheckbox
+                type="checkbox"
+                checked={isRegionFullySelected(key)}
+                ref={(input) => {
+                  if (input) {
+                    input.indeterminate = isRegionPartiallySelected(key);
+                  }
+                }}
+                onChange={(e) => handleRegionToggle(key, e)}
+                disabled={disabled}
+              />
             </RegionChip>
           ))}
         </RegionsContainer>
@@ -302,23 +364,24 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ selectedCountries, on
       </div>
       <CountryGrid>
         {sortedCountries.map(country => (
-          <CountryOption
-            key={country.code}
-            selected={selectedCountries.includes(country.name)}
-            onClick={() => handleCountryToggle(country.name)}
-            style={disabled ? { pointerEvents: 'none', opacity: 0.6 } : {}}
-            tabIndex={0}
-            role="button"
-            aria-pressed={selectedCountries.includes(country.name)}
-          >
-            <FlagContainer>
-              <Flag code={country.code} />
-            </FlagContainer>
-            <CountryInfo>
-              <CountryName>{country.name}</CountryName>
-              <CountryRegion>{country.region}</CountryRegion>
-            </CountryInfo>
-          </CountryOption>
+          <TooltipWrapper key={country.code} tooltipText={country.name}>
+            <CountryOption
+              selected={selectedCountries.includes(country.name)}
+              onClick={() => handleCountryToggle(country.name)}
+              style={disabled ? { pointerEvents: 'none', opacity: 0.6 } : {}}
+              tabIndex={0}
+              role="button"
+              aria-pressed={selectedCountries.includes(country.name)}
+            >
+              <FlagContainer>
+                <Flag code={country.code} />
+              </FlagContainer>
+              <CountryInfo>
+                <CountryName>{country.name}</CountryName>
+                <CountryRegion>{country.region}</CountryRegion>
+              </CountryInfo>
+            </CountryOption>
+          </TooltipWrapper>
         ))}
       </CountryGrid>
       {error && <ErrorMessage>Please select at least one country</ErrorMessage>}

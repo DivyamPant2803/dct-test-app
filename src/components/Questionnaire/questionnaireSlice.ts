@@ -2,10 +2,10 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 // Define the type for categorized entities
 interface CategorizedEntities {
-  [category: string]: string[]; // category -> array of entity IDs
+  [category: string]: string[]; // category -> array of entity IDs (not names)
 }
 interface EntitiesByCountry {
-  [country: string]: string[]; // country -> array of entity IDs
+  [country: string]: string[]; // country -> array of entity IDs (not names)
 }
 
 interface QuestionnaireState {
@@ -16,7 +16,7 @@ interface QuestionnaireState {
   /**
    * dataSubjectType can be either:
    * - string[] (legacy)
-   * - { Client: string[], Employee: string[] } (categorized)
+   * - { Client: string[]; Employee: string[] } (categorized)
    */
   dataSubjectType: string[] | { CID: string[]; ED: string[] };
   countries: string[];
@@ -25,6 +25,7 @@ interface QuestionnaireState {
   transferLocation: string[];
   recipientType: string[];
   reviewDataTransferPurpose: { [infoCat: string]: { [dataSubjectType: string]: { [recipientType: string]: string[] } } };
+  cidInfoMessageShown: boolean; // Track if CID info message has been shown
 }
 
 const initialState: QuestionnaireState = {
@@ -39,6 +40,7 @@ const initialState: QuestionnaireState = {
   transferLocation: [],
   recipientType: [],
   reviewDataTransferPurpose: {},
+  cidInfoMessageShown: false,
 };
 
 const questionnaireSlice = createSlice({
@@ -76,9 +78,12 @@ const questionnaireSlice = createSlice({
       state.transferLocation = [];
       state.recipientType = [];
       state.reviewDataTransferPurpose = {};
+      state.cidInfoMessageShown = false;
     },
     setInformationCategory(state, action: PayloadAction<string[]>) {
       state.informationCategory = action.payload;
+      // Reset CID info message flag when information category changes
+      state.cidInfoMessageShown = false;
     },
     setDataSubjectType(state, action: PayloadAction<string[] | { CID: string[]; ED: string[] }>) {
       // Accept both legacy array and new categorized object
@@ -105,12 +110,12 @@ const questionnaireSlice = createSlice({
       state.entities = action.payload;
     },
     addEntityToCategory(state, action: PayloadAction<{category: string, entityId: string, name: string}>) {
-      const { category, name } = action.payload;
+      const { category, entityId } = action.payload;
       if (!state.entities[category]) {
         state.entities[category] = [];
       }
-      if (!state.entities[category].includes(name)) {
-        state.entities[category].push(name);
+      if (!state.entities[category].includes(entityId)) {
+        state.entities[category].push(entityId);
       }
     },
     removeEntityFromCategory(state, action: PayloadAction<{category: string, entityId: string}>) {
@@ -124,12 +129,12 @@ const questionnaireSlice = createSlice({
       }
     },
     addEntityToCountry(state, action: PayloadAction<{country: string, entityId: string, name: string}>) {
-      const { country, name } = action.payload;
+      const { country, entityId } = action.payload;
       if (!state.entitiesByCountry[country]) {
         state.entitiesByCountry[country] = [];
       }
-      if (!state.entitiesByCountry[country].includes(name)) {
-        state.entitiesByCountry[country].push(name);
+      if (!state.entitiesByCountry[country].includes(entityId)) {
+        state.entitiesByCountry[country].push(entityId);
       }
     },
     removeEntityFromCountry(state, action: PayloadAction<{country: string, entityId: string}>) {
@@ -149,6 +154,9 @@ const questionnaireSlice = createSlice({
     },
     setReviewDataTransferPurpose(state, action: PayloadAction<{ [infoCat: string]: { [dataSubjectType: string]: { [recipientType: string]: string[] } } }>) {
       state.reviewDataTransferPurpose = action.payload;
+    },
+    setCidInfoMessageShown(state, action: PayloadAction<boolean>) {
+      state.cidInfoMessageShown = action.payload;
     },
   },
 });
@@ -171,6 +179,7 @@ export const {
   setTransferLocation,
   setRecipientType,
   setReviewDataTransferPurpose,
+  setCidInfoMessageShown,
 } = questionnaireSlice.actions;
 
 export default questionnaireSlice.reducer; 

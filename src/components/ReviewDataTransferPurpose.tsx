@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useAppDispatch, useAppSelector } from '../hooks/useRedux';
 import { setReviewDataTransferPurpose } from './Questionnaire/questionnaireSlice';
+import TooltipWrapper from './common/TooltipWrapper';
 import {
   INFO_CATEGORY_CID,
   INFO_CATEGORY_ED,
@@ -24,7 +25,8 @@ import {
 const Container = styled.div`
   max-width: 100%;
   height: 100%;
-  overflow-y: auto;
+  overflow-x: auto;
+  overflow-y: visible;
 
   &::-webkit-scrollbar {
     width: 8px;
@@ -68,6 +70,7 @@ const CategoryTitle = styled.h2`
 
 const TableContainer = styled.div`
   padding: 1rem;
+  padding-bottom: 3rem; /* Add extra padding at bottom for tooltips */
 `;
 
 const Table = styled.table`
@@ -164,6 +167,7 @@ interface Props {
   dataSubjectType: string[];
   recipientType: string[];
   onChange?: (selectedItems: Set<string>) => void;
+  onValidationChange?: (isValid: boolean) => void;
 }
 
 // Helper to map dataSubjectType to display label and section type
@@ -190,7 +194,8 @@ const ReviewDataTransferPurpose: React.FC<Props> = ({
   dataSubjectType,
   recipientType,
   onChange,
-  informationCategory
+  informationCategory,
+  onValidationChange
 }) => {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const dispatch = useAppDispatch();
@@ -215,6 +220,21 @@ const ReviewDataTransferPurpose: React.FC<Props> = ({
   const clientDSTypes = new Set(DATA_SUBJECT_TYPES_CLIENT);
   const employeeDSTypes = new Set(DATA_SUBJECT_TYPES_EMPLOYEE);
 
+  // Helper function to parse item format: "infoCat-type-recipient-purpose"
+  const parseItem = (item: string) => {
+    const parts = item.split('-');
+    if (parts.length < 4) {
+      return null; // Invalid format
+    }
+    
+    return {
+      infoCat: parts[0],
+      dsType: parts[1],
+      recipient: parts[2],
+      purpose: parts.slice(3).join('-') // Join all parts after the third hyphen
+    };
+  };
+
   // Build tabs dynamically from selected dataSubjectType
   const tabInfos = dataSubjectType.map(getTabInfo);
   const [activeTab, setActiveTab] = useState<string>(tabInfos[0]?.label || '');
@@ -236,23 +256,31 @@ const ReviewDataTransferPurpose: React.FC<Props> = ({
       dataSubjectType.forEach(dsType => {
         if (allowedDSTypes.has(dsType)) {
           categorizedPurpose[infoCat][dsType] = {};
-          // Include 'Scope' as a recipient type
-          const allRecipientTypes = [...recipientType, 'Scope'];
-          allRecipientTypes.forEach(recType => {
+          // Determine which recipient types to include based on data subject type
+          let recipientTypesToInclude: string[];
+          if (dsType === 'Employee' || dsType === 'Candidate' || dsType === DATA_SUBJECT_TYPE_CS_EMPLOYEE) {
+            // Employee types need both Scope and regular recipient types
+            recipientTypesToInclude = [...recipientType, 'Scope'];
+          } else {
+            // Client types only need regular recipient types
+            recipientTypesToInclude = [...recipientType];
+          }
+          
+          recipientTypesToInclude.forEach(recType => {
             const relevant = Array.from(selectedItemsSet)
               .filter(item => {
-                // Split the item to extract the exact infoCat, dsType, and recType
-                // Example: "CID - CS Client-Entity-Facilitation of Outsourcing/Nearshoring/Offshoring"
-                const [itemInfoCat, itemDsType, itemRecipient] = item.split('-').map(s => s.trim());
+                const parsed = parseItem(item);
+                if (!parsed) return false;
+                
                 return (
-                  itemInfoCat === infoCat &&
-                  itemDsType === dsType &&
-                  itemRecipient === recType
+                  parsed.infoCat === infoCat &&
+                  parsed.dsType === dsType &&
+                  parsed.recipient === recType
                 );
               })
               .map(item => {
-                const parts = item.split('-');
-                return parts[parts.length - 1].trim();
+                const parsed = parseItem(item);
+                return parsed ? parsed.purpose : '';
               });
             categorizedPurpose[infoCat][dsType][recType] = relevant;
           });
@@ -261,6 +289,55 @@ const ReviewDataTransferPurpose: React.FC<Props> = ({
     });
     console.log("ReviewDataTransferPurpose: categorizedPurpose: "+JSON.stringify(categorizedPurpose));
     return categorizedPurpose;
+  };
+
+  // Function to check if at least one item is selected for each recipient type
+  const checkValidation = (selectedItemsSet: Set<string>) => {
+    const infoCats = Array.isArray(informationCategory) ? informationCategory : [informationCategory];
+    
+    for (const infoCat of infoCats) {
+      let allowedDSTypes: Set<string>;
+      if (infoCat === INFO_CATEGORY_CID) {
+        allowedDSTypes = clientDSTypes;
+      } else if (infoCat === INFO_CATEGORY_ED) {
+        allowedDSTypes = employeeDSTypes;
+      } else {
+        allowedDSTypes = new Set();
+      }
+
+      for (const dsType of dataSubjectType) {
+        if (allowedDSTypes.has(dsType)) {
+          // Determine which recipient types to check based on data subject type
+          let recipientTypesToCheck: string[];
+          if (dsType === 'Employee' || dsType === 'Candidate' || dsType === DATA_SUBJECT_TYPE_CS_EMPLOYEE) {
+            // Employee types need both Scope and regular recipient types
+            recipientTypesToCheck = [...recipientType, 'Scope'];
+          } else {
+            // Client types only need regular recipient types
+            recipientTypesToCheck = [...recipientType];
+          }
+          
+          for (const recType of recipientTypesToCheck) {
+            const hasSelection = Array.from(selectedItemsSet).some(item => {
+              const parsed = parseItem(item);
+              if (!parsed) return false;
+              
+              return (
+                parsed.infoCat === infoCat &&
+                parsed.dsType === dsType &&
+                parsed.recipient === recType
+              );
+            });
+            
+            if (!hasSelection) {
+              return false; // Invalid - missing selection for this recipient type
+            }
+          }
+        }
+      }
+    }
+    
+    return true; // Valid - all recipient types have at least one selection
   };
 
   // Initialize selectedItems only once on mount
@@ -296,6 +373,10 @@ const ReviewDataTransferPurpose: React.FC<Props> = ({
     setSelectedItems(allItems);
     const categorizedPurpose = buildCategorizedPurpose(allItems);
     dispatch(setReviewDataTransferPurpose(categorizedPurpose));
+    
+    // Check validation and notify parent
+    const isValid = checkValidation(allItems);
+    onValidationChange?.(isValid);
     // eslint-disable-next-line
   }, []); // Only run on mount
 
@@ -316,6 +397,11 @@ const ReviewDataTransferPurpose: React.FC<Props> = ({
         newSet.add(id);
       }
       onChange?.(newSet);
+      
+      // Check validation and notify parent
+      const isValid = checkValidation(newSet);
+      onValidationChange?.(isValid);
+      
       return newSet;
     });
   };
@@ -330,13 +416,14 @@ const ReviewDataTransferPurpose: React.FC<Props> = ({
   const renderChips = (items: string[], prefix: string) => (
     <ChipsContainer>
       {items.map(item => (
-        <Chip
-          key={`${prefix}-${item}`}
-          selected={selectedItems.has(`${prefix}-${item}`)}
-          onClick={(e) => handleToggle(`${prefix}-${item}`, e)}
-        >
-          {item}
-        </Chip>
+        <TooltipWrapper key={`${prefix}-${item}`} tooltipText={item}>
+          <Chip
+            selected={selectedItems.has(`${prefix}-${item}`)}
+            onClick={(e) => handleToggle(`${prefix}-${item}`, e)}
+          >
+            {item}
+          </Chip>
+        </TooltipWrapper>
       ))}
     </ChipsContainer>
   );
@@ -423,15 +510,16 @@ const ReviewDataTransferPurpose: React.FC<Props> = ({
     <Container>
       <TabsWrapper>
         {tabInfos.map(tab => (
-          <TabButton
-            type="button"
-            key={tab.label}
-            selected={activeTab === tab.label}
-            onClick={() => setActiveTab(tab.label)}
-            data-testid={`tab-${tab.label}`}
-          >
-            {tab.label}
-          </TabButton>
+          <TooltipWrapper key={tab.label} tooltipText={tab.label}>
+            <TabButton
+              type="button"
+              selected={activeTab === tab.label}
+              onClick={() => setActiveTab(tab.label)}
+              data-testid={`tab-${tab.label}`}
+            >
+              {tab.label}
+            </TabButton>
+          </TooltipWrapper>
         ))}
       </TabsWrapper>
       {tabInfos.filter(tab => tab.label === activeTab).map(tab => (

@@ -9,7 +9,9 @@ const Container = styled.div`
   height: 100%;
   background: #f5f5f5;
   padding: 2rem;
+  position: relative;
 `;
+
 
 const Guidance = () => {
   const [showResults, setShowResults] = useState<boolean>(false);
@@ -30,15 +32,10 @@ const Guidance = () => {
 
   return (
     <Container>
-      {/*{showResults && (
-        <BackButton onClick={() => setShowResults(false)}>
-          ← Back to Questionnaire
-        </BackButton>
-      )}*/}
       {!showResults ? (
         <Questionnaire onComplete={handleQuestionnaireComplete} />
       ) : (
-        <OutputRedesign/>
+        <OutputRedesign />
       )}
     </Container>
   );

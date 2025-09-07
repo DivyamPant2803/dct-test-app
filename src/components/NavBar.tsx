@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import styled from 'styled-components';
+import { FiMessageCircle } from 'react-icons/fi';
 import NotificationIcon from './NotificationIcon';
 
 const NavBarContainer = styled.nav`
@@ -21,6 +22,27 @@ const RightSection = styled.div`
   height: 100%;
   display: flex;
   align-items: center;
+  gap: 1rem;
+`;
+
+const ChatbotButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+  }
 `;
 
 const NavList = styled.ul`
@@ -52,9 +74,10 @@ const StyledNavLink = styled(NavLink)`
 interface NavBarProps {
   unreadCount: number;
   onNotificationClick: () => void;
+  onChatbotClick: () => void;
 }
 
-const NavBar: React.FC<NavBarProps> = ({ unreadCount, onNotificationClick }) => (
+const NavBar: React.FC<NavBarProps> = ({ unreadCount, onNotificationClick, onChatbotClick }) => (
   <NavBarContainer>
     <NavList>
       <li>
@@ -64,10 +87,26 @@ const NavBar: React.FC<NavBarProps> = ({ unreadCount, onNotificationClick }) => 
         <StyledNavLink to="/guidance">Guidance</StyledNavLink>
       </li>
       <li>
-        <StyledNavLink to="/admin">Administration</StyledNavLink>
+        <StyledNavLink to="/my-transfers">My Transfers</StyledNavLink>
+      </li>
+      <li>
+        <StyledNavLink to="/dct">Administration</StyledNavLink>
+      </li>
+      <li>
+        <StyledNavLink to="/legal">Legal</StyledNavLink>
+      </li>
+      <li>
+        <StyledNavLink to="/legal-content">Legal Content</StyledNavLink>
+      </li>
+      <li>
+        <StyledNavLink to="/admin-cr">Admin CR</StyledNavLink>
       </li>
     </NavList>
     <RightSection>
+      <ChatbotButton onClick={onChatbotClick}>
+        <FiMessageCircle size={16} />
+        Support
+      </ChatbotButton>
       <NotificationIcon unreadCount={unreadCount} onClick={onNotificationClick} />
     </RightSection>
   </NavBarContainer>

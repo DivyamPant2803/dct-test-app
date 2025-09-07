@@ -9,6 +9,9 @@ import QuestionnaireTabs from './QuestionnaireTabs';
 import AzureCloudHostingLocations from './AzureCloudHostingLocations';
 import AccessLocations from './AccessLocations';
 import CountrySelector from './CountrySelector';
+import OptionPanel from './OptionPanel';
+import TooltipWrapper from '../common/TooltipWrapper';
+import NavigationButtons from '../common/NavigationButtons';
 import { useAppSelector, useAppDispatch } from '../../hooks/useRedux';
 import {
   setCurrentStep,
@@ -84,53 +87,13 @@ const OptionsContainer = styled.div`
   }
 `;
 
-const OptionPanel = styled.div<{ selected: boolean }>`
-  display: flex;
-  align-items: flex-start;
-  padding: 1rem;
-  border: 2px solid ${props => props.selected ? '#000' : '#eee'};
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  background-color: ${props => props.selected ? '#f8f8f8' : 'white'};
-  position: relative;
-  height: auto;
-  min-height: 80px;
-
-  &:hover {
-    border-color: #000;
-    background-color: ${props => props.selected ? '#f8f8f8' : '#f9f9f9'};
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  }
-`;
-
-const OptionContent = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  flex: 1;
-`;
-
-const OptionTitle = styled.span`
-  font-size: 1rem;
-  font-weight: 500;
-  color: #333;
-`;
-
-const OptionDescription = styled.span`
-  font-size: 0.85rem;
-  color: #666;
-  line-height: 1.3;
-`;
-
-const SubmitButton = styled.button`
-  background-color: #000;
+const SubmitButton = styled.button<{ disabled?: boolean }>`
+  background-color: ${props => props.disabled ? '#ccc' : '#000'};
   color: white;
   border: none;
   padding: 1rem 2rem;
   border-radius: 4px;
-  cursor: pointer;
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
   font-weight: bold;
   font-size: 1rem;
   transition: all 0.3s ease;
@@ -139,15 +102,49 @@ const SubmitButton = styled.button`
   flex-shrink: 0;
 
   &:hover {
-    background-color: #333;
-    transform: translateY(-2px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background-color: ${props => props.disabled ? '#ccc' : '#333'};
+    transform: ${props => props.disabled ? 'none' : 'translateY(-2px)'};
+    box-shadow: ${props => props.disabled ? 'none' : '0 2px 8px rgba(0, 0, 0, 0.1)'};
   }
 `;
 
 const ErrorMessage = styled.p`
   color: #000;
   margin-top: 0.5rem;
+`;
+
+const InfoBubble = styled.div`
+  background: #f0f8ff;
+  border: 1px solid #b3d9ff;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+`;
+
+const InfoIcon = styled.div`
+  color: #0066cc;
+  font-size: 1.2rem;
+  margin-top: 0.1rem;
+  flex-shrink: 0;
+`;
+
+const InfoContent = styled.div`
+  color: #333;
+`;
+
+const InfoLink = styled.a`
+  color: #0066cc;
+  text-decoration: underline;
+  font-weight: 500;
+  
+  &:hover {
+    color: #004499;
+  }
 `;
 
 const CategorySection = styled.div`
@@ -332,9 +329,12 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
   const [isOutputExpanded, setIsOutputExpanded] = useState(true);
   const [isAzureExpanded, setIsAzureExpanded] = useState(false);
   const [activeAzureTab, setActiveAzureTab] = useState<'cloud' | 'access' | null>(null);
+  const [isReviewDataTransferPurposeValid, setIsReviewDataTransferPurposeValid] = useState(false);
+  const [entitySelectionError, setEntitySelectionError] = useState<string | null>(null);
 
   const formValues = watch();
   const currentQuestion = questions[currentStep];
+  console.log(currentQuestion);
   
   const currentSelections = {
     informationCategory: formValues.informationCategory || [],
@@ -343,6 +343,24 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
     transferLocation: formValues.transferLocation || [],
     recipientType: formValues.recipientType || [],
   };
+
+  // Entity validation constants
+  const MAX_ENTITIES = 100;
+  const ENTITY_LIMIT_WARNING = 90; // Show warning when approaching limit
+
+  // Validate entity selection count
+  const validateEntitySelection = useCallback((entityCount: number) => {
+    if (entityCount > MAX_ENTITIES) {
+      setEntitySelectionError(`Maximum ${MAX_ENTITIES} entities allowed. Please reduce your selection.`);
+      return false;
+    } else if (entityCount > ENTITY_LIMIT_WARNING) {
+      setEntitySelectionError(`Warning: You have selected ${entityCount} entities. Maximum allowed is ${MAX_ENTITIES}.`);
+      return true;
+    } else {
+      setEntitySelectionError(null);
+      return true;
+    }
+  }, []);
 
   // Update isAllStepsCompleted to include all steps
   const isAllStepsCompleted = useCallback(() => {
@@ -399,11 +417,35 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
     }
   }, [enabledSteps, completedSteps, questions.length, isAllStepsCompleted, currentStep, dispatch]);
 
-  // Debug log for rendering
-  useEffect(() => {
-    console.log('Current step:', currentStep);
-    console.log('Current question ID:', currentQuestion.id);
-  }, [currentStep, currentQuestion.id]);
+  // Navigation handlers for Back and Next buttons
+  const handleBack = useCallback(() => {
+    if (currentStep > 0) {
+      dispatch(setCurrentStep(currentStep - 1));
+    }
+  }, [currentStep, dispatch]);
+
+  const handleNext = useCallback(() => {
+    if (currentStep < questions.length - 1) {
+      dispatch(setCurrentStep(currentStep + 1));
+    }
+  }, [currentStep, questions.length, dispatch]);
+
+  // Check if current step is completed to enable Next button
+  const isCurrentStepCompleted = useCallback(() => {
+    const currentValues = watch(questions[currentStep]?.id) || [];
+    
+    // Special handling for review data transfer purpose step
+    if (questions[currentStep]?.id === 'reviewDataTransferPurpose') {
+      return isReviewDataTransferPurposeValid;
+    }
+    
+    // Special handling for entities step - check if within limit
+    if (questions[currentStep]?.id === 'entities') {
+      return currentValues.length > 0 && currentValues.length <= MAX_ENTITIES;
+    }
+    
+    return currentValues.length > 0;
+  }, [currentStep, questions, watch, isReviewDataTransferPurposeValid]);
 
   // Step completion and enabling logic
   const updateStepStatus = useCallback((stepIndex: number, values: string[]) => {
@@ -442,13 +484,6 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
     }
   }, [currentQuestion.id, watch, updateStepStatus, dispatch]);
 
-  // Debug log for step state changes
-  useEffect(() => {
-    console.log('Current step:', currentStep);
-    console.log('Enabled steps:', enabledSteps);
-    console.log('Completed steps:', completedSteps);
-  }, [currentStep, enabledSteps, completedSteps]);
-
   // Update the step enabling logic for transfer location
   useEffect(() => {
     if (currentSelections.transferLocation.length > 0) {
@@ -475,16 +510,31 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
   const onSubmit = (data: any) => {
     console.log('Raw form data:', data);
     
-    // Get selected entities for each country
-    const selectedEntities: { [key: string]: string[] } = {};
-    data.countries.forEach((country: string) => {
-      const countryEntities = INITIAL_FORM_DATA.entities[country] || [];
-      selectedEntities[country] = countryEntities;
+    // data.entities is an array of composite keys: entityId|category
+    const selectedEntities = (data.entities || []).map((key: string) => {
+      const [entityId, category] = key.split('|');
+      return { entityId, category };
     });
+    console.log('Selected Entities');
+    console.log(selectedEntities);
+
+    // Optionally, group by category or country if needed
+    // Example: group by category
+    const entitiesByCategory: { [category: string]: string[] } = {};
+    selectedEntities.forEach(({ entityId, category }: { entityId: string; category: string }) => {
+      if (!entitiesByCategory[category]) entitiesByCategory[category] = [];
+      entitiesByCategory[category].push(entityId);
+    });
+
+    // Example: group by country (if you have a mapping entityId -> country)
+    // const entitiesByCountry: { [country: string]: string[] } = {};
+    // ...
 
     const formData = {
       ...data,
-      entities: selectedEntities
+      selectedEntities, // array of { entityId, category }
+      entitiesByCategory, // grouped by category
+      // entitiesByCountry, // grouped by country if needed
     };
 
     console.log('Processed form data:', formData);
@@ -526,10 +576,21 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
     const selectedCountries = watch('countries') || [];
     const informationCategories = watch('informationCategory') || [];
 
-    const handleEntitySelect = (entityId: string) => {
-      const newValues = selectedValues.includes(entityId)
-        ? selectedValues.filter((id: string) => id !== entityId)
-        : [...selectedValues, entityId];
+    // selectedValues is now an array of composite keys: entityId|category
+    const handleEntitySelect = (entityId: string, category: string) => {
+      const key = `${entityId}|${category}`;
+      const newValues = selectedValues.includes(key)
+        ? selectedValues.filter((id: string) => id !== key)
+        : [...selectedValues, key];
+      
+      // Validate entity selection count
+      if (!selectedValues.includes(key)) { // Only validate when adding new entities
+        const isValid = validateEntitySelection(newValues.length);
+        if (!isValid) {
+          return; // Don't proceed if validation fails
+        }
+      }
+      
       setValue(currentQuestion.id, newValues);
 
       if (newValues.length > 0) {
@@ -539,12 +600,58 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
     };
 
     return (
-      <EntitySelection
-        selectedCountries={selectedCountries}
-        informationCategory={informationCategories}
-        selectedEntities={selectedValues}
-        onEntitySelect={handleEntitySelect}
-      />
+      <>
+        <EntitySelection
+          selectedCountries={selectedCountries}
+          informationCategory={informationCategories}
+          selectedEntities={selectedValues}
+          onEntitySelect={handleEntitySelect}
+          maxEntities={MAX_ENTITIES}
+          entityLimitWarning={ENTITY_LIMIT_WARNING}
+        />
+        
+        {/* Info Bubble */}
+        <InfoBubble>
+          <InfoIcon>ℹ️</InfoIcon>
+          <InfoContent>
+            <strong>Entity Selection Limit:</strong> You can select up to {MAX_ENTITIES} entities. 
+            {selectedValues.length > 0 && (
+              <span style={{ display: 'block', marginTop: '0.5rem' }}>
+                <strong>Current selection:</strong> {selectedValues.length} entities selected
+                {selectedValues.length > ENTITY_LIMIT_WARNING && (
+                  <span style={{ color: '#856404', fontWeight: 'bold' }}>
+                    {' '}({MAX_ENTITIES - selectedValues.length} remaining)
+                  </span>
+                )}
+              </span>
+            )}
+            <br />
+            If you need to work with more than {MAX_ENTITIES} entities, please{' '}
+            <InfoLink href="#" onClick={(e) => {
+              e.preventDefault();
+              // TODO: Implement download report functionality
+              alert('Download report functionality will be implemented here.');
+            }}>
+              download the comprehensive report
+            </InfoLink>{' '}
+            instead.
+          </InfoContent>
+        </InfoBubble>
+        
+        {/* Entity Selection Error */}
+        {entitySelectionError && (
+          <ErrorMessage style={{ 
+            color: entitySelectionError.includes('Warning') ? '#856404' : '#721c24',
+            backgroundColor: entitySelectionError.includes('Warning') ? '#fff3cd' : '#f8d7da',
+            border: `1px solid ${entitySelectionError.includes('Warning') ? '#ffeaa7' : '#f5c6cb'}`,
+            borderRadius: '4px',
+            padding: '0.75rem',
+            marginTop: '1rem'
+          }}>
+            {entitySelectionError}
+          </ErrorMessage>
+        )}
+      </>
     );
   };
 
@@ -554,6 +661,11 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
     if (entitySelections.length > 0) {
       updateStepStatus(3, ['entities']);
       dispatch(addEnabledStep(4));
+    }
+    
+    // Clear error when entity count is reduced below limit
+    if (entitySelections.length <= MAX_ENTITIES) {
+      setEntitySelectionError(null);
     }
   }, [watch('entities'), updateStepStatus, dispatch]);
 
@@ -614,40 +726,20 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
     }
   };
 
-  const renderBasicOptionPanel = (option: string) => {
-    const selectedValues = watch(currentQuestion.id) || [];
-    const isSelected = selectedValues.includes(option);
-
-    return (
-      <OptionPanel
-        key={option}
-        selected={isSelected}
-        onClick={(e) => handleOptionSelect(e, option)}
-      >
-        <OptionContent>
-          <OptionTitle>{option}</OptionTitle>
-          <OptionDescription>{getOptionDescription(option)}</OptionDescription>
-        </OptionContent>
-      </OptionPanel>
-    );
-  };
-
   const renderDataSubjectOptionPanel = (option: DataSubjectCategory) => {
     return (
       <CategorySection key={option.category}>
         <CategoryTitle>{option.category}</CategoryTitle>
         <OptionsContainer>
           {option.options.map(subOption => (
-            <OptionPanel
-              key={subOption}
-              selected={selectedOptions.includes(subOption)}
-              onClick={(e) => handleOptionSelect(e, subOption)}
-            >
-              <OptionContent>
-                <OptionTitle>{subOption}</OptionTitle>
-                <OptionDescription>{getOptionDescription(subOption)}</OptionDescription>
-              </OptionContent>
-            </OptionPanel>
+            <TooltipWrapper key={subOption} tooltipText={subOption}>
+              <OptionPanel
+                option={subOption}
+                isSelected={selectedOptions.includes(subOption)}
+                description={getOptionDescription(subOption)}
+                onClick={(e) => handleOptionSelect(e, subOption)}
+              />
+            </TooltipWrapper>
           ))}
         </OptionsContainer>
       </CategorySection>
@@ -761,6 +853,7 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
         informationCategory={informationCategories}
         dataSubjectType={dataSubjectTypes}
         recipientType={recipientTypes}
+        onValidationChange={setIsReviewDataTransferPurposeValid}
       />
     );
   };
@@ -794,9 +887,31 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
       />
       <ContentContainer>
         {activeAzureTab === 'cloud' ? (
-          <AzureCloudHostingLocations />
+          <>
+            <AzureCloudHostingLocations />
+            {/* Navigation Buttons for Azure Cloud */}
+            <NavigationButtons
+              onBack={handleBack}
+              onNext={handleNext}
+              canGoBack={true}
+              canGoNext={false}
+              showBack={true}
+              showNext={false}
+            />
+          </>
         ) : activeAzureTab === 'access' ? (
-          <AccessLocations />
+          <>
+            <AccessLocations />
+            {/* Navigation Buttons for Azure Access */}
+            <NavigationButtons
+              onBack={handleBack}
+              onNext={handleNext}
+              canGoBack={true}
+              canGoNext={false}
+              showBack={true}
+              showNext={false}
+            />
+          </>
         ) : (
           <QuestionContainer>
             <>
@@ -826,23 +941,82 @@ export default function Questionnaire({ onComplete }: { onComplete: (data: any) 
                 (currentQuestion.options as DataSubjectCategory[]).map(option => renderDataSubjectOptionPanel(option))
               ) : currentQuestion.id === 'recipientType' ? (
                 <OptionsContainer>
-                  {RECIPIENT_TYPES.map(option => renderBasicOptionPanel(option))}
+                  {RECIPIENT_TYPES.map(option => (
+                    <TooltipWrapper key={option} tooltipText={option}>
+                      <OptionPanel
+                        option={option}
+                        isSelected={(watch(currentQuestion.id) || []).includes(option)}
+                        description={getOptionDescription(option)}
+                        onClick={(e) => handleOptionSelect(e, option)}
+                      />
+                    </TooltipWrapper>
+                  ))}
                 </OptionsContainer>
               ) : currentQuestion.id === 'reviewDataTransferPurpose' ? (
                 renderReviewDataTransferPurpose()
               ) : (
                 <OptionsContainer>
-                  {(currentQuestion.options as string[]).map(option => renderBasicOptionPanel(option))}
+                  {(currentQuestion.options as string[]).map(option => (
+                    <TooltipWrapper key={option} tooltipText={option}>
+                      <OptionPanel
+                        option={option}
+                        isSelected={(watch(currentQuestion.id) || []).includes(option)}
+                        description={getOptionDescription(option)}
+                        onClick={(e) => handleOptionSelect(e, option)}
+                      />
+                    </TooltipWrapper>
+                  ))}
                 </OptionsContainer>
               )}
               {errors[currentQuestion.id] && (
                 <ErrorMessage>Please select at least one option</ErrorMessage>
               )}
+              
+              {/* Navigation Buttons */}
+              <NavigationButtons
+                onBack={handleBack}
+                onNext={handleNext}
+                canGoBack={currentStep > 0}
+                canGoNext={isCurrentStepCompleted() && currentStep < questions.length - 1}
+                showBack={currentStep > 0}
+                showNext={currentStep < questions.length - 1}
+                nextText={currentStep === questions.length - 2 ? 'Review' : 'Next'}
+              />
             </>
           </QuestionContainer>
         )}
         {activeAzureTab === null && currentStep === questions.length - 1 && (
-          <SubmitButton type="submit">View Output</SubmitButton>
+          <>
+            <SubmitButton 
+              type="submit" 
+              disabled={
+                !isAllStepsCompleted() || 
+                (currentQuestion.id === 'reviewDataTransferPurpose' && !isReviewDataTransferPurposeValid) ||
+                (watch('entities') || []).length > MAX_ENTITIES
+              }
+            >
+              View Output
+            </SubmitButton>
+            {currentQuestion.id === 'reviewDataTransferPurpose' && !isReviewDataTransferPurposeValid && (
+              <ErrorMessage style={{ marginLeft: '2rem', marginTop: '0.5rem' }}>
+                Please select at least one item for each recipient type to proceed.
+              </ErrorMessage>
+            )}
+            {(watch('entities') || []).length > MAX_ENTITIES && (
+              <ErrorMessage style={{ marginLeft: '2rem', marginTop: '0.5rem' }}>
+                Cannot proceed: You have selected {(watch('entities') || []).length} entities, which exceeds the maximum limit of {MAX_ENTITIES}.
+              </ErrorMessage>
+            )}
+            {/* Navigation Buttons for final step */}
+            <NavigationButtons
+              onBack={handleBack}
+              onNext={() => {}} // No next action on final step
+              canGoBack={true}
+              canGoNext={false}
+              showBack={true}
+              showNext={false}
+            />
+          </>
         )}
       </ContentContainer>
     </Form>

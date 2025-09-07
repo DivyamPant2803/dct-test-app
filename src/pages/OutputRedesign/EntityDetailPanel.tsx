@@ -182,7 +182,7 @@ interface AzureHostingLocation {
   conditions?: string;
 }
 
-function getMockAzureHostingLocations(entity: string): AzureHostingLocation[] {
+export function getMockAzureHostingLocations(entity: string): AzureHostingLocation[] {
   return [
     {
       region: 'South East Asia (SAS) - Singapore',
@@ -209,12 +209,21 @@ interface AccessLocationRecord {
   exposureAllowedTo: string[];
 }
 
-function getMockAccessLocations(entity: string, selectedBusinessDivision: string | null): AccessLocationRecord[] {
+const entityCountryMap: Record<string, string> = {
+  'Singapore Global Wealth Management (GWM) Entity 2': 'Singapore',
+  'South Korea Global Wealth Management (GWM) Entity 3': 'South Korea',
+  'South Korea Global Wealth Management (GWM) Entity 4': 'South Korea',
+  'United Kingdom Global Wealth Management (GWM) Entity 3': 'United Kingdom',
+  // Add more mappings as needed
+};
+
+export function getMockAccessLocations(entity: string, selectedBusinessDivision: string | null): AccessLocationRecord[] {
+  const country = entityCountryMap[entity] || 'Germany';
   if (selectedBusinessDivision === 'GWM') {
     return [{
       id: '1',
-      country: 'Germany',
-      countryCode: 'DE',
+      country,
+      countryCode: country.slice(0, 2).toUpperCase(),
       businessDivision: 'GWM',
       entity,
       exposureAllowedTo: ['France', 'United Kingdom', 'United States'],
@@ -242,6 +251,9 @@ const EntityDetailPanel: React.FC<EntityDetailPanelProps> = ({ entity, details =
     accessLocations: false,
     approvedChannels: false,
   });
+
+  const accessLocations = getMockAccessLocations(entity, selectedBusinessDivision ?? null);
+  const country = accessLocations.length > 0 ? accessLocations[0].country : '--';
 
   const handleExportPDF = () => {
     // TODO: Implement export to PDF
@@ -275,7 +287,11 @@ const EntityDetailPanel: React.FC<EntityDetailPanelProps> = ({ entity, details =
 
   return (
     <DetailPanel>
-      <DetailTitle>{entity}</DetailTitle>
+      <DetailTitle>{entity}
+        <span style={{ fontWeight: 400, fontSize: '0.95em', color: '#64748b', marginLeft: 16 }}>
+          {country !== '--' && <>({country})</>}
+        </span>
+      </DetailTitle>
       <ContactPersonCard>
         <ContactIcon><FiUser /></ContactIcon>
         <span>Contact Person: <b>{details.contactPerson || '--'}</b></span>

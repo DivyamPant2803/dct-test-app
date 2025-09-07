@@ -8,27 +8,12 @@ const homeContentHtml = `
 <p>Lorem Ipsum is simply dummy text of the printing and typesetting industry.</p>
 <!— Important Announcement: End —>
 <!— Release Notes: Start —>
-<h3><strong>Announcement - 06-05-2025:&nbsp;</strong></h3>
-<h4>Release 1.0 is live and the following changes have been implemented: &nbsp;<h4/>
-<h4>&nbsp;</h4>
-<h5><strong>XYZ Application:</strong></h5>
-<ul>
-	<li>Release item 1</li>
-	<li>Release item 2</li>
-	<li>Release item 3</li>
-</ul>
-<p><br></p>
-<h5><strong>Bug Fixes:</strong></h5>
-<ul>
-<li>Bug 1</li>
-<li>Bug 2</li>
-<li>Bug 3</li>
-<li>Bug 4</li>
-</ul>
+<h3><strong>Release Notes&nbsp;</strong></h3>
+
 <!— Release Notes: End —>
-<p><br>
+<br>
 <!— Key Notes: Start —>
-<h3>Key Notes:&nbsp;</h3></p>
+<h3>Key Notes:&nbsp;</h3>
 <p>Lorem Ipsum is simply dummy text of the printing and typesetting industry.</p>
 <p>Lorem Ipsum is simply dummy text of the printing and typesetting industry.</p>
 <p>Lorem Ipsum is simply dummy text of the printing and typesetting industry.</p>

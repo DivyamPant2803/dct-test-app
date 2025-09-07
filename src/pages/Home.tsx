@@ -1,6 +1,7 @@
 import styled from 'styled-components';
-import { useState } from 'react';
+import React from 'react';
 import { useStaticContent, StaticContentProvider } from '../contexts/StaticContentContext';
+import { categoriesMeta, getCategoryFromTitle } from '../constants/categories';
 
 const Container = styled.div`
   max-width: 1100px;
@@ -10,34 +11,103 @@ const Container = styled.div`
   min-height: 100vh;
 `;
 
-const Grid = styled.div`
+const TopGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 24px;
+  margin-bottom: 24px;
 `;
 
-const Card = styled.div`
+const BottomGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+`;
+
+const PriorityCard = styled.div`
   background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  padding: 20px 14px;
+  border-radius: 18px;
+  border: 2.5px solid #d21919;
+  padding: 32px 28px 24px 28px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  position: relative;
+  transition: box-shadow 0.2s, border 0.2s;
+`;
+
+const PriorityAccent = styled.div`
+  position: absolute;
+  left: 0;
+  top: 24px;
+  width: 6px;
+  height: 36px;
+  border-radius: 6px;
+`;
+
+const IconWrapper = styled.div`
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
 `;
 
 const CardHeader = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
   margin-bottom: 10px;
 `;
 
-const CardTitle = styled.h3`
+const PriorityCardTitle = styled.h3`
   margin: 0;
-  font-size: 1.15rem;
-  color: #222;
-  font-weight: 600;
+  font-size: 1.5rem;
+  color: #111;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+`;
+
+const PriorityPanel = styled.div`
+  background: #fff6f6;
+  border-radius: 12px;
+  margin-top: 8px;
+  padding: 22px 18px 12px 18px;
+  max-height: 320px;
+  overflow-y: auto;
+`;
+
+const SmallCard = styled.div`
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 6px rgba(210, 25, 25, 0.06);
+  border: 1.5px solid #f3c2c2;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 180px;
+  max-height: none;
+  transition: box-shadow 0.2s, border 0.2s;
+`;
+
+const SmallCardTitle = styled.h4`
+  margin: 0;
+  font-size: 1.08rem;
+  color: #111;
+  font-weight: 700;
+`;
+
+const SmallPanel = styled.div`
+  background: #fff8f8;
+  border-radius: 8px;
+  border: 1px solid #f3c2c2;
+  margin-top: 4px;
+  padding: 12px 10px 8px 10px;
+  width: 100%;
+  max-height: none;
+  overflow-y: auto;
+  box-shadow: 0 1px 4px rgba(210, 25, 25, 0.02);
 `;
 
 const Summary = styled.p`
@@ -46,42 +116,9 @@ const Summary = styled.p`
   padding-bottom: 20px;
 `;
 
-const Button = styled.button`
-  padding: 8px 20px;
-  border-radius: 6px;
-  border: 1px solid rgb(0, 0, 0);
-  background: #fff;
-  color:rgb(0, 0, 0);
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s;
-  &:hover, &:focus {
-    background:rgb(0, 0, 0);
-    color: #fff;
-    outline: none;
-  }
-`;
-
-const ExpandedPanel = styled.div`
-  background: #fafbfc;
-  border-radius: 8px; 
-  border: 1px solid #e0e0e0;
-  margin-top: 18px;
-  padding: 18px 14px 8px 14px;
-  max-height: 260px;
-  overflow-y: auto;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-  animation: fadeIn 0.3s;
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-8px); }
-    to { opacity: 1; transform: none; }
-  }
-`;
-
 const EntryBody = styled.div`
   margin-bottom: 12px;
   color: #333;
-
   ul, ol {
     margin: 0.5em 0 0.5em 1.5em;
     padding: 0;
@@ -94,70 +131,96 @@ const EntryBody = styled.div`
     margin: 0.5em 0;
   }
   a {
-    color: #3366cc;
+    color: #d21919;
     text-decoration: underline;
     &:hover {
-      color: #003399;
+      color: #111;
     }
   }
   strong {
     font-weight: 600;
   }
 `;
-const Divider = styled.div`
-  border-bottom: 1px solid #ececec;
-  margin: 10px 0 12px 0;
-`;
 
-// Inner content that uses the context
 const HomeContentInner = () => {
-  const [expanded, setExpanded] = useState<number|null>(null);
   const { content } = useStaticContent();
 
-  const handleExpand = (idx: number) => {
-    setExpanded(prev => (prev === idx ? null : idx));
-  };
+  // Filter out sections with no content
+  const sectionsWithContent = content.filter(section => {
+    // Check if the body has actual content (not just empty elements)
+    if (!section.body) return false;
+    
+    // If body is a string, check if it's not empty
+    if (typeof section.body === 'string') {
+      return section.body.trim().length > 0;
+    }
+    
+    // If body is a React element, check if it has children or text content
+    if (React.isValidElement(section.body)) {
+      return true; // React elements are considered to have content
+    }
+    
+    // For arrays or other React nodes, consider them as having content
+    return true;
+  });
+
+  // Find the two priority cards
+  const importantIdx = sectionsWithContent.findIndex(s => s.title.replace(/[:：]+$/, '').toLowerCase().includes('important announcement'));
+  const releaseIdx = sectionsWithContent.findIndex(s => s.title.replace(/[:：]+$/, '').toLowerCase().includes('announcement -') || s.title.replace(/[:：]+$/, '').toLowerCase().includes('release notes'));
+  const priorityCards = [
+    importantIdx !== -1 ? sectionsWithContent[importantIdx] : null,
+    releaseIdx !== -1 ? sectionsWithContent[releaseIdx] : null,
+  ].filter((s): s is NonNullable<typeof s> => s !== null);
+  const otherCards = sectionsWithContent.filter((_, idx) => idx !== importantIdx && idx !== releaseIdx);
 
   return (
     <Container>
       <Summary>
         The Data Transfer Compliance Tool helps you ensure compliance for all your data transfer activities.
       </Summary>
-      <Grid>
-        {content.map((section, idx) => (
-          <Card key={idx}>
-            <CardHeader>
-              <CardTitle>{section.title}</CardTitle>
-            </CardHeader>
-            {expanded === idx ? (
-              <>
-                <Button onClick={() => handleExpand(idx)} aria-expanded={expanded===idx} aria-controls={`panel-${idx}`}>
-                  Hide Details
-                </Button>
-                <ExpandedPanel id={`panel-${idx}`}>
-                  <EntryBody>{section.body}</EntryBody>
-                </ExpandedPanel>
-              </>
-            ) : (
-              <Button onClick={() => handleExpand(idx)} aria-expanded={expanded===idx} aria-controls={`panel-${idx}`}>
-                View Details
-              </Button>
-            )}
-          </Card>
-        ))}
-      </Grid>
+      <TopGrid>
+        {priorityCards.map((section, idx) => {
+          const category = getCategoryFromTitle(section.title);
+          return (
+            <PriorityCard key={idx}>
+              <PriorityAccent />
+              <CardHeader>
+                {/*category && <IconWrapper>{categoriesMeta[category].icon}</IconWrapper>*/}
+                <PriorityCardTitle>{section.title}</PriorityCardTitle>
+              </CardHeader>
+              <PriorityPanel>
+                <EntryBody>{section.body}</EntryBody>
+              </PriorityPanel>
+            </PriorityCard>
+          );
+        })}
+      </TopGrid>
+      <BottomGrid>
+        {otherCards.map((section, idx) => {
+          const category = getCategoryFromTitle(section.title);
+          return (
+            <SmallCard key={idx}>
+              <CardHeader>
+                {category && <IconWrapper>{categoriesMeta[category].icon}</IconWrapper>}
+                <SmallCardTitle>{section.title}</SmallCardTitle>
+              </CardHeader>
+              <SmallPanel>
+                <EntryBody>{section.body}</EntryBody>
+              </SmallPanel>
+            </SmallCard>
+          );
+        })}
+      </BottomGrid>
     </Container>
   );
 };
 
-// HomeContent receives the HTML as a prop and provides it to the context
 const HomeContent = ({ homeContentHtml }: { homeContentHtml: string }) => (
   <StaticContentProvider rawHtml={homeContentHtml}>
     <HomeContentInner />
   </StaticContentProvider>
 );
 
-// Home receives the HTML as a prop and passes it down
 const Home = ({ homeContentHtml }: { homeContentHtml: string }) => (
   <HomeContent homeContentHtml={homeContentHtml} />
 );

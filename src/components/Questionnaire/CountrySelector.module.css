@@ -1,0 +1,274 @@
+.regionsContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  flex: 1;
+  overflow-x: auto;
+}
+
+.regionsContainer::-webkit-scrollbar {
+  height: 4px;
+}
+
+.regionsContainer::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.regionsContainer::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 2px;
+}
+
+.regionChip {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border: 2px solid #eee;
+  border-radius: 20px;
+  background: white;
+  color: #666;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.regionChip:hover {
+  border-color: #000;
+  background: #f8f8f8;
+  color: #000;
+}
+
+.regionChip.selected {
+  border-color: #000;
+  background: #f8f8f8;
+  color: #000;
+}
+
+.countBadge {
+  background: #000;
+  color: white;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 10px;
+  margin-left: 0.5rem;
+}
+
+.searchContainer {
+  flex-shrink: 0;
+  width: 300px;
+  margin-left: 1rem;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid #eee;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  height: 36px;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: #000;
+}
+
+.searchInput::placeholder {
+  color: #999;
+}
+
+.countryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  width: 100%;
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  align-content: start;
+}
+
+.countryGrid::-webkit-scrollbar {
+  width: 8px;
+}
+
+.countryGrid::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.countryGrid::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.countryOption {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  border: 2px solid #eee;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: white;
+  height: 60px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.countryOption:hover {
+  border-color: #000;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.countryOption.selected {
+  border-color: #000;
+  background-color: #f8f8f8;
+}
+
+.flagContainer {
+  width: 30px;
+  height: 20px;
+  overflow: hidden;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.flagContainer img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.countryInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.countryName {
+  font-weight: 500;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.countryRegion {
+  font-size: 0.8rem;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.errorMessage {
+  color: #000;
+  margin-top: 0.5rem;
+}
+
+.selectedCountriesSection {
+  margin-bottom: 1.5rem;
+  background: #f8f8f8;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.selectedCountriesHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: #f8f8f8;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.selectedCountriesHeader:hover {
+  background: #f0f0f0;
+}
+
+.selectedCountriesHeader.expanded {
+  background: #f0f0f0;
+}
+
+.selectedCountriesTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.selectedCountriesContent {
+  padding: 0;
+  max-height: 0;
+  overflow: auto;
+  transition: all 0.3s ease-in-out;
+}
+
+.selectedCountriesContent.expanded {
+  padding: 0.75rem;
+  max-height: 250px;
+}
+
+.selectedCountriesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.selectedCountryCard {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: white;
+  border: 1.5px solid #000;
+  border-radius: 8px;
+  padding: 0.5rem 1rem 0.5rem 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #222;
+  cursor: pointer;
+  transition: background 0.2s, border 0.2s;
+}
+
+.selectedCountryCard:hover {
+  background: #ffeaea;
+  border-color: #d00;
+  color: #d00;
+}
+
+.noCountries {
+  text-align: center;
+  color: #666;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 8px;
+}
+
+.cardFlag {
+  display: inline-block;
+  width: 22px;
+  height: 15px;
+  margin-right: 0.5rem;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.cardSpacer {
+  flex: 1;
+}
+
+.disabled {
+  pointer-events: none;
+  opacity: 0.6;
+} 
