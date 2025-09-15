@@ -6,6 +6,7 @@ interface ReaffirmModalProps {
   isOpen: boolean;
   onClose: () => void;
   requirement: Requirement | null;
+  requirements?: Requirement[];
   onSubmit: (data: ReaffirmationRequest) => Promise<void>;
 }
 
@@ -197,21 +198,26 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   `}
 `;
 
-const ReaffirmModal: React.FC<ReaffirmModalProps> = ({ isOpen, onClose, requirement, onSubmit }) => {
+const ReaffirmModal: React.FC<ReaffirmModalProps> = ({ isOpen, onClose, requirement, requirements, onSubmit }) => {
   const [action, setAction] = useState<'REAFFIRMED_AS_IS' | 'REAFFIRMED_WITH_CHANGES'>('REAFFIRMED_AS_IS');
   const [comment, setComment] = useState('');
   const [proposedChanges, setProposedChanges] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Get the current requirement data from the requirements list
+  const currentRequirement = requirement && requirements 
+    ? requirements.find(req => req.id === requirement.id) || requirement
+    : requirement;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!requirement) return;
+    if (!currentRequirement) return;
     
     setIsSubmitting(true);
     try {
       await onSubmit({
-        requirementId: requirement.id,
+        requirementId: currentRequirement.id,
         action,
         comment: comment.trim() || undefined,
         proposedChanges: action === 'REAFFIRMED_WITH_CHANGES' ? proposedChanges.trim() : undefined
@@ -237,7 +243,7 @@ const ReaffirmModal: React.FC<ReaffirmModalProps> = ({ isOpen, onClose, requirem
     });
   };
 
-  if (!requirement) return null;
+  if (!currentRequirement) return null;
 
   return (
     <ModalOverlay $isOpen={isOpen} onClick={onClose}>
@@ -252,28 +258,28 @@ const ReaffirmModal: React.FC<ReaffirmModalProps> = ({ isOpen, onClose, requirem
             <RequirementInfo>
               <InfoRow>
                 <InfoLabel>Title:</InfoLabel>
-                <InfoValue>{requirement.title}</InfoValue>
+                <InfoValue>{currentRequirement.title}</InfoValue>
               </InfoRow>
               <InfoRow>
                 <InfoLabel>Jurisdiction:</InfoLabel>
-                <InfoValue>{requirement.jurisdiction}</InfoValue>
+                <InfoValue>{currentRequirement.jurisdiction}</InfoValue>
               </InfoRow>
               <InfoRow>
                 <InfoLabel>Entity:</InfoLabel>
-                <InfoValue>{requirement.entity}</InfoValue>
+                <InfoValue>{currentRequirement.entity}</InfoValue>
               </InfoRow>
               <InfoRow>
                 <InfoLabel>Subject Type:</InfoLabel>
-                <InfoValue>{requirement.subjectType}</InfoValue>
+                <InfoValue>{currentRequirement.subjectType}</InfoValue>
               </InfoRow>
               <InfoRow>
                 <InfoLabel>Original Date:</InfoLabel>
-                <InfoValue>{formatDate(requirement.originalIngestionDate)}</InfoValue>
+                <InfoValue>{formatDate(currentRequirement.originalIngestionDate)}</InfoValue>
               </InfoRow>
               <InfoRow>
                 <InfoLabel>Last Reaffirmed:</InfoLabel>
                 <InfoValue>
-                  {requirement.lastReaffirmedAt ? formatDate(requirement.lastReaffirmedAt) : 'Never'}
+                  {currentRequirement.lastReaffirmedAt ? formatDate(currentRequirement.lastReaffirmedAt) : 'Never'}
                 </InfoValue>
               </InfoRow>
             </RequirementInfo>
@@ -291,7 +297,7 @@ const ReaffirmModal: React.FC<ReaffirmModalProps> = ({ isOpen, onClose, requirem
                 maxHeight: '200px',
                 overflowY: 'auto'
               }}>
-                {requirement.text}
+                {currentRequirement.text}
               </div>
             </FormGroup>
 

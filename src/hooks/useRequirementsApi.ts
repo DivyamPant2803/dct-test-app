@@ -105,7 +105,7 @@ const migrateCRStatuses = () => {
 };
 
 export const useRequirementsApi = () => {
-  const [requirements, setRequirements] = useState<Requirement[]>([]);
+  const [_requirements, setRequirements] = useState<Requirement[]>([]);
   const [_changeRequests, setChangeRequests] = useState<ChangeRequest[]>(getStoredChangeRequests());
   const [_requirementVersions, setRequirementVersions] = useState<RequirementVersion[]>(getStoredRequirementVersions());
 
@@ -343,6 +343,206 @@ export const useRequirementsApi = () => {
             }
           ],
           nextReaffirmationDue: calculateNextReaffirmationDue(oneYearAgo.toISOString(), threeMonthsAgo.toISOString())
+        },
+        // Additional OVERDUE requirements for bulk testing
+        {
+          id: 'req-9',
+          version: 1,
+          title: 'DPR Data Processing Agreement',
+          jurisdiction: 'Germany',
+          entity: 'Deutsche Technologie und Datendienste GmbH',
+          subjectType: 'Employee',
+          text: 'Data processing agreements must specify the subject matter, duration, nature and purpose of processing, types of personal data, and categories of data subjects. Controllers must ensure processors provide sufficient guarantees.',
+          updatedAt: eightMonthsAgo.toISOString(),
+          effectiveDate: eightMonthsAgo.toISOString(),
+          createdBy: 'admin-user',
+          lastModifiedBy: 'admin-user',
+          // OVERDUE - never reaffirmed, due 2 months ago
+          originalIngestionDate: eightMonthsAgo.toISOString(),
+          lastReaffirmedAt: undefined,
+          lastReaffirmedBy: undefined,
+          reaffirmationHistory: [],
+          nextReaffirmationDue: calculateNextReaffirmationDue(eightMonthsAgo.toISOString())
+        },
+        {
+          id: 'req-10',
+          version: 2,
+          title: 'PIPEDA Privacy Compliance',
+          jurisdiction: 'Canada',
+          entity: 'US Global Technology Solutions Corporation',
+          subjectType: 'Candidate',
+          text: 'Organizations must obtain meaningful consent for the collection, use, and disclosure of personal information. Individuals have the right to access and correct their personal information. Organizations must implement appropriate safeguards.',
+          updatedAt: sixMonthsAgo.toISOString(),
+          effectiveDate: sixMonthsAgo.toISOString(),
+          createdBy: 'admin-user',
+          lastModifiedBy: 'legal-user-2',
+          // OVERDUE - last reaffirmed 6 months ago, due 3 months ago
+          originalIngestionDate: sixMonthsAgo.toISOString(),
+          lastReaffirmedAt: sixMonthsAgo.toISOString(),
+          lastReaffirmedBy: 'legal-user-2',
+          reaffirmationHistory: [
+            {
+              id: 'reaff-5',
+              requirementId: 'req-10',
+              reaffirmedAt: sixMonthsAgo.toISOString(),
+              reaffirmedBy: 'legal-user-2',
+              action: 'REAFFIRMED_AS_IS',
+              comment: 'No changes required - requirement remains current'
+            }
+          ],
+          nextReaffirmationDue: calculateNextReaffirmationDue(sixMonthsAgo.toISOString(), sixMonthsAgo.toISOString())
+        },
+        {
+          id: 'req-11',
+          version: 1,
+          title: 'UK GDPR Data Subject Rights',
+          jurisdiction: 'United Kingdom',
+          entity: 'Deutsche Technologie und Datendienste GmbH',
+          subjectType: 'Client',
+          text: 'Data subjects have the right to access, rectify, erase, restrict processing, data portability, and object to processing of their personal data. Organizations must respond to data subject requests within one month.',
+          updatedAt: oneYearAgo.toISOString(),
+          effectiveDate: oneYearAgo.toISOString(),
+          createdBy: 'admin-user',
+          lastModifiedBy: 'legal-user-1',
+          // OVERDUE - last reaffirmed 1 year ago, due 6 months ago
+          originalIngestionDate: oneYearAgo.toISOString(),
+          lastReaffirmedAt: oneYearAgo.toISOString(),
+          lastReaffirmedBy: 'legal-user-1',
+          reaffirmationHistory: [
+            {
+              id: 'reaff-6',
+              requirementId: 'req-11',
+              reaffirmedAt: oneYearAgo.toISOString(),
+              reaffirmedBy: 'legal-user-1',
+              action: 'REAFFIRMED_WITH_CHANGES',
+              comment: 'Updated to reflect new UK GDPR guidance',
+              changes: 'Added clarification on data portability requirements'
+            }
+          ],
+          nextReaffirmationDue: calculateNextReaffirmationDue(oneYearAgo.toISOString(), oneYearAgo.toISOString())
+        },
+        {
+          id: 'req-12',
+          version: 1,
+          title: 'CCPA Consumer Rights Compliance',
+          jurisdiction: 'United States',
+          entity: 'US Global Technology Solutions Corporation',
+          subjectType: 'Client',
+          text: 'California consumers have the right to know what personal information is collected, used, shared, or sold. Businesses must provide clear privacy notices and honor consumer requests to delete, correct, or opt-out of the sale of personal information.',
+          updatedAt: eightMonthsAgo.toISOString(),
+          effectiveDate: eightMonthsAgo.toISOString(),
+          createdBy: 'admin-user',
+          lastModifiedBy: 'admin-user',
+          // OVERDUE - never reaffirmed, due 2 months ago
+          originalIngestionDate: eightMonthsAgo.toISOString(),
+          lastReaffirmedAt: undefined,
+          lastReaffirmedBy: undefined,
+          reaffirmationHistory: [],
+          nextReaffirmationDue: calculateNextReaffirmationDue(eightMonthsAgo.toISOString())
+        },
+        {
+          id: 'req-13',
+          version: 1,
+          title: 'PDPA Data Protection Requirements',
+          jurisdiction: 'Singapore',
+          entity: 'Singapore Advanced Technology Solutions Pte Ltd',
+          subjectType: 'Employee',
+          text: 'Organizations must obtain consent before collecting, using, or disclosing personal data. Data subjects have the right to withdraw consent and request access to their personal data. Organizations must implement reasonable security arrangements to protect personal data.',
+          updatedAt: oneYearAgo.toISOString(),
+          effectiveDate: oneYearAgo.toISOString(),
+          createdBy: 'admin-user',
+          lastModifiedBy: 'legal-user-3',
+          // OVERDUE - last reaffirmed 1 year ago, due 6 months ago
+          originalIngestionDate: oneYearAgo.toISOString(),
+          lastReaffirmedAt: oneYearAgo.toISOString(),
+          lastReaffirmedBy: 'legal-user-3',
+          reaffirmationHistory: [
+            {
+              id: 'reaff-7',
+              requirementId: 'req-13',
+              reaffirmedAt: oneYearAgo.toISOString(),
+              reaffirmedBy: 'legal-user-3',
+              action: 'REAFFIRMED_AS_IS',
+              comment: 'Requirement remains valid and current'
+            }
+          ],
+          nextReaffirmationDue: calculateNextReaffirmationDue(oneYearAgo.toISOString(), oneYearAgo.toISOString())
+        },
+        {
+          id: 'req-14',
+          version: 1,
+          title: 'LGPD Data Protection Law',
+          jurisdiction: 'Brazil',
+          entity: 'Singapore Advanced Technology Solutions Pte Ltd',
+          subjectType: 'Prospect',
+          text: 'Organizations must process personal data in accordance with the principles of purpose, adequacy, necessity, free access, data quality, transparency, security, prevention, non-discrimination, and accountability.',
+          updatedAt: sixMonthsAgo.toISOString(),
+          effectiveDate: sixMonthsAgo.toISOString(),
+          createdBy: 'admin-user',
+          lastModifiedBy: 'legal-user-2',
+          // OVERDUE - last reaffirmed 6 months ago, due 3 months ago
+          originalIngestionDate: sixMonthsAgo.toISOString(),
+          lastReaffirmedAt: sixMonthsAgo.toISOString(),
+          lastReaffirmedBy: 'legal-user-2',
+          reaffirmationHistory: [
+            {
+              id: 'reaff-8',
+              requirementId: 'req-14',
+              reaffirmedAt: sixMonthsAgo.toISOString(),
+              reaffirmedBy: 'legal-user-2',
+              action: 'REAFFIRMED_WITH_CHANGES',
+              comment: 'Updated to reflect new LGPD regulations',
+              changes: 'Added new accountability requirements'
+            }
+          ],
+          nextReaffirmationDue: calculateNextReaffirmationDue(sixMonthsAgo.toISOString(), sixMonthsAgo.toISOString())
+        },
+        {
+          id: 'req-15',
+          version: 1,
+          title: 'GDPR Data Protection Impact Assessment',
+          jurisdiction: 'Germany',
+          entity: 'Deutsche Technologie und Datendienste GmbH',
+          subjectType: 'Candidate',
+          text: 'A DPIA must be carried out before processing personal data that is likely to result in a high risk to the rights and freedoms of natural persons, particularly when using new technologies.',
+          updatedAt: eightMonthsAgo.toISOString(),
+          effectiveDate: eightMonthsAgo.toISOString(),
+          createdBy: 'admin-user',
+          lastModifiedBy: 'admin-user',
+          // OVERDUE - never reaffirmed, due 2 months ago
+          originalIngestionDate: eightMonthsAgo.toISOString(),
+          lastReaffirmedAt: undefined,
+          lastReaffirmedBy: undefined,
+          reaffirmationHistory: [],
+          nextReaffirmationDue: calculateNextReaffirmationDue(eightMonthsAgo.toISOString())
+        },
+        {
+          id: 'req-16',
+          version: 1,
+          title: 'PDPA Data Breach Notification',
+          jurisdiction: 'Singapore',
+          entity: 'Singapore Advanced Technology Solutions Pte Ltd',
+          subjectType: 'Client',
+          text: 'Organizations must notify the Personal Data Protection Commission and affected individuals within 72 hours of discovering a data breach that poses significant harm to individuals.',
+          updatedAt: oneYearAgo.toISOString(),
+          effectiveDate: oneYearAgo.toISOString(),
+          createdBy: 'admin-user',
+          lastModifiedBy: 'legal-user-1',
+          // OVERDUE - last reaffirmed 1 year ago, due 6 months ago
+          originalIngestionDate: oneYearAgo.toISOString(),
+          lastReaffirmedAt: oneYearAgo.toISOString(),
+          lastReaffirmedBy: 'legal-user-1',
+          reaffirmationHistory: [
+            {
+              id: 'reaff-9',
+              requirementId: 'req-16',
+              reaffirmedAt: oneYearAgo.toISOString(),
+              reaffirmedBy: 'legal-user-1',
+              action: 'REAFFIRMED_AS_IS',
+              comment: 'No changes required - requirement remains current'
+            }
+          ],
+          nextReaffirmationDue: calculateNextReaffirmationDue(oneYearAgo.toISOString(), oneYearAgo.toISOString())
         }
       ];
 
@@ -370,7 +570,7 @@ export const useRequirementsApi = () => {
         localStorage.setItem(`requirement_${req.id}`, JSON.stringify(req));
       });
       setRequirements(sampleRequirements);
-  }, []);
+  }, [setRequirements]);
 
   const getRequirements = useCallback(async (filters?: {
     jurisdiction?: string[];

@@ -52,15 +52,15 @@ const Section = styled.div`
   min-height: 0;
 `;
 
-const SectionTitle = styled.h2`
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #222;
-  margin-bottom: 1rem;
-  border-bottom: 2px solid #f0f0f0;
-  padding-bottom: 0.5rem;
-  flex-shrink: 0;
-`;
+// const SectionTitle = styled.h2`
+//   font-size: 1.25rem;
+//   font-weight: 600;
+//   color: #222;
+//   margin-bottom: 1rem;
+//   border-bottom: 2px solid #f0f0f0;
+//   padding-bottom: 0.5rem;
+//   flex-shrink: 0;
+// `;
 
 const Filters = styled.div`
   display: flex;
@@ -297,16 +297,16 @@ const AdminCRDashboard: React.FC = () => {
     }
   };
 
-  const getTabTitle = (tab: TabType) => {
-    switch (tab) {
-      case 'pending':
-        return 'Pending CRs';
-      case 'approved':
-        return 'Approved';
-      case 'rejected':
-        return 'Rejected';
-    }
-  };
+  // const getTabTitle = (tab: TabType) => {
+  //   switch (tab) {
+  //     case 'pending':
+  //       return 'Pending CRs';
+  //     case 'approved':
+  //       return 'Approved';
+  //     case 'rejected':
+  //       return 'Rejected';
+  //   }
+  // };
 
   return (
     <DashboardContainer>

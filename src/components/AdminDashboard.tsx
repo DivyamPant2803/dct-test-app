@@ -42,15 +42,15 @@ const Section = styled.div`
   min-height: 0;
 `;
 
-const SectionTitle = styled.h2`
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #222;
-  margin-bottom: 0.5rem;
-  border-bottom: 1px solid #f0f0f0;
-  padding-bottom: 0.25rem;
-  flex-shrink: 0;
-`;
+// const SectionTitle = styled.h2`
+//   font-size: 1.1rem;
+//   font-weight: 600;
+//   color: #222;
+//   margin-bottom: 0.5rem;
+//   border-bottom: 1px solid #f0f0f0;
+//   padding-bottom: 0.25rem;
+//   flex-shrink: 0;
+// `;
 
 const Filters = styled.div`
   display: flex;
@@ -232,10 +232,10 @@ const DocumentName = styled.div`
   justify-content: center;
 `;
 
-const FileIconSmall = styled.span`
-  font-size: 0.9rem;
-  flex-shrink: 0;
-`;
+// const FileIconSmall = styled.span`
+//   font-size: 0.9rem;
+//   flex-shrink: 0;
+// `;
 
 const DocumentTitle = styled.div`
   font-weight: 500;
@@ -421,22 +421,22 @@ const AdminDashboard: React.FC = () => {
     });
   };
 
-  const getFileIcon = (filename: string) => {
-    const ext = filename.split('.').pop()?.toLowerCase();
-    switch (ext) {
-      case 'pdf': return '📄';
-      case 'docx':
-      case 'doc': return '📝';
-      case 'xlsx':
-      case 'xls': return '📊';
-      case 'pptx':
-      case 'ppt': return '📈';
-      case 'jpg':
-      case 'jpeg':
-      case 'png': return '🖼️';
-      default: return '📄';
-    }
-  };
+  // const getFileIcon = (filename: string) => {
+  //   const ext = filename.split('.').pop()?.toLowerCase();
+  //   switch (ext) {
+  //     case 'pdf': return '📄';
+  //     case 'docx':
+  //     case 'doc': return '📝';
+  //     case 'xlsx':
+  //     case 'xls': return '📊';
+  //     case 'pptx':
+  //     case 'ppt': return '📈';
+  //     case 'jpg':
+  //     case 'jpeg':
+  //     case 'png': return '🖼️';
+  //     default: return '📄';
+  //   }
+  // };
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0B';

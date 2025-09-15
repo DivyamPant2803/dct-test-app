@@ -7,6 +7,7 @@ interface ProposeEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   requirement: Requirement | null;
+  requirements?: Requirement[];
   onSubmit: (data: {
     requirementId: string;
     proposedText: string;
@@ -246,6 +247,7 @@ const ProposeEditModal: React.FC<ProposeEditModalProps> = ({
   isOpen,
   onClose,
   requirement,
+  requirements,
   onSubmit
 }) => {
   const [formData, setFormData] = useState({
@@ -260,20 +262,25 @@ const ProposeEditModal: React.FC<ProposeEditModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  // Get the current requirement data from the requirements list
+  const currentRequirement = requirement && requirements 
+    ? requirements.find(req => req.id === requirement.id) || requirement
+    : requirement;
+
   // Initialize form data when requirement changes
   React.useEffect(() => {
-    if (requirement) {
+    if (currentRequirement) {
       setFormData({
-        title: requirement.title,
-        jurisdiction: requirement.jurisdiction,
-        entity: requirement.entity,
-        subjectType: requirement.subjectType,
+        title: currentRequirement.title,
+        jurisdiction: currentRequirement.jurisdiction,
+        entity: currentRequirement.entity,
+        subjectType: currentRequirement.subjectType,
         proposedText: '', // Start with empty text so users must make changes
         impact: '',
         approver: ''
       });
     }
-  }, [requirement]);
+  }, [currentRequirement]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -283,7 +290,7 @@ const ProposeEditModal: React.FC<ProposeEditModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!requirement) return;
+    if (!currentRequirement) return;
     
     // Validation
     if (!formData.proposedText.trim()) {
@@ -306,7 +313,7 @@ const ProposeEditModal: React.FC<ProposeEditModalProps> = ({
 
     try {
       await onSubmit({
-        requirementId: requirement.id,
+        requirementId: currentRequirement.id,
         proposedText: formData.proposedText,
         impact: formData.impact,
         approver: formData.approver,
@@ -341,7 +348,7 @@ const ProposeEditModal: React.FC<ProposeEditModalProps> = ({
     }
   };
 
-  if (!requirement) return null;
+  if (!currentRequirement) return null;
 
   return (
     <ModalOverlay $isOpen={isOpen}>
@@ -414,7 +421,7 @@ const ProposeEditModal: React.FC<ProposeEditModalProps> = ({
                 overflowY: 'auto',
                 marginBottom: '1rem'
               }}>
-                {requirement.text}
+                {currentRequirement.text}
               </div>
             </FormGroup>
 

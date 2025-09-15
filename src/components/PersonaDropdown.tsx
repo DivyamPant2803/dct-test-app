@@ -109,18 +109,18 @@ const ItemDescription = styled.div`
   margin-top: 0.125rem;
 `;
 
-const DemoModeBanner = styled.div`
-  padding: 0.5rem 1rem;
-  background: #fef3c7;
-  border-bottom: 1px solid #f59e0b;
-  font-size: 0.75rem;
-  color: #92400e;
-  text-align: center;
-  font-weight: 500;
-`;
+// const DemoModeBanner = styled.div`
+//   padding: 0.5rem 1rem;
+//   background: #fef3c7;
+//   border-bottom: 1px solid #f59e0b;
+//   font-size: 0.75rem;
+//   color: #92400e;
+//   text-align: center;
+//   font-weight: 500;
+// `;
 
 const PersonaDropdown: React.FC = () => {
-  const { currentPersona, setCurrentPersona, availablePersonas, isDemoMode } = usePersona();
+  const { currentPersona, setCurrentPersona, availablePersonas } = usePersona();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 

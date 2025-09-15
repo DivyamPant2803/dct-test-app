@@ -4,6 +4,7 @@ import { Requirement, ChangeRequest, ReaffirmationStatus, ReaffirmationRequest }
 import { useRequirementsApi } from '../hooks/useRequirementsApi';
 import ProposeEditModal from './ProposeEditModal';
 import ReaffirmModal from './ReaffirmModal';
+import BulkReaffirmModal from './BulkReaffirmModal';
 import StyledSelect from './common/StyledSelect';
 import { FiEdit3, FiClock, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 
@@ -51,6 +52,7 @@ const Section = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow: hidden; /* Prevent content overflow */
 `;
 
 
@@ -78,46 +80,84 @@ const SelectWrapper = styled.div`
   min-width: 150px;
 `;
 
+const TableContainer = styled.div`
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto; /* Allow vertical scrolling if needed */
+`;
+
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  flex: 1;
-  min-height: 0;
+  table-layout: fixed; /* Fixed layout for better column control */
 `;
 
-const Th = styled.th`
+const Th = styled.th<{ $width?: string }>`
   background: #f8f8f8;
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 0.75rem;
   text-align: left;
   font-weight: 500;
   color: #333;
   border-bottom: 2px solid #eee;
   white-space: nowrap;
+  width: ${props => props.$width || 'auto'};
+  overflow: hidden;
+  text-overflow: ellipsis;
 `;
 
-const ThRight = styled.th`
+const ThRight = styled.th<{ $width?: string }>`
   background: #f8f8f8;
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 0.75rem;
   text-align: right;
   font-weight: 500;
   color: #333;
   border-bottom: 2px solid #eee;
   white-space: nowrap;
+  width: ${props => props.$width || 'auto'};
+  overflow: hidden;
+  text-overflow: ellipsis;
 `;
 
-const Td = styled.td`
-  padding: 0.5rem 1rem;
+const ThCheckbox = styled.th`
+  background: #f8f8f8;
+  padding: 0.5rem 0.25rem;
+  text-align: center;
+  font-weight: 500;
+  color: #333;
+  border-bottom: 2px solid #eee;
+  width: 40px;
+`;
+
+const TdCheckbox = styled.td`
+  padding: 0.5rem 0.25rem;
+  text-align: center;
+  width: 40px;
+  vertical-align: middle;
+`;
+
+const Td = styled.td<{ $width?: string }>`
+  padding: 0.5rem 0.75rem;
   border-bottom: 1px solid #eee;
   color: #666;
   vertical-align: top;
+  width: ${props => props.$width || 'auto'};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-wrap: break-word;
 `;
 
-const TdRight = styled.td`
-  padding: 0.5rem 1rem;
+const TdRight = styled.td<{ $width?: string }>`
+  padding: 0.5rem 0.75rem;
   border-bottom: 1px solid #eee;
   color: #666;
   vertical-align: top;
   text-align: right;
+  width: ${props => props.$width || 'auto'};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 const Tr = styled.tr`
@@ -233,6 +273,37 @@ const LoadingMessage = styled.div`
   font-size: 0.9rem;
 `;
 
+const SelectionBar = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: #495057;
+  flex-shrink: 0; /* Prevent shrinking */
+  z-index: 10; /* Ensure it's above table content */
+`;
+
+const SelectionInfo = styled.span`
+  font-weight: 500;
+`;
+
+const SelectionActions = styled.div`
+  display: flex;
+  gap: 0.5rem;
+`;
+
+const TableAndSelectionWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+`;
+
 type TabType = 'explore' | 'reaffirmation-due' | 'my-requests';
 
 const LegalContentDashboard: React.FC = () => {
@@ -243,7 +314,11 @@ const LegalContentDashboard: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showProposeModal, setShowProposeModal] = useState(false);
   const [showReaffirmModal, setShowReaffirmModal] = useState(false);
+  const [showBulkReaffirmModal, setShowBulkReaffirmModal] = useState(false);
   const [selectedRequirement, setSelectedRequirement] = useState<Requirement | null>(null);
+  
+  // Bulk selection state
+  const [selectedRequirements, setSelectedRequirements] = useState<Set<string>>(new Set());
   
   // Filters for explore tab
   const [filters, setFilters] = useState({
@@ -356,6 +431,44 @@ const LegalContentDashboard: React.FC = () => {
     setShowReaffirmModal(true);
   };
 
+  // Bulk selection handlers
+  const handleSelectRequirement = (requirementId: string) => {
+    setSelectedRequirements(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(requirementId)) {
+        newSet.delete(requirementId);
+      } else {
+        // Enforce 10-item limit
+        if (newSet.size >= 10) {
+          return prev;
+        }
+        newSet.add(requirementId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    const allIds = reaffirmationDueRequirements.map(req => req.id);
+    const maxSelectable = Math.min(allIds.length, 10);
+    
+    if (selectedRequirements.size === maxSelectable) {
+      // Deselect all
+      setSelectedRequirements(new Set());
+    } else {
+      // Select up to limit
+      setSelectedRequirements(new Set(allIds.slice(0, maxSelectable)));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedRequirements(new Set());
+  };
+
+  const handleBulkReaffirm = () => {
+    setShowBulkReaffirmModal(true);
+  };
+
   const handleSubmitChangeRequest = async (data: {
     requirementId: string;
     proposedText: string;
@@ -386,25 +499,62 @@ const LegalContentDashboard: React.FC = () => {
       await reaffirmRequirement(data);
       console.log('Reaffirmation completed successfully');
       
+      // Reload data for both tabs to reflect changes
+      console.log('Reloading all requirements...');
+      await loadRequirements();
+      console.log('All requirements reloaded');
+      
+      console.log('Reloading reaffirmation due requirements...');
+      await loadReaffirmationDueRequirements();
+      console.log('Reaffirmation due requirements reloaded');
+      
       setShowReaffirmModal(false);
       setSelectedRequirement(null);
-      
-      // Reload data to reflect changes
-      if (activeTab === 'reaffirmation-due') {
-        console.log('Reloading reaffirmation due requirements...');
-        await loadReaffirmationDueRequirements();
-        console.log('Reaffirmation due requirements reloaded');
-      } else {
-        console.log('Reloading all requirements...');
-        await loadRequirements();
-        console.log('All requirements reloaded');
-      }
       
       // Show success message
       alert('Requirement reaffirmed successfully!');
     } catch (error) {
       console.error('Error submitting reaffirmation:', error);
       alert('Failed to reaffirm requirement. Please try again.');
+      throw error;
+    }
+  };
+
+  const handleSubmitBulkReaffirmation = async (data: {
+    requirementIds: string[];
+    comment: string;
+    action: 'REAFFIRMED_AS_IS' | 'REAFFIRMED_WITH_CHANGES';
+  }) => {
+    try {
+      console.log('Submitting bulk reaffirmation:', data);
+      
+      // TODO: Implement bulk reaffirmation API call
+      // For now, process each requirement individually
+      for (const requirementId of data.requirementIds) {
+        await reaffirmRequirement({
+          requirementId,
+          action: data.action,
+          comment: data.comment
+        });
+      }
+      
+      setShowBulkReaffirmModal(false);
+      setSelectedRequirements(new Set());
+      
+      // Reload data for both tabs to reflect changes
+      console.log('Reloading all requirements...');
+      await loadRequirements();
+      console.log('All requirements reloaded');
+      
+      console.log('Reloading reaffirmation due requirements...');
+      await loadReaffirmationDueRequirements();
+      console.log('Reaffirmation due requirements reloaded');
+      
+      // Show success message
+      alert(`Successfully reaffirmed ${data.requirementIds.length} requirements!`);
+    } catch (error) {
+      console.error('Error submitting bulk reaffirmation:', error);
+      alert('Failed to reaffirm some requirements. Please try again.');
       throw error;
     }
   };
@@ -421,9 +571,22 @@ const LegalContentDashboard: React.FC = () => {
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const formatDateCompact = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return 'Invalid';
+    }
+    
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: '2-digit'
     });
   };
 
@@ -560,60 +723,62 @@ const LegalContentDashboard: React.FC = () => {
           {loading ? (
             <LoadingMessage>Loading requirements...</LoadingMessage>
           ) : (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Title</Th>
-                  <Th>Jurisdiction</Th>
-                  <Th>Entity</Th>
-                  <Th>Subject Type</Th>
-                  <Th>Version</Th>
-                  <Th>Original Date</Th>
-                  <Th>Last Reaffirmed</Th>
-                  <Th>Reaffirmation Status</Th>
-                  <Th>Last Updated</Th>
-                  <Th>Actions</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {requirements.length === 0 ? (
+            <TableContainer>
+              <Table>
+                <thead>
                   <tr>
-                    <Td colSpan={10}>
-                      <NoDataMessage>No requirements found</NoDataMessage>
-                    </Td>
+                    <Th $width="25%">Title</Th>
+                    <Th $width="12%">Jurisdiction</Th>
+                    <Th $width="20%">Entity</Th>
+                    <Th $width="10%">Subject Type</Th>
+                    <Th $width="6%">Version</Th>
+                    <Th $width="10%">Original Date</Th>
+                    <Th $width="10%">Last Reaffirmed</Th>
+                    <Th $width="12%">Reaffirmation Status</Th>
+                    <Th $width="10%">Last Updated</Th>
+                    <Th $width="15%">Actions</Th>
                   </tr>
-                ) : (
-                  requirements.map((req) => {
-                    const reaffirmationStatus = getReaffirmationStatus(req);
-                    return (
-                      <Tr key={req.id}>
-                        <Td>{req.title}</Td>
-                        <Td>{req.jurisdiction}</Td>
-                        <Td>{req.entity}</Td>
-                        <Td>{req.subjectType}</Td>
-                        <Td>v{req.version}</Td>
-                        <Td>{formatDate(req.originalIngestionDate)}</Td>
-                        <Td>{req.lastReaffirmedAt ? formatDate(req.lastReaffirmedAt) : 'Never'}</Td>
-                        <Td>
-                          <ReaffirmationBadge $status={reaffirmationStatus}>
-                            {getReaffirmationStatusText(reaffirmationStatus)}
-                          </ReaffirmationBadge>
-                        </Td>
-                        <Td>{formatDate(req.updatedAt)}</Td>
-                        <Td>
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <Button onClick={() => handleProposeEdit(req)}>
-                              <FiEdit3 />
-                              Propose Edit
-                            </Button>
-                          </div>
-                        </Td>
-                      </Tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </Table>
+                </thead>
+                <tbody>
+                  {requirements.length === 0 ? (
+                    <tr>
+                      <Td colSpan={10}>
+                        <NoDataMessage>No requirements found</NoDataMessage>
+                      </Td>
+                    </tr>
+                  ) : (
+                    requirements.map((req) => {
+                      const reaffirmationStatus = getReaffirmationStatus(req);
+                      return (
+                        <Tr key={req.id}>
+                          <Td $width="25%">{req.title}</Td>
+                          <Td $width="12%">{req.jurisdiction}</Td>
+                          <Td $width="20%">{req.entity}</Td>
+                          <Td $width="10%">{req.subjectType}</Td>
+                          <Td $width="6%">v{req.version}</Td>
+                          <Td $width="10%">{formatDateCompact(req.originalIngestionDate)}</Td>
+                          <Td $width="10%">{req.lastReaffirmedAt ? formatDateCompact(req.lastReaffirmedAt) : 'Never'}</Td>
+                          <Td $width="12%">
+                            <ReaffirmationBadge $status={reaffirmationStatus}>
+                              {getReaffirmationStatusText(reaffirmationStatus)}
+                            </ReaffirmationBadge>
+                          </Td>
+                          <Td $width="10%">{formatDate(req.updatedAt)}</Td>
+                          <Td $width="15%">
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                              <Button onClick={() => handleProposeEdit(req)}>
+                                <FiEdit3 />
+                                Propose Edit
+                              </Button>
+                            </div>
+                          </Td>
+                        </Tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </Table>
+            </TableContainer>
           )}
         </Section>
       )}
@@ -681,68 +846,112 @@ const LegalContentDashboard: React.FC = () => {
           {loading ? (
             <LoadingMessage>Loading reaffirmation due requirements...</LoadingMessage>
           ) : (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Title</Th>
-                  <Th>Jurisdiction</Th>
-                  <Th>Entity</Th>
-                  <Th>Subject Type</Th>
-                  <Th>Version</Th>
-                  <Th>Original Date</Th>
-                  <Th>Last Reaffirmed</Th>
-                  <Th>Status</Th>
-                  <ThRight>Days Until Due</ThRight>
-                  <ThRight>Actions</ThRight>
-                </tr>
-              </thead>
-              <tbody>
-                {reaffirmationDueRequirements.length === 0 ? (
-                  <tr>
-                    <Td colSpan={10}>
-                      <NoDataMessage>No requirements due for reaffirmation</NoDataMessage>
-                    </Td>
-                  </tr>
-                ) : (
-                  reaffirmationDueRequirements.map((req) => {
-                    const reaffirmationStatus = getReaffirmationStatus(req);
-                    const now = new Date();
-                    const dueDate = new Date(req.nextReaffirmationDue);
-                    const daysUntilDue = isNaN(dueDate.getTime()) ? 0 : Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                    
-                    return (
-                      <Tr key={req.id}>
-                        <Td>{req.title}</Td>
-                        <Td>{req.jurisdiction}</Td>
-                        <Td>{req.entity}</Td>
-                        <Td>{req.subjectType}</Td>
-                        <Td>v{req.version}</Td>
-                        <Td>{formatDate(req.originalIngestionDate)}</Td>
-                        <Td>{req.lastReaffirmedAt ? formatDate(req.lastReaffirmedAt) : 'Never'}</Td>
-                        <Td>
-                          <ReaffirmationBadge $status={reaffirmationStatus}>
-                            {getReaffirmationStatusText(reaffirmationStatus)}
-                          </ReaffirmationBadge>
+            <TableAndSelectionWrapper>
+              <TableContainer>
+                <Table>
+                  <thead>
+                    <tr>
+                      <ThCheckbox>
+                        <input
+                          type="checkbox"
+                          checked={selectedRequirements.size > 0 && selectedRequirements.size === Math.min(reaffirmationDueRequirements.length, 10)}
+                          onChange={handleSelectAll}
+                          style={{ width: '16px', height: '16px' }}
+                        />
+                      </ThCheckbox>
+                      <Th $width="22%">Title</Th>
+                      <Th $width="11%">Jurisdiction</Th>
+                      <Th $width="18%">Entity</Th>
+                      <Th $width="9%">Subject Type</Th>
+                      <Th $width="6%">Version</Th>
+                      <Th $width="9%">Original Date</Th>
+                      <Th $width="9%">Last Reaffirmed</Th>
+                      <Th $width="10%">Status</Th>
+                      <ThRight $width="8%">Days Until Due</ThRight>
+                      <ThRight $width="8%">Actions</ThRight>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reaffirmationDueRequirements.length === 0 ? (
+                      <tr>
+                        <Td colSpan={11}>
+                          <NoDataMessage>No requirements due for reaffirmation</NoDataMessage>
                         </Td>
-                        <TdRight>
-                          <span style={{ 
-                            color: daysUntilDue < 0 ? '#991b1b' : daysUntilDue <= 7 ? '#92400e' : '#065f46',
-                            fontWeight: '500'
+                      </tr>
+                    ) : (
+                      reaffirmationDueRequirements.map((req) => {
+                        const reaffirmationStatus = getReaffirmationStatus(req);
+                        const now = new Date();
+                        const dueDate = new Date(req.nextReaffirmationDue);
+                        const daysUntilDue = isNaN(dueDate.getTime()) ? 0 : Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                        const isSelected = selectedRequirements.has(req.id);
+                        const isDisabled = !isSelected && selectedRequirements.size >= 10;
+                        
+                        return (
+                          <Tr key={req.id} style={{ 
+                            backgroundColor: isSelected ? '#f8f9fa' : 'transparent',
+                            opacity: isDisabled ? 0.6 : 1
                           }}>
-                            {daysUntilDue < 0 ? `${Math.abs(daysUntilDue)} days overdue` : `${daysUntilDue} days`}
-                          </span>
-                        </TdRight>
-                        <TdRight>
-                          <Button $variant="primary" onClick={() => handleReaffirm(req)}>
-                            Reaffirm
-                          </Button>
-                        </TdRight>
-                      </Tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </Table>
+                          <TdCheckbox>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleSelectRequirement(req.id)}
+                              disabled={isDisabled}
+                              style={{ width: '16px', height: '16px' }}
+                            />
+                          </TdCheckbox>
+                          <Td $width="22%">{req.title}</Td>
+                          <Td $width="11%">{req.jurisdiction}</Td>
+                          <Td $width="18%">{req.entity}</Td>
+                          <Td $width="9%">{req.subjectType}</Td>
+                          <Td $width="6%">v{req.version}</Td>
+                          <Td $width="9%">{formatDateCompact(req.originalIngestionDate)}</Td>
+                          <Td $width="9%">{req.lastReaffirmedAt ? formatDateCompact(req.lastReaffirmedAt) : 'Never'}</Td>
+                          <Td $width="10%">
+                            <ReaffirmationBadge $status={reaffirmationStatus}>
+                              {getReaffirmationStatusText(reaffirmationStatus)}
+                            </ReaffirmationBadge>
+                          </Td>
+                          <TdRight $width="8%">
+                            <span style={{ 
+                              color: daysUntilDue < 0 ? '#991b1b' : daysUntilDue <= 7 ? '#92400e' : '#065f46',
+                              fontWeight: '500'
+                            }}>
+                              {daysUntilDue < 0 ? `${Math.abs(daysUntilDue)} days overdue` : `${daysUntilDue} days`}
+                            </span>
+                          </TdRight>
+                          <TdRight $width="8%">
+                            <Button $variant="primary" onClick={() => handleReaffirm(req)}>
+                              Reaffirm
+                            </Button>
+                          </TdRight>
+                          </Tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </Table>
+              </TableContainer>
+
+              {/* Selection Summary Bar */}
+              {selectedRequirements.size > 0 && (
+                <SelectionBar>
+                  <SelectionInfo>
+                    {selectedRequirements.size} requirement{selectedRequirements.size !== 1 ? 's' : ''} selected
+                    {selectedRequirements.size >= 10 && ' (maximum reached)'}
+                  </SelectionInfo>
+                  <SelectionActions>
+                    <Button $variant="primary" onClick={handleBulkReaffirm}>
+                      Bulk Reaffirm
+                    </Button>
+                    <Button $variant="secondary" onClick={clearSelection}>
+                      Clear Selection
+                    </Button>
+                  </SelectionActions>
+                </SelectionBar>
+              )}
+            </TableAndSelectionWrapper>
           )}
         </Section>
       )}
@@ -752,43 +961,45 @@ const LegalContentDashboard: React.FC = () => {
           {loading ? (
             <LoadingMessage>Loading change requests...</LoadingMessage>
           ) : (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Title</Th>
-                  <Th>Requirement</Th>
-                  <Th>Status</Th>
-                  <Th>Assigned To</Th>
-                  <Th>Submitted</Th>
-                  <Th>Decided</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {changeRequests.length === 0 ? (
+            <TableContainer>
+              <Table>
+                <thead>
                   <tr>
-                    <Td colSpan={6}>
-                      <NoDataMessage>No change requests found</NoDataMessage>
-                    </Td>
+                    <Th $width="30%">Title</Th>
+                    <Th $width="25%">Requirement</Th>
+                    <Th $width="15%">Status</Th>
+                    <Th $width="15%">Assigned To</Th>
+                    <Th $width="15%">Submitted</Th>
+                    <Th $width="15%">Decided</Th>
                   </tr>
-                ) : (
-                  changeRequests.map((cr) => (
-                    <Tr key={cr.id}>
-                      <Td>{cr.title}</Td>
-                      <Td>{cr.jurisdiction} - {cr.entity}</Td>
-                      <Td>
-                        <StatusBadge $status={cr.status}>
-                          {getStatusIcon(cr.status)}
-                          {cr.status}
-                        </StatusBadge>
+                </thead>
+                <tbody>
+                  {changeRequests.length === 0 ? (
+                    <tr>
+                      <Td colSpan={6}>
+                        <NoDataMessage>No change requests found</NoDataMessage>
                       </Td>
-                      <Td>{cr.approver}</Td>
-                      <Td>{formatDate(cr.createdAt)}</Td>
-                      <Td>{cr.decidedAt ? formatDate(cr.decidedAt) : '-'}</Td>
-                    </Tr>
-                  ))
-                )}
-              </tbody>
-            </Table>
+                    </tr>
+                  ) : (
+                    changeRequests.map((cr) => (
+                      <Tr key={cr.id}>
+                        <Td $width="30%">{cr.title}</Td>
+                        <Td $width="25%">{cr.jurisdiction} - {cr.entity}</Td>
+                        <Td $width="15%">
+                          <StatusBadge $status={cr.status}>
+                            {getStatusIcon(cr.status)}
+                            {cr.status}
+                          </StatusBadge>
+                        </Td>
+                        <Td $width="15%">{cr.approver}</Td>
+                        <Td $width="15%">{formatDate(cr.createdAt)}</Td>
+                        <Td $width="15%">{cr.decidedAt ? formatDate(cr.decidedAt) : '-'}</Td>
+                      </Tr>
+                    ))
+                  )}
+                </tbody>
+              </Table>
+            </TableContainer>
           )}
         </Section>
       )}
@@ -800,6 +1011,7 @@ const LegalContentDashboard: React.FC = () => {
           setSelectedRequirement(null);
         }}
         requirement={selectedRequirement}
+        requirements={[...requirements, ...reaffirmationDueRequirements]}
         onSubmit={handleSubmitChangeRequest}
       />
 
@@ -810,7 +1022,17 @@ const LegalContentDashboard: React.FC = () => {
           setSelectedRequirement(null);
         }}
         requirement={selectedRequirement}
+        requirements={[...requirements, ...reaffirmationDueRequirements]}
         onSubmit={handleSubmitReaffirmation}
+      />
+
+      <BulkReaffirmModal
+        isOpen={showBulkReaffirmModal}
+        onClose={() => {
+          setShowBulkReaffirmModal(false);
+        }}
+        requirements={reaffirmationDueRequirements.filter(req => selectedRequirements.has(req.id))}
+        onSubmit={handleSubmitBulkReaffirmation}
       />
     </DashboardContainer>
   );

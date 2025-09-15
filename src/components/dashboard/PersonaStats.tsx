@@ -31,11 +31,11 @@ const StatLabel = styled.div`
   letter-spacing: 0.5px;
 `;
 
-const StatIcon = styled.div<{ $color: string }>`
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-  color: ${props => props.$color};
-`;
+// const StatIcon = styled.div<{ $color: string }>`
+//   font-size: 2rem;
+//   margin-bottom: 0.5rem;
+//   color: ${props => props.$color};
+// `;
 
 interface PersonaStatsProps {
   persona: string;

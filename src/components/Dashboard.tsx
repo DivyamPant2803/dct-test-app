@@ -14,96 +14,96 @@ const DashboardContainer = styled.div`
   gap: 2rem;
 `;
 
-const DashboardHeader = styled.div`
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  padding: 1.5rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-`;
+// const DashboardHeader = styled.div`
+//   background: white;
+//   border-radius: 12px;
+//   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+//   padding: 1.5rem;
+//   display: flex;
+//   justify-content: space-between;
+//   align-items: center;
+// `;
 
-const PersonaInfo = styled.div<{ $color: string }>`
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  
-  &::before {
-    content: '';
-    width: 4px;
-    height: 40px;
-    background: ${props => props.$color};
-    border-radius: 2px;
-  }
-`;
+// const PersonaInfo = styled.div<{ $color: string }>`
+//   display: flex;
+//   align-items: center;
+//   gap: 1rem;
+//   
+//   &::before {
+//     content: '';
+//     width: 4px;
+//     height: 40px;
+//     background: ${props => props.$color};
+//     border-radius: 2px;
+//   }
+// `;
 
-const PersonaIcon = styled.span`
-  font-size: 2rem;
-`;
+// const PersonaIcon = styled.span`
+//   font-size: 2rem;
+// `;
 
-const PersonaDetails = styled.div`
-  display: flex;
-  flex-direction: column;
-`;
+// const PersonaDetails = styled.div`
+//   display: flex;
+//   flex-direction: column;
+// `;
 
-const PersonaName = styled.h1`
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #222;
-  margin: 0;
-`;
+// const PersonaName = styled.h1`
+//   font-size: 1.5rem;
+//   font-weight: 600;
+//   color: #222;
+//   margin: 0;
+// `;
 
-const PersonaDescription = styled.p`
-  font-size: 0.9rem;
-  color: #666;
-  margin: 0.25rem 0 0 0;
-`;
+// const PersonaDescription = styled.p`
+//   font-size: 0.9rem;
+//   color: #666;
+//   margin: 0.25rem 0 0 0;
+// `;
 
-const DashboardActions = styled.div`
-  display: flex;
-  gap: 1rem;
-`;
+// const DashboardActions = styled.div`
+//   display: flex;
+//   gap: 1rem;
+// `;
 
-const ActionButton = styled.button<{ $variant: string; $color: string }>`
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  border: 1px solid ${props => {
-    switch (props.$variant) {
-      case 'primary': return props.$color;
-      case 'escalate': return '#9C27B0';
-      case 'danger': return '#F44336';
-      default: return '#ccc';
-    }
-  }};
-  background: ${props => {
-    switch (props.$variant) {
-      case 'primary': return props.$color;
-      case 'escalate': return '#9C27B0';
-      case 'danger': return '#F44336';
-      default: return 'white';
-    }
-  }};
-  color: ${props => props.$variant === 'secondary' ? '#222' : 'white'};
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+// const ActionButton = styled.button<{ $variant: string; $color: string }>`
+//   padding: 0.5rem 1rem;
+//   border-radius: 6px;
+//   border: 1px solid ${props => {
+//     switch (props.$variant) {
+//       case 'primary': return props.$color;
+//       case 'escalate': return '#9C27B0';
+//       case 'danger': return '#F44336';
+//       default: return '#ccc';
+//     }
+//   }};
+//   background: ${props => {
+//     switch (props.$variant) {
+//       case 'primary': return props.$color;
+//       case 'escalate': return '#9C27B0';
+//       case 'danger': return '#F44336';
+//       default: return 'white';
+//     }
+//   }};
+//   color: ${props => props.$variant === 'secondary' ? '#222' : 'white'};
+//   font-weight: 500;
+//   cursor: pointer;
+//   transition: all 0.2s ease;
+//   font-size: 0.9rem;
+//   display: flex;
+//   align-items: center;
+//   gap: 0.5rem;
 
-  &:hover {
-    opacity: 0.9;
-    transform: translateY(-1px);
-  }
+//   &:hover {
+//     opacity: 0.9;
+//     transform: translateY(-1px);
+//   }
 
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-  }
-`;
+//   &:disabled {
+//     opacity: 0.5;
+//     cursor: not-allowed;
+//     transform: none;
+//   }
+// `;
 
 const Tabs = styled.div`
   display: flex;
