@@ -1,19 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
-import { Requirement, ChangeRequest } from '../types/index';
+import { Requirement, ChangeRequest, ReaffirmationStatus, ReaffirmationRequest } from '../types/index';
 import { useRequirementsApi } from '../hooks/useRequirementsApi';
 import ProposeEditModal from './ProposeEditModal';
+import ReaffirmModal from './ReaffirmModal';
 import StyledSelect from './common/StyledSelect';
-import { FiEye, FiEdit3, FiClock, FiCheckCircle, FiXCircle } from 'react-icons/fi';
+import { FiEdit3, FiClock, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 
 const DashboardContainer = styled.div`
   width: 100%;
   height: 100%;
   background: #f5f5f5;
-  padding: 2rem;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
 `;
 
 const Tabs = styled.div`
@@ -23,6 +22,8 @@ const Tabs = styled.div`
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   overflow: hidden;
+  margin-bottom: 1.5rem;
+  flex-shrink: 0;
 `;
 
 const Tab = styled.button<{ $active: boolean }>`
@@ -45,23 +46,20 @@ const Section = styled.div`
   background: white;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  padding: 1.5rem;
+  padding: 1.25rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 `;
 
-const SectionTitle = styled.h2`
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #222;
-  margin-bottom: 1.5rem;
-  border-bottom: 2px solid #f0f0f0;
-  padding-bottom: 0.5rem;
-`;
 
 const Filters = styled.div`
   display: flex;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
   flex-wrap: wrap;
+  flex-shrink: 0;
 `;
 
 const FilterGroup = styled.div`
@@ -83,12 +81,13 @@ const SelectWrapper = styled.div`
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  margin-top: 1rem;
+  flex: 1;
+  min-height: 0;
 `;
 
 const Th = styled.th`
   background: #f8f8f8;
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   text-align: left;
   font-weight: 500;
   color: #333;
@@ -96,11 +95,29 @@ const Th = styled.th`
   white-space: nowrap;
 `;
 
+const ThRight = styled.th`
+  background: #f8f8f8;
+  padding: 0.75rem 1rem;
+  text-align: right;
+  font-weight: 500;
+  color: #333;
+  border-bottom: 2px solid #eee;
+  white-space: nowrap;
+`;
+
 const Td = styled.td`
-  padding: 1rem;
+  padding: 0.5rem 1rem;
   border-bottom: 1px solid #eee;
   color: #666;
-  vertical-align: middle;
+  vertical-align: top;
+`;
+
+const TdRight = styled.td`
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #eee;
+  color: #666;
+  vertical-align: top;
+  text-align: right;
 `;
 
 const Tr = styled.tr`
@@ -110,10 +127,10 @@ const Tr = styled.tr`
 `;
 
 const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
-  padding: 0.5rem 1rem;
+  padding: 0.4rem 0.8rem;
   border: none;
   border-radius: 4px;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -140,9 +157,9 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
 `;
 
 const StatusBadge = styled.span<{ $status: 'PENDING' | 'APPROVED' | 'REJECTED' }>`
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-size: 0.8rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
   font-weight: 500;
   display: flex;
   align-items: center;
@@ -169,6 +186,35 @@ const StatusBadge = styled.span<{ $status: 'PENDING' | 'APPROVED' | 'REJECTED' }
   }}
 `;
 
+const ReaffirmationBadge = styled.span<{ $status: ReaffirmationStatus }>`
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  display: inline-block;
+  white-space: nowrap;
+  
+  ${props => {
+    switch (props.$status) {
+      case 'CURRENT':
+        return `
+          background: #d1fae5;
+          color: #065f46;
+        `;
+      case 'DUE_SOON':
+        return `
+          background: #fef3c7;
+          color: #92400e;
+        `;
+      case 'OVERDUE':
+        return `
+          background: #fee2e2;
+          color: #991b1b;
+        `;
+    }
+  }}
+`;
+
 const NoDataMessage = styled.div`
   display: flex;
   align-items: center;
@@ -187,14 +233,16 @@ const LoadingMessage = styled.div`
   font-size: 0.9rem;
 `;
 
-type TabType = 'explore' | 'my-requests';
+type TabType = 'explore' | 'reaffirmation-due' | 'my-requests';
 
 const LegalContentDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('explore');
   const [requirements, setRequirements] = useState<Requirement[]>([]);
+  const [reaffirmationDueRequirements, setReaffirmationDueRequirements] = useState<Requirement[]>([]);
   const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [showProposeModal, setShowProposeModal] = useState(false);
+  const [showReaffirmModal, setShowReaffirmModal] = useState(false);
   const [selectedRequirement, setSelectedRequirement] = useState<Requirement | null>(null);
   
   // Filters for explore tab
@@ -208,7 +256,8 @@ const LegalContentDashboard: React.FC = () => {
     getRequirements, 
     getChangeRequests, 
     createChangeRequest,
-    initializeSampleData 
+    initializeSampleData,
+    reaffirmRequirement
   } = useRequirementsApi();
 
   // Initialize sample data on component mount
@@ -227,9 +276,41 @@ const LegalContentDashboard: React.FC = () => {
       };
       
       const data = await getRequirements(filterParams);
+      console.log('Loaded requirements:', data);
+      console.log('Sample requirement:', data[0]);
       setRequirements(data);
     } catch (error) {
       console.error('Error loading requirements:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters, getRequirements]);
+
+  // Load reaffirmation due requirements
+  const loadReaffirmationDueRequirements = useCallback(async () => {
+    setLoading(true);
+    try {
+      const filterParams = {
+        jurisdiction: filters.jurisdiction ? [filters.jurisdiction] : undefined,
+        entity: filters.entity ? [filters.entity] : undefined,
+        subjectType: filters.subjectType ? [filters.subjectType] : undefined,
+      };
+      
+      console.log('Loading requirements with filters:', filterParams);
+      const data = await getRequirements(filterParams);
+      console.log('All requirements loaded:', data.length);
+      
+      // Filter for requirements that are due or overdue for reaffirmation
+      const dueRequirements = data.filter(req => {
+        const status = getReaffirmationStatus(req);
+        console.log(`Requirement ${req.id} (${req.title}): status=${status}, nextDue=${req.nextReaffirmationDue}, lastReaffirmed=${req.lastReaffirmedAt}`);
+        return status === 'DUE_SOON' || status === 'OVERDUE';
+      });
+      
+      console.log('Due requirements found:', dueRequirements.length);
+      setReaffirmationDueRequirements(dueRequirements);
+    } catch (error) {
+      console.error('Error loading reaffirmation due requirements:', error);
     } finally {
       setLoading(false);
     }
@@ -254,10 +335,12 @@ const LegalContentDashboard: React.FC = () => {
   useEffect(() => {
     if (activeTab === 'explore') {
       loadRequirements();
+    } else if (activeTab === 'reaffirmation-due') {
+      loadReaffirmationDueRequirements();
     } else {
       loadChangeRequests();
     }
-  }, [activeTab, loadRequirements, loadChangeRequests]);
+  }, [activeTab, loadRequirements, loadReaffirmationDueRequirements, loadChangeRequests]);
 
   const handleFilterChange = (field: string, value: string) => {
     setFilters(prev => ({ ...prev, [field]: value }));
@@ -266,6 +349,11 @@ const LegalContentDashboard: React.FC = () => {
   const handleProposeEdit = (requirement: Requirement) => {
     setSelectedRequirement(requirement);
     setShowProposeModal(true);
+  };
+
+  const handleReaffirm = (requirement: Requirement) => {
+    setSelectedRequirement(requirement);
+    setShowReaffirmModal(true);
   };
 
   const handleSubmitChangeRequest = async (data: {
@@ -292,8 +380,45 @@ const LegalContentDashboard: React.FC = () => {
     }
   };
 
+  const handleSubmitReaffirmation = async (data: ReaffirmationRequest) => {
+    try {
+      console.log('Submitting reaffirmation:', data);
+      await reaffirmRequirement(data);
+      console.log('Reaffirmation completed successfully');
+      
+      setShowReaffirmModal(false);
+      setSelectedRequirement(null);
+      
+      // Reload data to reflect changes
+      if (activeTab === 'reaffirmation-due') {
+        console.log('Reloading reaffirmation due requirements...');
+        await loadReaffirmationDueRequirements();
+        console.log('Reaffirmation due requirements reloaded');
+      } else {
+        console.log('Reloading all requirements...');
+        await loadRequirements();
+        console.log('All requirements reloaded');
+      }
+      
+      // Show success message
+      alert('Requirement reaffirmed successfully!');
+    } catch (error) {
+      console.error('Error submitting reaffirmation:', error);
+      alert('Failed to reaffirm requirement. Please try again.');
+      throw error;
+    }
+  };
+
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    if (!dateString) return 'N/A';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      console.error('Invalid date string:', dateString);
+      return 'Invalid Date';
+    }
+    
+    return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -313,6 +438,42 @@ const LegalContentDashboard: React.FC = () => {
     }
   };
 
+  const getReaffirmationStatus = (requirement: Requirement): ReaffirmationStatus => {
+    if (!requirement.nextReaffirmationDue) {
+      console.error('Missing nextReaffirmationDue for requirement:', requirement.id);
+      return 'CURRENT';
+    }
+    
+    const now = new Date();
+    const dueDate = new Date(requirement.nextReaffirmationDue);
+    
+    if (isNaN(dueDate.getTime())) {
+      console.error('Invalid nextReaffirmationDue date for requirement:', requirement.id, requirement.nextReaffirmationDue);
+      return 'CURRENT';
+    }
+    
+    const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysUntilDue < 0) {
+      return 'OVERDUE';
+    } else if (daysUntilDue <= 30) {
+      return 'DUE_SOON';
+    } else {
+      return 'CURRENT';
+    }
+  };
+
+  const getReaffirmationStatusText = (status: ReaffirmationStatus): string => {
+    switch (status) {
+      case 'CURRENT':
+        return 'Current';
+      case 'DUE_SOON':
+        return 'Due Soon';
+      case 'OVERDUE':
+        return 'Overdue';
+    }
+  };
+
   return (
     <DashboardContainer>
       <Tabs>
@@ -321,6 +482,12 @@ const LegalContentDashboard: React.FC = () => {
           onClick={() => setActiveTab('explore')}
         >
           Explore Requirements
+        </Tab>
+        <Tab 
+          $active={activeTab === 'reaffirmation-due'} 
+          onClick={() => setActiveTab('reaffirmation-due')}
+        >
+          Reaffirmation Due
         </Tab>
         <Tab 
           $active={activeTab === 'my-requests'} 
@@ -332,8 +499,6 @@ const LegalContentDashboard: React.FC = () => {
 
       {activeTab === 'explore' && (
         <Section>
-          <SectionTitle>Explore Requirements</SectionTitle>
-          
           <Filters>
             <FilterGroup>
               <FilterLabel>Jurisdiction</FilterLabel>
@@ -346,7 +511,9 @@ const LegalContentDashboard: React.FC = () => {
                     { value: 'Germany', label: 'Germany' },
                     { value: 'United States', label: 'United States' },
                     { value: 'Singapore', label: 'Singapore' },
-                    { value: 'United Kingdom', label: 'United Kingdom' }
+                    { value: 'United Kingdom', label: 'United Kingdom' },
+                    { value: 'Canada', label: 'Canada' },
+                    { value: 'Brazil', label: 'Brazil' }
                   ]}
                   placeholder="All Jurisdictions"
                 />
@@ -381,7 +548,8 @@ const LegalContentDashboard: React.FC = () => {
                     { value: 'Employee', label: 'Employee' },
                     { value: 'Client', label: 'Client' },
                     { value: 'Candidate', label: 'Candidate' },
-                    { value: 'Prospect', label: 'Prospect' }
+                    { value: 'Prospect', label: 'Prospect' },
+                    { value: 'Candidate', label: 'Candidate' }
                   ]}
                   placeholder="All Types"
                 />
@@ -400,6 +568,9 @@ const LegalContentDashboard: React.FC = () => {
                   <Th>Entity</Th>
                   <Th>Subject Type</Th>
                   <Th>Version</Th>
+                  <Th>Original Date</Th>
+                  <Th>Last Reaffirmed</Th>
+                  <Th>Reaffirmation Status</Th>
                   <Th>Last Updated</Th>
                   <Th>Actions</Th>
                 </tr>
@@ -407,29 +578,168 @@ const LegalContentDashboard: React.FC = () => {
               <tbody>
                 {requirements.length === 0 ? (
                   <tr>
-                    <Td colSpan={7}>
+                    <Td colSpan={10}>
                       <NoDataMessage>No requirements found</NoDataMessage>
                     </Td>
                   </tr>
                 ) : (
-                  requirements.map((req) => (
-                    <Tr key={req.id}>
-                      <Td>{req.title}</Td>
-                      <Td>{req.jurisdiction}</Td>
-                      <Td>{req.entity}</Td>
-                      <Td>{req.subjectType}</Td>
-                      <Td>v{req.version}</Td>
-                      <Td>{formatDate(req.updatedAt)}</Td>
-                      <Td>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <Button onClick={() => handleProposeEdit(req)}>
-                            <FiEdit3 />
-                            Propose Edit
+                  requirements.map((req) => {
+                    const reaffirmationStatus = getReaffirmationStatus(req);
+                    return (
+                      <Tr key={req.id}>
+                        <Td>{req.title}</Td>
+                        <Td>{req.jurisdiction}</Td>
+                        <Td>{req.entity}</Td>
+                        <Td>{req.subjectType}</Td>
+                        <Td>v{req.version}</Td>
+                        <Td>{formatDate(req.originalIngestionDate)}</Td>
+                        <Td>{req.lastReaffirmedAt ? formatDate(req.lastReaffirmedAt) : 'Never'}</Td>
+                        <Td>
+                          <ReaffirmationBadge $status={reaffirmationStatus}>
+                            {getReaffirmationStatusText(reaffirmationStatus)}
+                          </ReaffirmationBadge>
+                        </Td>
+                        <Td>{formatDate(req.updatedAt)}</Td>
+                        <Td>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <Button onClick={() => handleProposeEdit(req)}>
+                              <FiEdit3 />
+                              Propose Edit
+                            </Button>
+                          </div>
+                        </Td>
+                      </Tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </Table>
+          )}
+        </Section>
+      )}
+
+      {activeTab === 'reaffirmation-due' && (
+        <Section>
+          <Filters>
+            <FilterGroup>
+              <FilterLabel>Jurisdiction</FilterLabel>
+              <SelectWrapper>
+                <StyledSelect
+                  value={filters.jurisdiction}
+                  onChange={(value) => handleFilterChange('jurisdiction', value)}
+                  options={[
+                    { value: '', label: 'All Jurisdictions' },
+                    { value: 'Germany', label: 'Germany' },
+                    { value: 'United States', label: 'United States' },
+                    { value: 'Singapore', label: 'Singapore' },
+                    { value: 'United Kingdom', label: 'United Kingdom' },
+                    { value: 'Canada', label: 'Canada' },
+                    { value: 'Brazil', label: 'Brazil' }
+                  ]}
+                  placeholder="All Jurisdictions"
+                />
+              </SelectWrapper>
+            </FilterGroup>
+            
+            <FilterGroup>
+              <FilterLabel>Entity</FilterLabel>
+              <SelectWrapper>
+                <StyledSelect
+                  value={filters.entity}
+                  onChange={(value) => handleFilterChange('entity', value)}
+                  options={[
+                    { value: '', label: 'All Entities' },
+                    { value: 'Deutsche Technologie und Datendienste GmbH', label: 'Deutsche Technologie und Datendienste GmbH' },
+                    { value: 'US Global Technology Solutions Corporation', label: 'US Global Technology Solutions Corporation' },
+                    { value: 'Singapore Advanced Technology Solutions Pte Ltd', label: 'Singapore Advanced Technology Solutions Pte Ltd' }
+                  ]}
+                  placeholder="All Entities"
+                />
+              </SelectWrapper>
+            </FilterGroup>
+            
+            <FilterGroup>
+              <FilterLabel>Subject Type</FilterLabel>
+              <SelectWrapper>
+                <StyledSelect
+                  value={filters.subjectType}
+                  onChange={(value) => handleFilterChange('subjectType', value)}
+                  options={[
+                    { value: '', label: 'All Types' },
+                    { value: 'Employee', label: 'Employee' },
+                    { value: 'Client', label: 'Client' },
+                    { value: 'Candidate', label: 'Candidate' },
+                    { value: 'Prospect', label: 'Prospect' },
+                    { value: 'Candidate', label: 'Candidate' }
+                  ]}
+                  placeholder="All Types"
+                />
+              </SelectWrapper>
+            </FilterGroup>
+          </Filters>
+
+          {loading ? (
+            <LoadingMessage>Loading reaffirmation due requirements...</LoadingMessage>
+          ) : (
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Title</Th>
+                  <Th>Jurisdiction</Th>
+                  <Th>Entity</Th>
+                  <Th>Subject Type</Th>
+                  <Th>Version</Th>
+                  <Th>Original Date</Th>
+                  <Th>Last Reaffirmed</Th>
+                  <Th>Status</Th>
+                  <ThRight>Days Until Due</ThRight>
+                  <ThRight>Actions</ThRight>
+                </tr>
+              </thead>
+              <tbody>
+                {reaffirmationDueRequirements.length === 0 ? (
+                  <tr>
+                    <Td colSpan={10}>
+                      <NoDataMessage>No requirements due for reaffirmation</NoDataMessage>
+                    </Td>
+                  </tr>
+                ) : (
+                  reaffirmationDueRequirements.map((req) => {
+                    const reaffirmationStatus = getReaffirmationStatus(req);
+                    const now = new Date();
+                    const dueDate = new Date(req.nextReaffirmationDue);
+                    const daysUntilDue = isNaN(dueDate.getTime()) ? 0 : Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                    
+                    return (
+                      <Tr key={req.id}>
+                        <Td>{req.title}</Td>
+                        <Td>{req.jurisdiction}</Td>
+                        <Td>{req.entity}</Td>
+                        <Td>{req.subjectType}</Td>
+                        <Td>v{req.version}</Td>
+                        <Td>{formatDate(req.originalIngestionDate)}</Td>
+                        <Td>{req.lastReaffirmedAt ? formatDate(req.lastReaffirmedAt) : 'Never'}</Td>
+                        <Td>
+                          <ReaffirmationBadge $status={reaffirmationStatus}>
+                            {getReaffirmationStatusText(reaffirmationStatus)}
+                          </ReaffirmationBadge>
+                        </Td>
+                        <TdRight>
+                          <span style={{ 
+                            color: daysUntilDue < 0 ? '#991b1b' : daysUntilDue <= 7 ? '#92400e' : '#065f46',
+                            fontWeight: '500'
+                          }}>
+                            {daysUntilDue < 0 ? `${Math.abs(daysUntilDue)} days overdue` : `${daysUntilDue} days`}
+                          </span>
+                        </TdRight>
+                        <TdRight>
+                          <Button $variant="primary" onClick={() => handleReaffirm(req)}>
+                            Reaffirm
                           </Button>
-                        </div>
-                      </Td>
-                    </Tr>
-                  ))
+                        </TdRight>
+                      </Tr>
+                    );
+                  })
                 )}
               </tbody>
             </Table>
@@ -439,8 +749,6 @@ const LegalContentDashboard: React.FC = () => {
 
       {activeTab === 'my-requests' && (
         <Section>
-          <SectionTitle>My Change Requests</SectionTitle>
-          
           {loading ? (
             <LoadingMessage>Loading change requests...</LoadingMessage>
           ) : (
@@ -493,6 +801,16 @@ const LegalContentDashboard: React.FC = () => {
         }}
         requirement={selectedRequirement}
         onSubmit={handleSubmitChangeRequest}
+      />
+
+      <ReaffirmModal
+        isOpen={showReaffirmModal}
+        onClose={() => {
+          setShowReaffirmModal(false);
+          setSelectedRequirement(null);
+        }}
+        requirement={selectedRequirement}
+        onSubmit={handleSubmitReaffirmation}
       />
     </DashboardContainer>
   );

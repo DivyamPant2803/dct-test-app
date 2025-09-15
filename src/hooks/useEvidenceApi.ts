@@ -271,7 +271,7 @@ export const useEvidenceApi = () => {
         console.log('Requirement not found:', {
           requirementId,
           transferId,
-          availableRequirements: transfer.requirements.map(r => r.id)
+          availableRequirements: transfer.requirements.map((r: any) => r.id)
         });
       }
     } else {

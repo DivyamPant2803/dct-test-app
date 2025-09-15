@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import { useStaticContent, ContentItem } from '../contexts/StaticContentContext';
+import { useStaticContent } from '../contexts/StaticContentContext';
+import { SectionContentItem } from '../utils/parseHomeHtml';
 import { Notification } from '../components/NotificationModal';
 
 const Layout = styled.div`
@@ -153,7 +154,7 @@ const Administration: React.FC<AdministrationProps> = ({ setNotifications }) => 
   const [activeTile, setActiveTile] = useState('static');
   const [activeTab, setActiveTab] = useState<CategoryKey>('announcements');
   const { content, setContent } = useStaticContent();
-  const [form, setForm] = useState<ContentItem>({ title: '', body: '' });
+  const [form, setForm] = useState<{ title: string; body: string }>({ title: '', body: '' });
   const [editIdx, setEditIdx] = useState<number|null>(null);
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement|HTMLTextAreaElement>) => {
@@ -163,7 +164,7 @@ const Administration: React.FC<AdministrationProps> = ({ setNotifications }) => 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setContent(prev => {
-      const arr = [...prev[activeTab as CategoryKey]];
+      const arr = [...(prev as any)[activeTab]];
       let action = '';
       if (editIdx !== null) {
         arr[editIdx] = { ...form };
@@ -192,13 +193,17 @@ const Administration: React.FC<AdministrationProps> = ({ setNotifications }) => 
   };
 
   const handleEdit = (idx: number) => {
-    setForm(content[activeTab as CategoryKey][idx]);
+    const item = (content as any)[activeTab][idx];
+    setForm({ 
+      title: item.title, 
+      body: typeof item.body === 'string' ? item.body : String(item.body) 
+    });
     setEditIdx(idx);
   };
 
   const handleDelete = (idx: number) => {
     setContent(prev => {
-      const arr = [...prev[activeTab as CategoryKey]];
+      const arr = [...(prev as any)[activeTab]];
       arr.splice(idx, 1);
       return { ...prev, [activeTab as CategoryKey]: arr };
     });
@@ -228,10 +233,10 @@ const Administration: React.FC<AdministrationProps> = ({ setNotifications }) => 
               </Form>
             </Card>
             <Collapsible title={`View All ${categories.find(c => c.key === activeTab)?.label}`}> 
-              {content[activeTab as CategoryKey].map((item: ContentItem, idx: number) => (
+              {(content as any)[activeTab].map((item: SectionContentItem, idx: number) => (
                 <Card key={idx}>
                   <h4>{item.title}</h4>
-                  <p style={{whiteSpace:'pre-line'}}>{item.body.length > 120 ? item.body.slice(0,120)+'...' : item.body}</p>
+                  <p style={{whiteSpace:'pre-line'}}>{typeof item.body === 'string' && item.body.length > 120 ? item.body.slice(0,120)+'...' : item.body}</p>
                   <Button type="button" onClick={()=>handleEdit(idx)}>Edit</Button>
                   <Button type="button" style={{marginLeft:8,background:'#fff',color:'#222',border:'1px solid #222'}} onClick={()=>handleDelete(idx)}>Delete</Button>
                 </Card>

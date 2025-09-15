@@ -401,9 +401,27 @@ const ProposeEditModal: React.FC<ProposeEditModalProps> = ({
             </FormGroup>
 
             <FormGroup>
-              <Label>Requirement Text</Label>
+              <Label>Current Requirement Text</Label>
+              <div style={{ 
+                background: '#f8f8f8', 
+                padding: '1rem', 
+                borderRadius: '6px', 
+                border: '1px solid #eee',
+                fontSize: '0.9rem',
+                lineHeight: '1.5',
+                color: '#333',
+                maxHeight: '200px',
+                overflowY: 'auto',
+                marginBottom: '1rem'
+              }}>
+                {requirement.text}
+              </div>
+            </FormGroup>
+
+            <FormGroup>
+              <Label>Proposed Requirement Text</Label>
               <div style={{ fontSize: '0.85rem', color: '#666', marginBottom: '0.5rem' }}>
-                Enter your proposed changes to the requirement text. This will be compared against the original text.
+                Enter your proposed changes to the requirement text. This will be compared against the original text above.
               </div>
               <RichTextArea
                 value={formData.proposedText}

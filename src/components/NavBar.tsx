@@ -2,6 +2,9 @@ import { NavLink } from 'react-router-dom';
 import styled from 'styled-components';
 import { FiMessageCircle } from 'react-icons/fi';
 import NotificationIcon from './NotificationIcon';
+import PersonaDropdown from './PersonaDropdown';
+import { usePersona } from '../contexts/PersonaContext';
+import { getPersonaNavigation } from '../config/personaConfig';
 
 const NavBarContainer = styled.nav`
   width: 100%;
@@ -77,39 +80,31 @@ interface NavBarProps {
   onChatbotClick: () => void;
 }
 
-const NavBar: React.FC<NavBarProps> = ({ unreadCount, onNotificationClick, onChatbotClick }) => (
-  <NavBarContainer>
-    <NavList>
-      <li>
-        <StyledNavLink to="/" end>Home</StyledNavLink>
-      </li>
-      <li>
-        <StyledNavLink to="/guidance">Guidance</StyledNavLink>
-      </li>
-      <li>
-        <StyledNavLink to="/my-transfers">My Transfers</StyledNavLink>
-      </li>
-      <li>
-        <StyledNavLink to="/dct">Administration</StyledNavLink>
-      </li>
-      <li>
-        <StyledNavLink to="/legal">Legal</StyledNavLink>
-      </li>
-      <li>
-        <StyledNavLink to="/legal-content">Legal Content</StyledNavLink>
-      </li>
-      <li>
-        <StyledNavLink to="/admin-cr">Admin CR</StyledNavLink>
-      </li>
-    </NavList>
-    <RightSection>
-      <ChatbotButton onClick={onChatbotClick}>
-        <FiMessageCircle size={16} />
-        Support
-      </ChatbotButton>
-      <NotificationIcon unreadCount={unreadCount} onClick={onNotificationClick} />
-    </RightSection>
-  </NavBarContainer>
-);
+const NavBar: React.FC<NavBarProps> = ({ unreadCount, onNotificationClick, onChatbotClick }) => {
+  const { currentPersona } = usePersona();
+  const navigationItems = getPersonaNavigation(currentPersona);
+
+  return (
+    <NavBarContainer>
+      <NavList>
+        {navigationItems.map((item) => (
+          <li key={item.route}>
+            <StyledNavLink to={item.route} end={item.route === '/'}>
+              {item.name}
+            </StyledNavLink>
+          </li>
+        ))}
+      </NavList>
+      <RightSection>
+        <PersonaDropdown />
+        <ChatbotButton onClick={onChatbotClick}>
+          <FiMessageCircle size={16} />
+          Support
+        </ChatbotButton>
+        <NotificationIcon unreadCount={unreadCount} onClick={onNotificationClick} />
+      </RightSection>
+    </NavBarContainer>
+  );
+};
 
 export default NavBar; 

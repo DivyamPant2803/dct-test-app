@@ -10,10 +10,10 @@ const DashboardContainer = styled.div`
   width: 100%;
   height: 100%;
   background: #f5f5f5;
-  padding: 2rem;
+  padding: 1rem;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1rem;
 `;
 
 const Tabs = styled.div`
@@ -27,14 +27,14 @@ const Tabs = styled.div`
 
 const Tab = styled.button<{ $active: boolean }>`
   flex: 1;
-  padding: 1rem 1.5rem;
+  padding: 0.75rem 1.25rem;
   border: none;
   background: ${props => props.$active ? '#222' : 'white'};
   color: ${props => props.$active ? 'white' : '#222'};
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 1rem;
+  font-size: 0.9rem;
   
   &:hover {
     background: ${props => props.$active ? '#444' : '#f8f8f8'};
@@ -45,23 +45,29 @@ const Section = styled.div`
   background: white;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  padding: 1.5rem;
+  padding: 1rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 `;
 
 const SectionTitle = styled.h2`
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: #222;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   border-bottom: 2px solid #f0f0f0;
   padding-bottom: 0.5rem;
+  flex-shrink: 0;
 `;
 
 const Filters = styled.div`
   display: flex;
   gap: 1rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   flex-wrap: wrap;
+  flex-shrink: 0;
 `;
 
 const FilterGroup = styled.div`
@@ -83,12 +89,13 @@ const SelectWrapper = styled.div`
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  margin-top: 1rem;
+  flex: 1;
+  min-height: 0;
 `;
 
 const Th = styled.th`
   background: #f8f8f8;
-  padding: 1rem;
+  padding: 0.75rem;
   text-align: left;
   font-weight: 500;
   color: #333;
@@ -97,7 +104,7 @@ const Th = styled.th`
 `;
 
 const Td = styled.td`
-  padding: 1rem;
+  padding: 0.75rem;
   border-bottom: 1px solid #eee;
   color: #666;
   vertical-align: middle;
@@ -182,7 +189,7 @@ const NoDataMessage = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 200px;
+  height: 120px;
   color: #666;
   font-size: 0.9rem;
 `;
@@ -191,7 +198,7 @@ const LoadingMessage = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 200px;
+  height: 120px;
   color: #666;
   font-size: 0.9rem;
 `;
@@ -325,7 +332,6 @@ const AdminCRDashboard: React.FC = () => {
       </Tabs>
 
       <Section>
-        <SectionTitle>{getTabTitle(activeTab)}</SectionTitle>
         
         <Filters>
           <FilterGroup>

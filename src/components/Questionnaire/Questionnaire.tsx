@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { RECIPIENT_TYPES } from '../../types';
 import EntitySelection from '../../components/EntitySelection/index';
 import ReviewDataTransferPurpose from '../../components/ReviewDataTransferPurpose';
-import { INITIAL_FORM_DATA } from '../../App';
+// import { INITIAL_FORM_DATA } from '../../App';
 import QuestionnaireTabs from './QuestionnaireTabs';
 import AzureCloudHostingLocations from './AzureCloudHostingLocations';
 import AccessLocations from './AccessLocations';

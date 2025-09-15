@@ -5,91 +5,59 @@ import { useEvidenceApi } from '../hooks/useEvidenceApi';
 import ReviewDrawer from './ReviewDrawer';
 import StatusChip from './StatusChip';
 import AdminAIInsights from './AdminAIInsights';
+import AdminCRDashboard from './AdminCRDashboard';
 import StyledSelect from './common/StyledSelect';
+import Sidebar, { SidebarGroup } from './common/Sidebar';
 
 const DashboardContainer = styled.div`
   width: 100%;
   height: 100%;
   background: #f5f5f5;
-  padding: 2rem;
+  display: flex;
+`;
+
+const SidebarWrapper = styled.div`
+  flex-shrink: 0;
+`;
+
+const MainContent = styled.div`
+  flex: 1;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
+  overflow-y: auto;
+  min-height: 0;
 `;
 
-const Tabs = styled.div`
-  display: flex;
-  gap: 0;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  margin-bottom: 2rem;
-  width: 100%;
-  z-index: 1;
-  border: 2px solid #e1e5e9;
-  min-height: 60px;
-`;
-
-const Tab = styled.button<{ $active: boolean }>`
-  flex: 1;
-  padding: 1rem 1.5rem;
-  border: none;
-  background: ${props => props.$active ? '#222' : 'white'};
-  color: ${props => props.$active ? 'white' : '#222'};
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 1rem;
-  position: relative;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  visibility: visible;
-  opacity: 1;
-  white-space: nowrap;
-  
-  &:hover {
-    background: ${props => props.$active ? '#444' : '#f8f9fa'};
-    transform: ${props => props.$active ? 'none' : 'translateY(-1px)'};
-  }
-  
-  &:active {
-    transform: translateY(0);
-  }
-  
-  &:first-child {
-    border-top-left-radius: 10px;
-    border-bottom-left-radius: 10px;
-  }
-  
-  &:last-child {
-    border-top-right-radius: 10px;
-    border-bottom-right-radius: 10px;
-  }
-`;
 
 const Section = styled.div`
   background: white;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  padding: 1.5rem;
+  padding: 1.25rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 `;
 
 const SectionTitle = styled.h2`
-  font-size: 1.5rem;
+  font-size: 1.1rem;
   font-weight: 600;
   color: #222;
-  margin-bottom: 1.5rem;
-  border-bottom: 2px solid #f0f0f0;
-  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 0.25rem;
+  flex-shrink: 0;
 `;
 
 const Filters = styled.div`
   display: flex;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
   flex-wrap: wrap;
+  flex-shrink: 0;
 `;
 
 const FilterGroup = styled.div`
@@ -111,7 +79,8 @@ const SelectWrapper = styled.div`
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  margin-top: 1rem;
+  flex: 1;
+  min-height: 0;
 `;
 
 const Th = styled.th`
@@ -176,39 +145,242 @@ const LoadingMessage = styled.div`
   font-size: 0.9rem;
 `;
 
+
+// Transfer Grouping Styles
+const TransferGroups = styled.div`
+  margin-top: 1rem;
+`;
+
+const TransferGroup = styled.div`
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+  background: white;
+  overflow: hidden;
+`;
+
+const TransferHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  
+  &:hover {
+    background: #f0f0f0;
+  }
+`;
+
+const TransferInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  min-width: 0;
+`;
+
+const TransferName = styled.div`
+  font-weight: 600;
+  color: #222;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+`;
+
+
+const ExpandIcon = styled.div<{ $expanded: boolean }>`
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+  transform: ${props => props.$expanded ? 'rotate(90deg)' : 'rotate(0deg)'};
+  color: #666;
+`;
+
+const DocumentList = styled.div`
+  background: white;
+`;
+
+const DocumentRow = styled.div`
+  display: grid;
+  grid-template-columns: 2fr 80px 120px 80px 60px 80px;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #f0f0f0;
+  align-items: center;
+  font-size: 0.85rem;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+  
+  &:hover {
+    background: #f9f9f9;
+  }
+`;
+
+const DocumentName = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  justify-content: center;
+`;
+
+const FileIconSmall = styled.span`
+  font-size: 0.9rem;
+  flex-shrink: 0;
+`;
+
+const DocumentTitle = styled.div`
+  font-weight: 500;
+  color: #222;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const CompactStatus = styled.span<{ $status: string }>`
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-align: center;
+  
+  ${props => {
+    switch (props.$status) {
+      case 'PENDING':
+        return 'background: #fef3c7; color: #92400e;';
+      case 'APPROVED':
+        return 'background: #d1fae5; color: #065f46;';
+      case 'REJECTED':
+        return 'background: #fee2e2; color: #991b1b;';
+      case 'UNDER_REVIEW':
+        return 'background: #dbeafe; color: #1e40af;';
+      case 'ESCALATED':
+        return 'background: #e9d5ff; color: #7c3aed;';
+      default:
+        return 'background: #f3f4f6; color: #6b7280;';
+    }
+  }}
+`;
+
+const CompactButton = styled.button`
+  padding: 0.3rem 0.6rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #222;
+  color: white;
+  
+  &:hover {
+    background: #444;
+  }
+`;
+
+const Pagination = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 1rem;
+`;
+
+const PageButton = styled.button<{ $active?: boolean }>`
+  padding: 0.4rem 0.8rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: ${props => props.$active ? '#222' : 'white'};
+  color: ${props => props.$active ? 'white' : '#222'};
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: ${props => props.$active ? '#444' : '#f5f5f5'};
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const EmptyTransferMessage = styled.div`
+  padding: 2rem;
+  text-align: center;
+  color: #666;
+  font-size: 0.9rem;
+  background: #f9f9f9;
+  border-radius: 6px;
+  margin: 0.5rem 0;
+`;
+
 const StatsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  margin-bottom: 2rem;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  flex-shrink: 0;
 `;
 
 const StatCard = styled.div`
   background: white;
-  padding: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  padding: 0.75rem;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
   text-align: center;
 `;
 
 const StatValue = styled.div`
-  font-size: 2rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: #222;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
 `;
 
 const StatLabel = styled.div`
-  font-size: 0.9rem;
+  font-size: 0.7rem;
   color: #666;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 `;
 
-type TabType = 'evidence-queue' | 'my-reviews' | 'all-transfers' | 'ai-insights';
+type SidebarItemType = 'evidence-queue' | 'my-reviews' | 'all-transfers' | 'ai-insights' | 'document-library' | 'change-requests';
 
 const AdminDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<TabType>('evidence-queue');
+  const [activeItem, setActiveItem] = useState<SidebarItemType>('evidence-queue');
+  const [sidebarGroups, setSidebarGroups] = useState<SidebarGroup[]>([
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      isExpanded: true,
+      items: [
+        { id: 'evidence-queue', label: 'Evidence Queue' },
+        { id: 'my-reviews', label: 'My Reviews' },
+        { id: 'all-transfers', label: 'All Transfers' },
+        { id: 'ai-insights', label: 'AI Insights' },
+        { id: 'document-library', label: 'Document Library' }
+      ]
+    },
+    {
+      id: 'change-requests',
+      label: 'Change Requests',
+      isExpanded: false,
+      items: [
+        { id: 'change-requests', label: 'Change Requests' }
+      ]
+    }
+  ]);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [selectedEvidence, setSelectedEvidence] = useState<Evidence | null>(null);
   const [showReviewDrawer, setShowReviewDrawer] = useState(false);
@@ -218,18 +390,71 @@ const AdminDashboard: React.FC = () => {
     jurisdiction: '',
     entity: ''
   });
+  
+  // Document library filters
+  const [documentFilters, setDocumentFilters] = useState({
+    status: '',
+    transferId: '',
+    uploadedBy: '',
+    dateRange: '',
+    fileType: ''
+  });
+  
+  
+  // Transfer grouping state
+  const [expandedTransfers, setExpandedTransfers] = useState<Set<string>>(new Set());
+  const [transferPage, setTransferPage] = useState(1);
+  const [transfersPerPage] = useState(20);
 
   const { getTransfers, submitReviewDecision, getAllEvidence } = useEvidenceApi();
+
+  // Helper functions for transfer grouping
+  const toggleTransferExpansion = (transferId: string) => {
+    setExpandedTransfers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(transferId)) {
+        newSet.delete(transferId);
+      } else {
+        newSet.add(transferId);
+      }
+      return newSet;
+    });
+  };
+
+  const getFileIcon = (filename: string) => {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    switch (ext) {
+      case 'pdf': return '📄';
+      case 'docx':
+      case 'doc': return '📝';
+      case 'xlsx':
+      case 'xls': return '📊';
+      case 'pptx':
+      case 'ppt': return '📈';
+      case 'jpg':
+      case 'jpeg':
+      case 'png': return '🖼️';
+      default: return '📄';
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + sizes[i];
+  };
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       try {
-        if (activeTab === 'evidence-queue') {
+        if (activeItem === 'evidence-queue') {
           // Load all evidence for filtering
           const evidence = await getAllEvidence();
           setAllEvidence(evidence);
-        } else if (activeTab === 'all-transfers') {
+        } else if (activeItem === 'all-transfers') {
           const transferData = await getTransfers();
           setTransfers(transferData);
         }
@@ -241,7 +466,7 @@ const AdminDashboard: React.FC = () => {
     };
 
     loadData();
-  }, [activeTab, getAllEvidence, getTransfers]);
+  }, [activeItem, getAllEvidence, getTransfers]);
 
   const handleReviewClick = (evidence: Evidence) => {
     setSelectedEvidence(evidence);
@@ -258,12 +483,28 @@ const AdminDashboard: React.FC = () => {
       const allEvidenceData = await getAllEvidence();
       setAllEvidence(allEvidenceData);
       
-      // Show success message
-      alert(`Evidence ${decision.decision.toLowerCase()}d successfully!`);
+      // Show success message with escalation details if applicable
+      if (decision.decision === 'ESCALATE' && decision.escalatedTo) {
+        alert(`Evidence escalated to ${decision.escalatedTo} successfully!`);
+      } else {
+        alert(`Evidence ${decision.decision.toLowerCase()}d successfully!`);
+      }
     } catch (error) {
       console.error('Failed to submit review decision:', error);
       alert('Failed to submit review decision. Please try again.');
     }
+  };
+
+  const handleSidebarItemClick = (itemId: string) => {
+    setActiveItem(itemId as SidebarItemType);
+  };
+
+  const handleSidebarGroupToggle = (groupId: string) => {
+    setSidebarGroups(prev => prev.map(group => 
+      group.id === groupId 
+        ? { ...group, isExpanded: !group.isExpanded }
+        : group
+    ));
   };
 
   const [allEvidence, setAllEvidence] = useState<Evidence[]>([]);
@@ -303,9 +544,6 @@ const AdminDashboard: React.FC = () => {
           <StatLabel>Rejected</StatLabel>
         </StatCard>
       </StatsGrid>
-
-      <Section>
-        <SectionTitle>Evidence Queue</SectionTitle>
         
         <Filters>
           <FilterGroup>
@@ -382,7 +620,6 @@ const AdminDashboard: React.FC = () => {
         ) : (
           <NoDataMessage>No evidence found for the selected filter</NoDataMessage>
         )}
-      </Section>
     </>
   );
 
@@ -394,8 +631,7 @@ const AdminDashboard: React.FC = () => {
     );
 
     return (
-      <Section>
-        <SectionTitle>My Reviews</SectionTitle>
+      <>
         {loading ? (
           <LoadingMessage>Loading reviews...</LoadingMessage>
         ) : myReviewedEvidence.length > 0 ? (
@@ -448,13 +684,12 @@ const AdminDashboard: React.FC = () => {
         ) : (
           <NoDataMessage>No reviews found</NoDataMessage>
         )}
-      </Section>
+      </>
     );
   };
 
   const renderAllTransfers = () => (
-    <Section>
-      <SectionTitle>All Transfers</SectionTitle>
+    <>
       {loading ? (
         <LoadingMessage>Loading transfers...</LoadingMessage>
       ) : transfers.length > 0 ? (
@@ -489,42 +724,473 @@ const AdminDashboard: React.FC = () => {
       ) : (
         <NoDataMessage>No transfers found</NoDataMessage>
       )}
-    </Section>
+    </>
   );
+
+  const renderDocumentLibrary = () => {
+    // Get all evidence from the evidence API
+    const allDocuments = allEvidence.map(evidence => {
+      // Extract entity and country from requirement ID pattern: req-{entity}-{country}
+      const requirementIdParts = evidence.requirementId.split('-');
+      let entityName = 'Unknown';
+      let countryName = 'Unknown';
+      
+      if (requirementIdParts.length >= 3) {
+        // Handle pattern like: req-south-korea-gwm-3-south-korea
+        // Extract the last part as country and everything between req- and country as entity
+        const countryIndex = requirementIdParts.lastIndexOf(requirementIdParts[requirementIdParts.length - 1]);
+        if (countryIndex > 1) {
+          countryName = requirementIdParts[countryIndex];
+          entityName = requirementIdParts.slice(1, countryIndex).join('-');
+        }
+      }
+      
+      // Try to find transfer by matching entity and country
+      const transfer = transfers.find(t => {
+        const transferEntity = t.entity.toLowerCase().replace(/\s+/g, '-');
+        const transferCountry = t.jurisdiction.toLowerCase().replace(/\s+/g, '-');
+        return transferEntity === entityName && transferCountry === countryName;
+      });
+      
+      // If no transfer found, try to find by requirement ID match
+      const transferByReq = transfers.find(t => 
+        t.requirements.some(req => req.id === evidence.requirementId)
+      );
+      
+      const finalTransfer = transfer || transferByReq;
+      const requirement = finalTransfer?.requirements.find(req => req.id === evidence.requirementId);
+      
+      // Format names for display
+      const displayEntity = entityName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      const displayCountry = countryName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      
+      return {
+        ...evidence,
+        transferId: finalTransfer?.id || `transfer-${entityName}-${countryName}`,
+        transferName: finalTransfer?.name || `Evidence Upload - ${displayEntity} (${displayCountry})`,
+        jurisdiction: finalTransfer?.jurisdiction || displayCountry,
+        entity: finalTransfer?.entity || displayEntity,
+        requirementId: evidence.requirementId,
+        requirementTitle: requirement?.name || 'Legal Requirement Evidence'
+      };
+    });
+
+    // Filter documents based on filters
+    const filteredDocuments = allDocuments.filter(doc => {
+      if (documentFilters.status && doc.status !== documentFilters.status) return false;
+      if (documentFilters.transferId && !doc.transferId.includes(documentFilters.transferId)) return false;
+      if (documentFilters.uploadedBy && !doc.uploadedBy.toLowerCase().includes(documentFilters.uploadedBy.toLowerCase())) return false;
+      if (documentFilters.fileType) {
+        const fileExtension = doc.filename.split('.').pop()?.toLowerCase();
+        if (fileExtension !== documentFilters.fileType) return false;
+      }
+      return true;
+    });
+
+    // Group documents by status for stats
+    const documentStats = {
+      total: allDocuments.length,
+      pending: allDocuments.filter(d => d.status === 'PENDING').length,
+      underReview: allDocuments.filter(d => d.status === 'UNDER_REVIEW').length,
+      approved: allDocuments.filter(d => d.status === 'APPROVED').length,
+      rejected: allDocuments.filter(d => d.status === 'REJECTED').length,
+      escalated: allDocuments.filter(d => d.status === 'ESCALATED').length
+    };
+
+  return (
+      <>
+        <StatsGrid>
+          <StatCard>
+            <StatValue>{documentStats.total}</StatValue>
+            <StatLabel>Total Documents</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue>{documentStats.pending}</StatValue>
+            <StatLabel>Pending</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue>{documentStats.underReview}</StatValue>
+            <StatLabel>Under Review</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue>{documentStats.approved}</StatValue>
+            <StatLabel>Approved</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue>{documentStats.rejected}</StatValue>
+            <StatLabel>Rejected</StatLabel>
+          </StatCard>
+          <StatCard>
+            <StatValue>{documentStats.escalated}</StatValue>
+            <StatLabel>Escalated</StatLabel>
+          </StatCard>
+        </StatsGrid>
+        <Filters>
+          <FilterGroup>
+            <FilterLabel>Status</FilterLabel>
+            <SelectWrapper>
+              <StyledSelect
+                value={documentFilters.status}
+                onChange={(value) => setDocumentFilters(prev => ({ ...prev, status: value }))}
+                options={[
+                  { value: '', label: 'All Status' },
+                  { value: 'PENDING', label: 'Pending' },
+                  { value: 'UNDER_REVIEW', label: 'Under Review' },
+                  { value: 'APPROVED', label: 'Approved' },
+                  { value: 'REJECTED', label: 'Rejected' },
+                  { value: 'ESCALATED', label: 'Escalated' }
+                ]}
+                placeholder="All Status"
+              />
+            </SelectWrapper>
+          </FilterGroup>
+          
+          <FilterGroup>
+            <FilterLabel>Transfer ID</FilterLabel>
+            <SelectWrapper>
+              <StyledSelect
+                value={documentFilters.transferId}
+                onChange={(value) => setDocumentFilters(prev => ({ ...prev, transferId: value }))}
+                options={[
+                  { value: '', label: 'All Transfers' },
+                  ...transfers.map(transfer => ({
+                    value: transfer.id,
+                    label: `${transfer.id} - ${transfer.name}`
+                  }))
+                ]}
+                placeholder="All Transfers"
+              />
+            </SelectWrapper>
+          </FilterGroup>
+
+          <FilterGroup>
+            <FilterLabel>File Type</FilterLabel>
+            <SelectWrapper>
+              <StyledSelect
+                value={documentFilters.fileType}
+                onChange={(value) => setDocumentFilters(prev => ({ ...prev, fileType: value }))}
+                options={[
+                  { value: '', label: 'All Types' },
+                  { value: 'pdf', label: 'PDF' },
+                  { value: 'docx', label: 'Word Document' },
+                  { value: 'xlsx', label: 'Excel' },
+                  { value: 'pptx', label: 'PowerPoint' },
+                  { value: 'txt', label: 'Text File' },
+                  { value: 'jpg', label: 'Image (JPG)' },
+                  { value: 'png', label: 'Image (PNG)' }
+                ]}
+                placeholder="All Types"
+              />
+            </SelectWrapper>
+          </FilterGroup>
+
+          <FilterGroup>
+            <FilterLabel>Uploaded By</FilterLabel>
+            <input
+              type="text"
+              placeholder="Search by user..."
+              value={documentFilters.uploadedBy}
+              onChange={(e) => setDocumentFilters(prev => ({ ...prev, uploadedBy: e.target.value }))}
+              style={{
+                padding: '0.5rem',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '0.9rem',
+                minWidth: '150px'
+              }}
+            />
+          </FilterGroup>
+        </Filters>
+
+        {loading ? (
+          <LoadingMessage>Loading documents...</LoadingMessage>
+        ) : allDocuments.length > 0 ? (
+          (() => {
+            const transferGroups = transfers.map(transfer => {
+              const transferDocuments = filteredDocuments.filter(doc => {
+                const matches = doc.transferId === transfer.id;
+                return matches;
+              });
+              
+              const statusCounts = {
+                pending: transferDocuments.filter(d => d.status === 'PENDING').length,
+                approved: transferDocuments.filter(d => d.status === 'APPROVED').length,
+                rejected: transferDocuments.filter(d => d.status === 'REJECTED').length,
+                underReview: transferDocuments.filter(d => d.status === 'UNDER_REVIEW').length,
+                escalated: transferDocuments.filter(d => d.status === 'ESCALATED').length
+              };
+              
+              const statusSummary = [
+                statusCounts.approved > 0 ? `${statusCounts.approved}✅` : '',
+                statusCounts.pending > 0 ? `${statusCounts.pending}⏳` : '',
+                statusCounts.rejected > 0 ? `${statusCounts.rejected}❌` : '',
+                statusCounts.underReview > 0 ? `${statusCounts.underReview}👀` : '',
+                statusCounts.escalated > 0 ? `${statusCounts.escalated}⚠️` : ''
+              ].filter(Boolean).join(' ');
+
+              return {
+                transfer,
+                documents: transferDocuments,
+                totalDocuments: transferDocuments.length,
+                statusCounts,
+                statusSummary
+              };
+            }).filter(group => group.totalDocuments > 0);
+            
+            // If no transfer groups found, try alternative matching strategies
+            let finalTransferGroups = transferGroups;
+            if (transferGroups.length === 0 && filteredDocuments.length > 0) {
+              // Try to create transfer groups based on document transfer IDs
+              const documentTransferIds = [...new Set(filteredDocuments.map(doc => doc.transferId))];
+              
+              const alternativeGroups = documentTransferIds.map(transferId => {
+                const transferDocuments = filteredDocuments.filter(doc => doc.transferId === transferId);
+                const firstDoc = transferDocuments[0];
+                
+                // Extract entity and jurisdiction from the first document's transfer info
+                const entity = firstDoc.entity || 'Unknown Entity';
+                const jurisdiction = firstDoc.jurisdiction || 'Unknown Jurisdiction';
+                
+                const statusCounts = {
+                  pending: transferDocuments.filter(d => d.status === 'PENDING').length,
+                  approved: transferDocuments.filter(d => d.status === 'APPROVED').length,
+                  rejected: transferDocuments.filter(d => d.status === 'REJECTED').length,
+                  underReview: transferDocuments.filter(d => d.status === 'UNDER_REVIEW').length,
+                  escalated: transferDocuments.filter(d => d.status === 'ESCALATED').length
+                };
+                
+                const statusSummary = [
+                  statusCounts.approved > 0 ? `${statusCounts.approved}✅` : '',
+                  statusCounts.pending > 0 ? `${statusCounts.pending}⏳` : '',
+                  statusCounts.rejected > 0 ? `${statusCounts.rejected}❌` : '',
+                  statusCounts.underReview > 0 ? `${statusCounts.underReview}👀` : '',
+                  statusCounts.escalated > 0 ? `${statusCounts.escalated}⚠️` : ''
+                ].filter(Boolean).join(' ');
+
+                return {
+                  transfer: {
+                    id: transferId,
+                    name: `Transfer - ${entity} (${jurisdiction})`,
+                    entity: entity,
+                    jurisdiction: jurisdiction,
+                    createdBy: 'system',
+                    createdAt: new Date().toISOString(),
+                    status: 'ACTIVE' as const,
+                    subjectType: 'Various',
+                    requirements: []
+                  },
+                  documents: transferDocuments,
+                  totalDocuments: transferDocuments.length,
+                  statusCounts,
+                  statusSummary
+                };
+              });
+              
+              if (alternativeGroups.length > 0) {
+                finalTransferGroups = alternativeGroups;
+              } else {
+                finalTransferGroups = [{
+                  transfer: {
+                    id: 'unmatched',
+                    name: 'Unmatched Documents',
+                    entity: 'Various',
+                    jurisdiction: 'Various',
+                    createdBy: 'system',
+                    createdAt: new Date().toISOString(),
+                    status: 'ACTIVE' as const,
+                    subjectType: 'Various',
+                    requirements: []
+                  },
+                  documents: filteredDocuments,
+                  totalDocuments: filteredDocuments.length,
+                  statusCounts: {
+                    pending: filteredDocuments.filter(d => d.status === 'PENDING').length,
+                    approved: filteredDocuments.filter(d => d.status === 'APPROVED').length,
+                    rejected: filteredDocuments.filter(d => d.status === 'REJECTED').length,
+                    underReview: filteredDocuments.filter(d => d.status === 'UNDER_REVIEW').length,
+                    escalated: filteredDocuments.filter(d => d.status === 'ESCALATED').length
+                  },
+                  statusSummary: ''
+                }];
+              }
+            }
+
+              // Pagination
+              const startIndex = (transferPage - 1) * transfersPerPage;
+              const endIndex = startIndex + transfersPerPage;
+              const paginatedGroups = finalTransferGroups.slice(startIndex, endIndex);
+              const totalPages = Math.ceil(finalTransferGroups.length / transfersPerPage);
+
+              return (
+                <>
+                  <TransferGroups>
+                    {paginatedGroups.map((group) => (
+                      <TransferGroup key={group.transfer.id}>
+                        <TransferHeader onClick={() => toggleTransferExpansion(group.transfer.id)}>
+                          <TransferInfo>
+                            <TransferName>{group.transfer.name}</TransferName>
+                          </TransferInfo>
+                          <ExpandIcon $expanded={expandedTransfers.has(group.transfer.id)}>
+                            ▶
+                          </ExpandIcon>
+                        </TransferHeader>
+                        
+                        {expandedTransfers.has(group.transfer.id) && (
+                          <DocumentList>
+                            {group.documents.length > 0 ? (
+                              <>
+                                <DocumentRow style={{ 
+                                  background: '#f8f9fa', 
+                                  fontWeight: '600', 
+                                  fontSize: '0.8rem',
+                                  color: '#666',
+                                  borderBottom: '2px solid #e0e0e0'
+                                }}>
+                                  <div>Document</div>
+                                  <div>Status</div>
+                                  <div>Uploaded By</div>
+                                  <div>Date</div>
+                                  <div>Size</div>
+                                  <div>Action</div>
+                                </DocumentRow>
+                                {group.documents.map((doc) => (
+                                  <DocumentRow key={doc.id}>
+                                    <DocumentName>
+                                      <DocumentTitle>{doc.filename}</DocumentTitle>
+                                    </DocumentName>
+                                    <CompactStatus $status={doc.status}>
+                                      {doc.status}
+                                    </CompactStatus>
+                                    <div style={{ fontSize: '0.8rem', color: '#666' }}>
+                                      {doc.uploadedBy}
+                                    </div>
+                                    <div style={{ fontSize: '0.8rem', color: '#666' }}>
+                                      {new Date(doc.uploadedAt).toLocaleDateString()}
+                                    </div>
+                                    <div style={{ fontSize: '0.8rem', color: '#666' }}>
+                                      {formatFileSize(doc.size)}
+                                    </div>
+                                    <CompactButton onClick={() => handleReviewClick(doc)}>
+                                      Review
+                                    </CompactButton>
+                                  </DocumentRow>
+                                ))}
+                              </>
+                            ) : (
+                              <EmptyTransferMessage>
+                                No documents found for this transfer
+                              </EmptyTransferMessage>
+                            )}
+                          </DocumentList>
+                        )}
+                      </TransferGroup>
+                    ))}
+                  </TransferGroups>
+                  
+                  {totalPages > 1 && (
+                    <Pagination>
+                      <PageButton 
+                        onClick={() => setTransferPage(prev => Math.max(1, prev - 1))}
+                        disabled={transferPage === 1}
+                      >
+                        ← Previous
+                      </PageButton>
+                      
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        const pageNum = Math.max(1, Math.min(totalPages, transferPage - 2 + i));
+                        return (
+                          <PageButton
+                            key={pageNum}
+                            $active={pageNum === transferPage}
+                            onClick={() => setTransferPage(pageNum)}
+                          >
+                            {pageNum}
+                          </PageButton>
+                        );
+                      })}
+                      
+                      <PageButton 
+                        onClick={() => setTransferPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={transferPage === totalPages}
+                      >
+                        Next →
+                      </PageButton>
+                    </Pagination>
+                  )}
+                </>
+              );
+            })()
+        ) : (
+          <NoDataMessage>
+            {allDocuments.length === 0 
+              ? 'No documents found. Upload some documents to see them here.' 
+              : 'No documents found for the selected filters'
+            }
+          </NoDataMessage>
+        )}
+      </>
+    );
+  };
+
+  const renderContent = () => {
+    if (activeItem === 'change-requests') {
+      return <AdminCRDashboard />;
+    }
+
+    switch (activeItem) {
+      case 'evidence-queue':
+        return (
+          <Section>
+            {renderEvidenceQueue()}
+          </Section>
+        );
+      case 'my-reviews':
+        return (
+          <Section>
+            {renderMyReviews()}
+          </Section>
+        );
+      case 'all-transfers':
+        return (
+          <Section>
+            {renderAllTransfers()}
+          </Section>
+        );
+      case 'ai-insights':
+        return (
+          <Section>
+            <AdminAIInsights />
+          </Section>
+        );
+      case 'document-library':
+        return (
+          <Section>
+            {renderDocumentLibrary()}
+          </Section>
+        );
+      default:
+        return (
+          <Section>
+            {renderEvidenceQueue()}
+          </Section>
+        );
+    }
+  };
 
   return (
     <DashboardContainer>
-      <Tabs>
-        <Tab
-          $active={activeTab === 'evidence-queue'}
-          onClick={() => setActiveTab('evidence-queue')}
-        >
-          Evidence Queue
-        </Tab>
-        <Tab
-          $active={activeTab === 'my-reviews'}
-          onClick={() => setActiveTab('my-reviews')}
-        >
-          My Reviews
-        </Tab>
-        <Tab
-          $active={activeTab === 'all-transfers'}
-          onClick={() => setActiveTab('all-transfers')}
-        >
-          All Transfers
-        </Tab>
-        <Tab
-          $active={activeTab === 'ai-insights'}
-          onClick={() => setActiveTab('ai-insights')}
-        >
-          AI Insights
-        </Tab>
-      </Tabs>
-
-      {activeTab === 'evidence-queue' && renderEvidenceQueue()}
-      {activeTab === 'my-reviews' && renderMyReviews()}
-      {activeTab === 'all-transfers' && renderAllTransfers()}
-      {activeTab === 'ai-insights' && <AdminAIInsights />}
+      <SidebarWrapper>
+        <Sidebar
+          groups={sidebarGroups}
+          activeItemId={activeItem}
+          onItemClick={handleSidebarItemClick}
+          onGroupToggle={handleSidebarGroupToggle}
+        />
+      </SidebarWrapper>
+      
+      <MainContent>
+        {renderContent()}
+      </MainContent>
 
       {showReviewDrawer && selectedEvidence && (
         <ReviewDrawer

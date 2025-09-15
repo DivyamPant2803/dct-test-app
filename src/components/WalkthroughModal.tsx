@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { FiX, FiChevronLeft, FiChevronRight, FiPlay, FiSkipForward } from 'react-icons/fi';
+import { FiX, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 
 const Overlay = styled.div`
   position: fixed;
@@ -300,9 +300,9 @@ const WalkthroughModal: React.FC<WalkthroughModalProps> = ({ open, onClose, step
     }
   };
 
-  const handleSkip = () => {
-    onClose();
-  };
+  // const handleSkip = () => {
+  //   onClose();
+  // };
 
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === steps.length - 1;

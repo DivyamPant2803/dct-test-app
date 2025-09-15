@@ -100,7 +100,7 @@ const Timeline = styled.div`
   }
 `;
 
-const TimelineItem = styled.div`
+const TimelineItem = styled.div<{ $action: string }>`
   position: relative;
   margin-bottom: 2rem;
   

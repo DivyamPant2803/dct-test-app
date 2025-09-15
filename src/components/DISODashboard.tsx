@@ -4,10 +4,9 @@ import { Evidence, ReviewDecision } from '../types/index';
 import { useEvidenceApi } from '../hooks/useEvidenceApi';
 import ReviewDrawer from './ReviewDrawer';
 import StatusChip from './StatusChip';
-import LegalContentDashboard from './LegalContentDashboard';
 import Sidebar, { SidebarGroup } from './common/Sidebar';
 
-const Container = styled.div`
+const DashboardContainer = styled.div`
   width: 100%;
   height: 100%;
   background: #f5f5f5;
@@ -28,14 +27,6 @@ const MainContent = styled.div`
   min-height: 0;
 `;
 
-const ContentWrapper = styled.div<{ $isVisible: boolean }>`
-  display: ${props => props.$isVisible ? 'flex' : 'none'};
-  flex-direction: column;
-  gap: 1.5rem;
-  flex: 1;
-  min-height: 0;
-`;
-
 const Section = styled.div`
   background: white;
   border-radius: 12px;
@@ -47,6 +38,15 @@ const Section = styled.div`
   min-height: 0;
 `;
 
+const SectionTitle = styled.h2`
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #222;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid #f0f0f0;
+  padding-bottom: 0.5rem;
+  flex-shrink: 0;
+`;
 
 const Table = styled.table`
   width: 100%;
@@ -57,7 +57,7 @@ const Table = styled.table`
 
 const Th = styled.th`
   background: #f8f8f8;
-  padding: 0.75rem 1rem;
+  padding: 1rem;
   text-align: left;
   font-weight: 500;
   color: #333;
@@ -66,10 +66,10 @@ const Th = styled.th`
 `;
 
 const Td = styled.td`
-  padding: 0.5rem 1rem;
+  padding: 1rem;
   border-bottom: 1px solid #eee;
   color: #666;
-  vertical-align: top;
+  vertical-align: middle;
 `;
 
 const Tr = styled.tr`
@@ -79,18 +79,18 @@ const Tr = styled.tr`
 `;
 
 const Button = styled.button<{ variant?: 'primary' | 'secondary' }>`
-  padding: 0.4rem 0.8rem;
-  border-radius: 4px;
-  border: 1px solid ${props => props.variant === 'primary' ? '#222' : '#ccc'};
-  background: ${props => props.variant === 'primary' ? '#222' : 'white'};
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid ${props => props.variant === 'primary' ? '#F44336' : '#ccc'};
+  background: ${props => props.variant === 'primary' ? '#F44336' : 'white'};
   color: ${props => props.variant === 'primary' ? 'white' : '#222'};
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
 
   &:hover {
-    background: ${props => props.variant === 'primary' ? '#444' : '#f8f8f8'};
+    background: ${props => props.variant === 'primary' ? '#D32F2F' : '#f8f8f8'};
   }
 
   &:disabled {
@@ -119,42 +119,42 @@ const LoadingMessage = styled.div`
 
 const StatsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
   flex-shrink: 0;
 `;
 
 const StatCard = styled.div`
   background: white;
-  padding: 0.75rem;
-  border-radius: 4px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  padding: 1.25rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   text-align: center;
 `;
 
 const StatValue = styled.div`
-  font-size: 1.25rem;
+  font-size: 1.75rem;
   font-weight: 600;
-  color: #222;
+  color: #F44336;
   margin-bottom: 0.25rem;
 `;
 
 const StatLabel = styled.div`
-  font-size: 0.7rem;
+  font-size: 0.9rem;
   color: #666;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.5px;
 `;
 
 const PriorityBadge = styled.span<{ $priority: 'high' | 'medium' | 'low' }>`
   display: inline-block;
-  padding: 0.2rem 0.4rem;
-  border-radius: 3px;
-  font-size: 0.65rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.5px;
   
   background-color: ${props => {
     switch (props.$priority) {
@@ -172,25 +172,30 @@ const PriorityBadge = styled.span<{ $priority: 'high' | 'medium' | 'low' }>`
   color: white;
 `;
 
-type SidebarItemType = 'escalated-evidence' | 'content-management';
+const SecurityAlert = styled.div`
+  background: #ffebee;
+  border: 1px solid #ffcdd2;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  color: #c62828;
+  font-weight: 500;
+`;
 
-const LegalReview: React.FC = () => {
+type SidebarItemType = 'escalated-evidence' | 'security-reviews' | 'risk-assessments' | 'security-analytics';
+
+const DISODashboard: React.FC = () => {
   const [activeItem, setActiveItem] = useState<SidebarItemType>('escalated-evidence');
   const [sidebarGroups, setSidebarGroups] = useState<SidebarGroup[]>([
     {
-      id: 'escalated-evidence',
-      label: 'Escalated Evidence',
+      id: 'diso-dashboard',
+      label: 'DISO Dashboard',
       isExpanded: true,
       items: [
-        { id: 'escalated-evidence', label: 'Escalated Evidence' }
-      ]
-    },
-    {
-      id: 'content-management',
-      label: 'Content Management',
-      isExpanded: false,
-      items: [
-        { id: 'content-management', label: 'Content Management' }
+        { id: 'escalated-evidence', label: 'Escalated Evidence' },
+        { id: 'security-reviews', label: 'Security Reviews' },
+        { id: 'risk-assessments', label: 'Risk Assessments' },
+        { id: 'security-analytics', label: 'Security Analytics' }
       ]
     }
   ]);
@@ -205,9 +210,9 @@ const LegalReview: React.FC = () => {
   const refreshEscalatedEvidence = useCallback(async () => {
     try {
       const allEvidence = await getAllEvidence();
-      const escalated = allEvidence.filter(e => e.status === 'ESCALATED');
+      const escalated = allEvidence.filter(e => e.status === 'ESCALATED' && e.escalatedTo === 'DISO');
       setEscalatedEvidence(escalated);
-      console.log('Refreshed escalated evidence:', escalated);
+      console.log('Refreshed escalated evidence for DISO:', escalated);
     } catch (error) {
       console.error('Failed to refresh escalated evidence:', error);
     }
@@ -310,6 +315,8 @@ const LegalReview: React.FC = () => {
       </StatsGrid>
 
       <Section>
+        <SectionTitle>Escalated Evidence for DISO Review</SectionTitle>
+        
         {loading ? (
           <LoadingMessage>Loading escalated evidence...</LoadingMessage>
         ) : escalatedEvidence.length > 0 ? (
@@ -330,10 +337,10 @@ const LegalReview: React.FC = () => {
                 <Tr key={evidence.id}>
                   <Td>{evidence.requirementId}</Td>
                   <Td>
-                    <div style={{ lineHeight: '1.3' }}>
-                      <div style={{ fontWeight: '500', marginBottom: '0.25rem' }}>{evidence.filename}</div>
+                    <div>
+                      <div style={{ fontWeight: '500' }}>{evidence.filename}</div>
                       {evidence.description && (
-                        <div style={{ fontSize: '0.75rem', color: '#888' }}>
+                        <div style={{ fontSize: '0.8rem', color: '#888' }}>
                           {evidence.description}
                         </div>
                       )}
@@ -362,15 +369,53 @@ const LegalReview: React.FC = () => {
             </tbody>
           </Table>
         ) : (
-          <NoDataMessage>No evidence escalated for legal review</NoDataMessage>
+          <NoDataMessage>No evidence escalated for DISO review</NoDataMessage>
         )}
       </Section>
     </>
   );
 
+  const renderSecurityReviews = () => (
+    <Section>
+      <SectionTitle>Security Reviews</SectionTitle>
+      <SecurityAlert>
+        ⚠️ Security Alert: 3 pending security reviews require immediate attention
+      </SecurityAlert>
+      <NoDataMessage>Security Reviews functionality coming soon</NoDataMessage>
+    </Section>
+  );
+
+  const renderRiskAssessments = () => (
+    <Section>
+      <SectionTitle>Risk Assessments</SectionTitle>
+      <NoDataMessage>Risk Assessments functionality coming soon</NoDataMessage>
+    </Section>
+  );
+
+  const renderSecurityAnalytics = () => (
+    <Section>
+      <SectionTitle>Security Analytics</SectionTitle>
+      <NoDataMessage>Security Analytics functionality coming soon</NoDataMessage>
+    </Section>
+  );
+
+  const renderContent = () => {
+    switch (activeItem) {
+      case 'escalated-evidence':
+        return renderEscalatedEvidence();
+      case 'security-reviews':
+        return renderSecurityReviews();
+      case 'risk-assessments':
+        return renderRiskAssessments();
+      case 'security-analytics':
+        return renderSecurityAnalytics();
+      default:
+        return renderEscalatedEvidence();
+    }
+  };
 
   return (
-    <Container>
+    <DashboardContainer>
       <SidebarWrapper>
         <Sidebar
           groups={sidebarGroups}
@@ -381,13 +426,7 @@ const LegalReview: React.FC = () => {
       </SidebarWrapper>
       
       <MainContent>
-        <ContentWrapper $isVisible={activeItem === 'escalated-evidence'}>
-          {renderEscalatedEvidence()}
-        </ContentWrapper>
-        
-        <ContentWrapper $isVisible={activeItem === 'content-management'}>
-          <LegalContentDashboard />
-        </ContentWrapper>
+        {renderContent()}
       </MainContent>
 
       {showReviewDrawer && selectedEvidence && (
@@ -398,8 +437,8 @@ const LegalReview: React.FC = () => {
           hideEscalateButton={true}
         />
       )}
-    </Container>
+    </DashboardContainer>
   );
 };
 
-export default LegalReview;
+export default DISODashboard;

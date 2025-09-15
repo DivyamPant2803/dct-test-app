@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Evidence, ReviewDecision } from '../types/index';
 import StatusChip from './StatusChip';
+import StyledSelect from './common/StyledSelect';
+import { AUTHORITY_CONFIGS } from '../config/personaConfig';
 
 const Overlay = styled.div`
   position: fixed;
@@ -158,50 +160,91 @@ const Label = styled.label`
 `;
 
 const TextArea = styled.textarea`
+  width: 100%;
+  min-height: 120px;
   padding: 0.75rem;
-  border: 1px solid #ccc;
+  border: 1px solid #ddd;
   border-radius: 6px;
-  font-size: 1rem;
-  min-height: 100px;
-  resize: vertical;
+  font-size: 0.9rem;
   font-family: inherit;
+  resize: vertical;
   transition: border-color 0.2s ease;
-  
+
   &:focus {
     outline: none;
-    border-color: #222;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  &::placeholder {
+    color: #9ca3af;
   }
 `;
 
-const DecisionButtons = styled.div`
-  display: flex;
-  gap: 1rem;
+const AuthoritySelection = styled.div`
   margin-top: 1rem;
 `;
 
+const AuthorityChips = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+`;
+
+const AuthorityChip = styled.button<{ $selected: boolean }>`
+  padding: 0.375rem 0.75rem;
+  border: 1px solid ${props => props.$selected ? '#222' : '#d1d5db'};
+  background: ${props => props.$selected ? '#222' : 'white'};
+  color: ${props => props.$selected ? 'white' : '#374151'};
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: #222;
+    background: ${props => props.$selected ? '#222' : '#f9fafb'};
+  }
+`;
+
+
+
+const DecisionButtons = styled.div`
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  justify-content: flex-end;
+`;
+
 const Button = styled.button<{ variant?: 'approve' | 'reject' | 'escalate' | 'secondary' }>`
-  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
   border-radius: 6px;
   border: 1px solid ${props => {
     switch (props.variant) {
       case 'approve':
-        return '#4CAF50';
+        return '#10b981';
       case 'reject':
-        return '#F44336';
+        return '#ef4444';
       case 'escalate':
-        return '#9C27B0';
+        return '#f59e0b';
       default:
-        return '#ccc';
+        return '#d1d5db';
     }
   }};
   background: ${props => {
     switch (props.variant) {
       case 'approve':
-        return '#4CAF50';
+        return '#10b981';
       case 'reject':
-        return '#F44336';
+        return '#ef4444';
       case 'escalate':
-        return '#9C27B0';
+        return '#f59e0b';
       default:
         return 'white';
     }
@@ -209,18 +252,17 @@ const Button = styled.button<{ variant?: 'approve' | 'reject' | 'escalate' | 'se
   color: white;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 1rem;
+  transition: all 0.15s ease;
+  font-size: 0.85rem;
+  min-width: 80px;
 
-  &:hover {
+  &:hover:not(:disabled) {
     opacity: 0.9;
-    transform: translateY(-1px);
   }
 
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    transform: none;
   }
 `;
 
@@ -255,6 +297,29 @@ const ReviewDrawer: React.FC<ReviewDrawerProps> = ({
 }) => {
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [escalationReason, setEscalationReason] = useState('');
+  const [selectedAuthorities, setSelectedAuthorities] = useState<string[]>([]);
+  const [canEscalate, setCanEscalate] = useState(false);
+
+  // Check if escalation is allowed based on comment content and selected authorities
+  useEffect(() => {
+    const hasMinimumLength = comment.trim().length >= 10;
+    const hasSelectedAuthorities = selectedAuthorities.length > 0;
+    setCanEscalate(hasMinimumLength || hasSelectedAuthorities);
+  }, [comment, selectedAuthorities]);
+
+  // Toggle authority selection
+  const toggleAuthority = (authority: string) => {
+    try {
+      setSelectedAuthorities(prev => 
+        prev.includes(authority) 
+          ? prev.filter(a => a !== authority)
+          : [...prev, authority]
+      );
+    } catch (error) {
+      console.error('Error toggling authority:', error);
+    }
+  };
 
   // Helper function to convert base64 to blob
   const base64ToBlob = (base64: string, mimeType: string): Blob => {
@@ -273,7 +338,13 @@ const ReviewDrawer: React.FC<ReviewDrawerProps> = ({
       await onDecision({
         evidenceId: evidence.id,
         decision,
-        note: comment.trim() || undefined
+        note: comment.trim() || undefined,
+        // Add escalation metadata for ESCALATE decisions
+        ...(decision === 'ESCALATE' && {
+          escalationReason,
+          taggedAuthorities: selectedAuthorities,
+          escalatedTo: selectedAuthorities[0] || 'Legal' // Default to Legal if no selection
+        })
       });
     } catch (error) {
       console.error('Failed to submit decision:', error);
@@ -305,13 +376,14 @@ const ReviewDrawer: React.FC<ReviewDrawerProps> = ({
     }
   };
 
-  return (
-    <Overlay onClick={onClose}>
-      <Drawer onClick={(e) => e.stopPropagation()}>
-        <Header>
-          <Title>Review Evidence</Title>
-          <CloseButton onClick={onClose}>&times;</CloseButton>
-        </Header>
+  try {
+    return (
+      <Overlay onClick={onClose}>
+        <Drawer onClick={(e) => e.stopPropagation()}>
+          <Header>
+            <Title>Review Evidence</Title>
+            <CloseButton onClick={onClose}>&times;</CloseButton>
+          </Header>
         
         <Content>
           <LeftColumn>
@@ -408,7 +480,7 @@ const ReviewDrawer: React.FC<ReviewDrawerProps> = ({
           <RightColumn>
             <Section>
               <SectionTitle>Review Decision</SectionTitle>
-              <Form>
+              <Form onSubmit={(e) => e.preventDefault()}>
                 <FormGroup>
                   <Label htmlFor="comment">Review Comments</Label>
                   <TextArea
@@ -418,6 +490,91 @@ const ReviewDrawer: React.FC<ReviewDrawerProps> = ({
                     placeholder="Add your review comments here..."
                   />
                 </FormGroup>
+
+                {!hideEscalateButton && (
+                  <AuthoritySelection>
+                    <Label>Select Authorities to Escalate To (Optional)</Label>
+                    <AuthorityChips>
+                      {Object.entries(AUTHORITY_CONFIGS).map(([key, config]) => {
+                        if (!config || !config.name) {
+                          console.warn(`Invalid authority config for key: ${key}`);
+                          return null;
+                        }
+                        return (
+                          <AuthorityChip
+                            key={key}
+                            $selected={selectedAuthorities.includes(key)}
+                            onClick={() => toggleAuthority(key)}
+                            type="button"
+                          >
+                            {config.name}
+                          </AuthorityChip>
+                        );
+                      })}
+                    </AuthorityChips>
+                    {selectedAuthorities.length > 0 && (
+                      <div style={{ 
+                        fontSize: '0.8rem', 
+                        color: '#666', 
+                        marginTop: '0.5rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}>
+                        <span>Selected authorities:</span>
+                        {selectedAuthorities.map(authority => {
+                          const config = AUTHORITY_CONFIGS[authority];
+                          if (!config || !config.name) {
+                            console.warn(`Invalid authority config for selected authority: ${authority}`);
+                            return null;
+                          }
+                          return (
+                            <span 
+                              key={authority}
+                              style={{ 
+                                color: '#222',
+                                fontWeight: '500',
+                                fontSize: '0.75rem',
+                                backgroundColor: '#f3f4f6',
+                                padding: '0.25rem 0.5rem',
+                                borderRadius: '4px'
+                              }}
+                            >
+                              {config.name}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </AuthoritySelection>
+                )}
+
+                {!hideEscalateButton && (
+                  <FormGroup>
+                    <Label htmlFor="escalation-reason">Escalation Reason (Required for Escalation)</Label>
+                    <StyledSelect
+                      value={escalationReason}
+                      onChange={(value) => {
+                        try {
+                          console.log('Escalation reason changed to:', value);
+                          setEscalationReason(value);
+                        } catch (error) {
+                          console.error('Error setting escalation reason:', error);
+                        }
+                      }}
+                      options={[
+                        { value: '', label: 'Select escalation reason...' },
+                        { value: 'compliance', label: 'Compliance Review Required' },
+                        { value: 'technical', label: 'Technical Security Assessment' },
+                        { value: 'business', label: 'Business Process Approval' },
+                        { value: 'budget', label: 'Budget/Contract Review' },
+                        { value: 'privacy', label: 'Data Protection Analysis' },
+                        { value: 'other', label: 'Other (specify in comments)' }
+                      ]}
+                      placeholder="Select escalation reason..."
+                    />
+                  </FormGroup>
+                )}
 
                 <DecisionButtons>
                   <Button
@@ -443,10 +600,26 @@ const ReviewDrawer: React.FC<ReviewDrawerProps> = ({
                       type="button"
                       variant="escalate"
                       onClick={() => handleDecision('ESCALATE')}
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || !canEscalate || !escalationReason}
+                      title={
+                        !canEscalate 
+                          ? "Add comments (10+ characters) or select authorities to enable escalation"
+                          : !escalationReason
+                          ? "Select an escalation reason to enable escalation"
+                          : `Escalate to ${selectedAuthorities.map(a => {
+                              const config = AUTHORITY_CONFIGS[a];
+                              return config?.name || a;
+                            }).join(', ') || 'selected authorities'}`
+                      }
                     >
                       {isSubmitting && <LoadingSpinner />}
-                      Escalate to Legal
+                      {canEscalate && escalationReason 
+                        ? `Escalate${selectedAuthorities.length > 0 ? ` to ${selectedAuthorities.map(a => {
+                            const config = AUTHORITY_CONFIGS[a];
+                            return config?.name || a;
+                          }).join(', ')}` : ''}`
+                        : 'Escalate'
+                      }
                     </Button>
                   )}
                 </DecisionButtons>
@@ -482,6 +655,27 @@ const ReviewDrawer: React.FC<ReviewDrawerProps> = ({
       </Drawer>
     </Overlay>
   );
+  } catch (error) {
+    console.error('Error rendering ReviewDrawer:', error);
+    return (
+      <Overlay onClick={onClose}>
+        <Drawer onClick={(e) => e.stopPropagation()}>
+          <Header>
+            <Title>Review Evidence</Title>
+            <CloseButton onClick={onClose}>&times;</CloseButton>
+          </Header>
+          <Content>
+            <div style={{ padding: '2rem', textAlign: 'center' }}>
+              <p>An error occurred while loading the review form.</p>
+              <button onClick={onClose} style={{ marginTop: '1rem', padding: '0.5rem 1rem', backgroundColor: '#222', color: 'white', border: 'none', borderRadius: '4px' }}>
+                Close
+              </button>
+            </div>
+          </Content>
+        </Drawer>
+      </Overlay>
+    );
+  }
 };
 
 export default ReviewDrawer;

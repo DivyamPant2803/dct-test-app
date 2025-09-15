@@ -412,6 +412,14 @@ const EndUserDashboard: React.FC = () => {
 
   const selectedTransfer = transfers.find(t => t.id === selectedTransferId);
 
+  // Filter evidence based on selected transfer
+  const filteredEvidence = selectedTransferId 
+    ? uploadedEvidence.filter(evidence => 
+        evidence.requirementId.includes(selectedTransfer?.entity.toLowerCase().replace(/\s+/g, '-') || '') &&
+        evidence.requirementId.includes(selectedTransfer?.jurisdiction.toLowerCase().replace(/\s+/g, '-') || '')
+      )
+    : uploadedEvidence;
+
   return (
     <DashboardContainer>
       <RefreshButton onClick={refreshAllData} title="Refresh Data">
@@ -520,7 +528,7 @@ const EndUserDashboard: React.FC = () => {
 
       <Section>
         <SectionTitle>Uploaded Evidence</SectionTitle>
-        {uploadedEvidence.length > 0 ? (
+        {filteredEvidence.length > 0 ? (
           <Table>
             <thead>
               <tr>
@@ -534,7 +542,7 @@ const EndUserDashboard: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {uploadedEvidence.map((evidence) => {
+              {filteredEvidence.map((evidence) => {
                 // Extract entity and country from requirement ID
                 const parts = evidence.requirementId.split('-');
                 const entity = parts[1]?.replace(/-/g, ' ') || 'Unknown Entity';
@@ -577,7 +585,12 @@ const EndUserDashboard: React.FC = () => {
             </tbody>
           </Table>
         ) : (
-          <NoDataMessage>No evidence uploaded yet</NoDataMessage>
+          <NoDataMessage>
+            {selectedTransferId 
+              ? `No evidence uploaded for the selected transfer yet` 
+              : 'No evidence uploaded yet'
+            }
+          </NoDataMessage>
         )}
       </Section>
 

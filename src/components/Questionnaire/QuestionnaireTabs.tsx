@@ -43,10 +43,10 @@ const QuestionnaireTabs: React.FC<QuestionnaireTabsProps> = ({
   isOutputExpanded,
   setIsOutputExpanded,
   isAllStepsCompleted,
-  isAzureExpanded,
-  setIsAzureExpanded,
-  onAzureCloudTabClick,
-  onAzureAccessTabClick
+  // isAzureExpanded,
+  // setIsAzureExpanded,
+  // onAzureCloudTabClick,
+  // onAzureAccessTabClick
 }) => (
   <TabsContainer>
     <TabGroup>

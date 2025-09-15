@@ -6,7 +6,7 @@ const TooltipContainer = styled.div`
   display: inline-block;
 `;
 
-const Tooltip = styled.div<{ show: boolean }>`
+const Tooltip = styled.div<{ $show: boolean }>`
   position: absolute;
   bottom: -40px;
   left: 50%;
@@ -18,8 +18,8 @@ const Tooltip = styled.div<{ show: boolean }>`
   font-size: 0.8rem;
   white-space: nowrap;
   z-index: 9999;
-  opacity: ${props => props.show ? 1 : 0};
-  visibility: ${props => props.show ? 'visible' : 'hidden'};
+  opacity: ${props => props.$show ? 1 : 0};
+  visibility: ${props => props.$show ? 'visible' : 'hidden'};
   transition: opacity 0.2s ease, visibility 0.2s ease;
   
   &::after {
@@ -47,7 +47,7 @@ const TooltipWrapper: React.FC<TooltipWrapperProps> = ({ children, tooltipText }
       onMouseLeave={() => setShowTooltip(false)}
     >
       {children}
-      <Tooltip show={showTooltip}>
+      <Tooltip $show={showTooltip}>
         {tooltipText}
       </Tooltip>
     </TooltipContainer>

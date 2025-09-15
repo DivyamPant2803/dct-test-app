@@ -256,7 +256,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({ selectedCountries, on
     dispatch(setCountries(newSelected));
   };
 
-  const handleRegionToggle = (regionKey: keyof typeof REGIONS, event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleRegionToggle = (regionKey: keyof typeof REGIONS, _event: React.ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;
     
     const regionCountryNames = COUNTRIES_DATA[regionKey].map(country => country.name);

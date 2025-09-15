@@ -68,9 +68,24 @@ export interface Evidence {
   reviewerNote?: string;
   reviewerId?: string;
   reviewedAt?: string;
-  fileType: 'PDF' | 'DOC' | 'XLS';
+  fileType: 'PDF' | 'DOC' | 'DOCX' | 'XLS' | 'XLSX';
   description?: string;
   base64Data?: string; // For localStorage storage
+  // New escalation fields
+  escalatedTo?: string;
+  escalatedBy?: string;
+  escalatedAt?: string;
+  escalationReason?: string;
+  escalationHistory?: Array<{
+    id: string;
+    escalatedTo: string;
+    escalatedBy: string;
+    escalatedAt: string;
+    reason: string;
+    comments: string;
+    taggedAuthorities: string[];
+  }>;
+  taggedAuthorities?: string[];
 }
 
 export interface Transfer {
@@ -100,6 +115,9 @@ export interface ReviewDecision {
   evidenceId: string;
   decision: 'APPROVE' | 'REJECT' | 'ESCALATE';
   note?: string;
+  escalationReason?: string;
+  taggedAuthorities?: string[];
+  escalatedTo?: string;
 }
 
 export interface User {
@@ -122,6 +140,12 @@ export interface Requirement {
   effectiveDate: string;
   createdBy: string;
   lastModifiedBy: string;
+  // Reaffirmation fields
+  originalIngestionDate: string;
+  lastReaffirmedAt?: string;
+  lastReaffirmedBy?: string;
+  reaffirmationHistory: ReaffirmationEntry[];
+  nextReaffirmationDue: string;
 }
 
 export type CRStatus = "PENDING" | "APPROVED" | "REJECTED";
@@ -183,4 +207,26 @@ export interface AIInsights {
     helpClicks: number;
   }[];
   period: string;
-} 
+}
+
+// Reaffirmation System Types
+export interface ReaffirmationEntry {
+  id: string;
+  requirementId: string;
+  reaffirmedAt: string;
+  reaffirmedBy: string;
+  action: 'REAFFIRMED_AS_IS' | 'REAFFIRMED_WITH_CHANGES';
+  comment?: string;
+  changes?: string;
+  previousVersion?: number;
+  newVersion?: number;
+}
+
+export interface ReaffirmationRequest {
+  requirementId: string;
+  action: 'REAFFIRMED_AS_IS' | 'REAFFIRMED_WITH_CHANGES';
+  comment?: string;
+  proposedChanges?: string;
+}
+
+export type ReaffirmationStatus = 'CURRENT' | 'DUE_SOON' | 'OVERDUE'; 

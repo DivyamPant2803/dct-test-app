@@ -495,7 +495,7 @@ const EntitySelection: React.FC<Props> = ({
   // Check if we're approaching or exceeding entity limits
   const isNearLimit = selectedEntities.length >= entityLimitWarning;
   const isAtLimit = selectedEntities.length >= maxEntities;
-  const canSelectMore = selectedEntities.length < maxEntities;
+  // const canSelectMore = selectedEntities.length < maxEntities;
 
   // Check if CID is selected and show info message
   useEffect(() => {
@@ -598,15 +598,15 @@ const EntitySelection: React.FC<Props> = ({
   }, [entities, selectedEntities]);
 
   // Helper function to check if an entity is selected in a specific category
-  const isEntitySelectedInCategory = (entityId: string, category: string): boolean => {
-    return selectedEntities.includes(getEntityCategoryKey(entityId, category));
-  };
+  // const isEntitySelectedInCategory = (entityId: string, category: string): boolean => {
+  //   return selectedEntities.includes(getEntityCategoryKey(entityId, category));
+  // };
 
   // Helper function to get all unique selected entities across all categories
-  const getAllSelectedEntities = (): string[] => {
-    // Return all composite keys
-    return selectedEntities;
-  };
+  // const getAllSelectedEntities = (): string[] => {
+  //   // Return all composite keys
+  //   return selectedEntities;
+  // };
 
   // Handle selection for a specific entity-category pair
   const handleEntitySelect = (entityId: string, category: string) => {

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import styled from 'styled-components';
-import { FiFileText, FiChevronRight, FiUpload, FiZap } from 'react-icons/fi';
+import { FiFileText, FiUpload, FiZap } from 'react-icons/fi';
 import { exportOutputToExcel } from './exportOutputToExcel';
 import { getMockEntityDetails } from './mockEntityDetails';
 import { getMockAzureHostingLocations, getMockAccessLocations } from './EntityDetailPanel';
@@ -150,46 +150,46 @@ const ExpandableTd = styled.td<{ isExpanded?: boolean; expandedWidth?: string }>
   min-width: ${({ isExpanded, expandedWidth }) => isExpanded && expandedWidth ? expandedWidth : 'auto'};
 `;
 
-const ExpandableContent = styled.div<{ isExpanded?: boolean }>`
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
+// const ExpandableContent = styled.div<{ isExpanded?: boolean }>`
+//   display: flex;
+//   align-items: flex-start;
+//   gap: 0.75rem;
+//   cursor: pointer;
+//   transition: all 0.2s ease;
+//
+//   &:hover {
+//     color: #1f2937;
+//   }
+// `;
 
-  &:hover {
-    color: #1f2937;
-  }
-`;
+// const ExpandIcon = styled.div<{ isExpanded?: boolean }>`
+//   display: flex;
+//   align-items: center;
+//   justify-content: center;
+//   width: 20px;
+//   height: 20px;
+//   color: #6b7280;
+//   transition: transform 0.2s ease;
+//   transform: ${({ isExpanded }) => isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'};
+//   flex-shrink: 0;
+//   margin-top: 2px;
+// `;
 
-const ExpandIcon = styled.div<{ isExpanded?: boolean }>`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  color: #6b7280;
-  transition: transform 0.2s ease;
-  transform: ${({ isExpanded }) => isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'};
-  flex-shrink: 0;
-  margin-top: 2px;
-`;
+// const ContentPreview = styled.div<{ isExpanded?: boolean }>`
+//   flex: 1;
+//   overflow: ${({ isExpanded }) => isExpanded ? 'visible' : 'hidden'};
+//   text-overflow: ${({ isExpanded }) => isExpanded ? 'clip' : 'ellipsis'};
+//   white-space: ${({ isExpanded }) => isExpanded ? 'normal' : 'nowrap'};
+// `;
 
-const ContentPreview = styled.div<{ isExpanded?: boolean }>`
-  flex: 1;
-  overflow: ${({ isExpanded }) => isExpanded ? 'visible' : 'hidden'};
-  text-overflow: ${({ isExpanded }) => isExpanded ? 'clip' : 'ellipsis'};
-  white-space: ${({ isExpanded }) => isExpanded ? 'normal' : 'nowrap'};
-`;
-
-const ExpandedContent = styled.div`
-  margin-top: 0.75rem;
-  padding: 1rem;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #e5e5e5;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-`;
+// const ExpandedContent = styled.div`
+//   margin-top: 0.75rem;
+//   padding: 1rem;
+//   background: white;
+//   border-radius: 8px;
+//   border: 1px solid #e5e5e5;
+//   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+// `;
 
 const ContentList = styled.ul`
   margin: 0;
@@ -461,12 +461,12 @@ const OutputTable: React.FC<OutputTableProps> = ({
   selectedGuidance,
   selectedRecipientTypes,
   selectedDataSubjectType,
-  selectedPurpose,
-  selectedTransferLocation,
+  // selectedPurpose,
+  // selectedTransferLocation,
   entities
 }) => {
   const [modalEntity, setModalEntity] = useState<string | null>(null);
-  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+  const [expandedRowId] = useState<string | null>(null);
   const [overlay, setOverlay] = useState<{
     entityId: string;
     column: string;
@@ -538,33 +538,33 @@ const OutputTable: React.FC<OutputTableProps> = ({
     );
   };
 
-  const handleRowExpand = (entityId: string) => {
-    setExpandedRowId(prev => (prev === entityId ? null : entityId));
-  };
+  // const handleRowExpand = (entityId: string) => {
+  //   setExpandedRowId(prev => (prev === entityId ? null : entityId));
+  // };
 
   const shouldShowExpandButton = (content: string[]) => {
     return content.length > 0 && content.some(item => item.length > 100);
   };
 
-  const openOverlay = (entityId: string, column: string, content: string[]) => {
-    // Find the cell position
-    const key = `${entityId}-${column}`;
-    const cell = cellRefs.current[key];
-    if (cell) {
-      const rect = cell.getBoundingClientRect();
-      setOverlay({
-        entityId,
-        column,
-        content,
-        anchor: {
-          top: rect.top + window.scrollY,
-          left: rect.left + window.scrollX,
-          width: rect.width,
-          height: rect.height,
-        },
-      });
-    }
-  };
+  // const openOverlay = (entityId: string, column: string, content: string[]) => {
+  //   // Find the cell position
+  //   const key = `${entityId}-${column}`;
+  //   const cell = cellRefs.current[key];
+  //   if (cell) {
+  //     const rect = cell.getBoundingClientRect();
+  //     setOverlay({
+  //       entityId,
+  //       column,
+  //       content,
+  //       anchor: {
+  //         top: rect.top + window.scrollY,
+  //         left: rect.left + window.scrollX,
+  //         width: rect.width,
+  //         height: rect.height,
+  //       },
+  //     });
+  //   }
+  // };
 
   const closeOverlay = () => setOverlay(null);
 
@@ -653,33 +653,33 @@ const OutputTable: React.FC<OutputTableProps> = ({
     );
   };
 
-  const renderCollapsedCell = (content: string[], entityId: string, columnType: string) => {
-    const shouldExpand = shouldShowExpandButton(content);
-    if (content.length === 0) {
-      return <span style={{ color: '#9ca3af' }}>—</span>;
-    }
-    if (!shouldExpand) {
-      return content.join(', ');
-    }
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={e => { e.stopPropagation(); handleRowExpand(entityId); }}>
-        <ExpandIcon isExpanded={expandedRowId === entityId}>
-          <FiChevronRight size={16} />
-        </ExpandIcon>
-        <div style={{
-          width: '100%',
-          height: '100%',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'normal',
-          display: '-webkit-box',
-          WebkitLineClamp: 4,
-          WebkitBoxOrient: 'vertical',
-          lineHeight: '1.4',
-        }}>{content[0]}</div>
-      </div>
-    );
-  };
+  // const renderCollapsedCell = (content: string[], entityId: string, columnType: string) => {
+  //   const shouldExpand = shouldShowExpandButton(content);
+  //   if (content.length === 0) {
+  //     return <span style={{ color: '#9ca3af' }}>—</span>;
+  //   }
+  //   if (!shouldExpand) {
+  //     return content.join(', ');
+  //   }
+  //   return (
+  //     <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={e => { e.stopPropagation(); handleRowExpand(entityId); }}>
+  //       <ExpandIcon isExpanded={expandedRowId === entityId}>
+  //         <FiChevronRight size={16} />
+  //       </ExpandIcon>
+  //       <div style={{
+  //         width: '100%',
+  //         height: '100%',
+  //         overflow: 'hidden',
+  //         textOverflow: 'ellipsis',
+  //         whiteSpace: 'normal',
+  //         display: '-webkit-box',
+  //         WebkitLineClamp: 4,
+  //         WebkitBoxOrient: 'vertical',
+  //         lineHeight: '1.4',
+  //       }}>{content[0]}</div>
+  //     </div>
+  //   );
+  // };
 
   const renderExpandedRow = (row: any, columnCount: number) => (
     <tr>
@@ -793,7 +793,7 @@ const OutputTable: React.FC<OutputTableProps> = ({
             </tr>
           </thead>
           <tbody>
-            {filteredTableData.map((row, index) => {
+            {filteredTableData.map((row, _index) => {
               const isExpanded = expandedRowId === row.entityId;
               
               return (
@@ -864,7 +864,7 @@ const OutputTable: React.FC<OutputTableProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {getMockAzureHostingLocations(modalEntity).map((loc: { region: string; approvalStatus: string; conditions?: string }, idx: number) => (
+                  {getMockAzureHostingLocations(modalEntity).map((loc: { region: string; approvalStatus: string; conditions?: string }, _idx: number) => (
                     <Tr key={modalEntity + loc.region}>
                       <Td>{loc.region}</Td>
                       <Td><StatusChip status={loc.approvalStatus}>{loc.approvalStatus}</StatusChip></Td>

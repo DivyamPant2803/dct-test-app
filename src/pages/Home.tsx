@@ -180,7 +180,7 @@ const HomeContentInner = () => {
       </Summary>
       <TopGrid>
         {priorityCards.map((section, idx) => {
-          const category = getCategoryFromTitle(section.title);
+          // const category = getCategoryFromTitle(section.title);
           return (
             <PriorityCard key={idx}>
               <PriorityAccent />

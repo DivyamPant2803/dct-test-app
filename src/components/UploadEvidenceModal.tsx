@@ -82,23 +82,23 @@ const Label = styled.label`
   font-size: 0.9rem;
 `;
 
-const Input = styled.input`
-  padding: 0.75rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 1rem;
-  transition: border-color 0.2s ease;
-  
-  &:focus {
-    outline: none;
-    border-color: #222;
-  }
-  
-  &:disabled {
-    background: #f5f5f5;
-    cursor: not-allowed;
-  }
-`;
+// const Input = styled.input`
+//   padding: 0.75rem;
+//   border: 1px solid #ccc;
+//   border-radius: 6px;
+//   font-size: 1rem;
+//   transition: border-color 0.2s ease;
+//   
+//   &:focus {
+//     outline: none;
+//     border-color: #222;
+//   }
+//   
+//   &:disabled {
+//     background: #f5f5f5;
+//     cursor: not-allowed;
+//   }
+// `;
 
 const TextArea = styled.textarea`
   padding: 0.75rem;

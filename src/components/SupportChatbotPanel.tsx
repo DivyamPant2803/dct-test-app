@@ -266,7 +266,7 @@ const SupportChatbotPanel: React.FC<SupportChatbotPanelProps> = ({
   const [useContext, setUseContext] = useState(!!contextRequirementId);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  const { sendMessage, getChatHistory, clearChatHistory, loading } = useAIChat();
+  const { sendMessage, getChatHistory, loading } = useAIChat();
 
   useEffect(() => {
     if (isOpen) {

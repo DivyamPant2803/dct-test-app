@@ -10,13 +10,10 @@ import Guidance from './pages/Guidance'
 import { Administration } from './pages/Administration'
 import NotificationModal, { Notification } from './components/NotificationModal'
 import homeContentHtml from './static/homeContentHtml'
-import EndUserDashboard from './components/EndUserDashboard'
-import AdminDashboard from './components/AdminDashboard'
-import LegalReview from './components/LegalReview'
-import LegalContentDashboard from './components/LegalContentDashboard'
-import AdminCRDashboard from './components/AdminCRDashboard'
 import RequirementDetails from './components/RequirementDetails'
 import SupportChatbotPanel from './components/SupportChatbotPanel'
+import { PersonaProvider } from './contexts/PersonaContext'
+import PersonaRouter from './components/PersonaRouter'
 
 const queryClient = new QueryClient()
 
@@ -220,38 +217,41 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <GlobalStyle />
       <BrowserRouter>
-        <AppContainer>
-          <Header>Data Transfer Compliance Tool</Header>
-          <NavBar 
-            unreadCount={unreadCount} 
-            onNotificationClick={handleNotificationClick}
-            onChatbotClick={handleChatbotClick}
-          />
-          <NotificationModal
-            open={modalOpen}
-            onClose={handleModalClose}
-            onMarkAllRead={handleMarkAllRead}
-            onNotificationClick={handleNotificationItemClick}
-          />
-          <Main>
-            <Routes>
-              <Route path="/" element={<Home homeContentHtml={homeContentHtml} />} />
-              <Route path="/guidance" element={<Guidance />} />
-              <Route path="/admin" element={<Administration setNotifications={setNotifications} />} />
-              <Route path="/my-transfers" element={<EndUserDashboard />} />
-              <Route path="/dct" element={<AdminDashboard />} />
-              <Route path="/legal" element={<LegalReview />} />
-              <Route path="/legal-content" element={<LegalContentDashboard />} />
-              <Route path="/admin-cr" element={<AdminCRDashboard />} />
-              <Route path="/requirement/:id" element={<RequirementDetails requirementId="req-1" />} />
-            </Routes>
-          </Main>
-          
-          <SupportChatbotPanel
-            isOpen={chatbotOpen}
-            onClose={handleChatbotClose}
-          />
-        </AppContainer>
+        <PersonaProvider>
+          <AppContainer>
+            <Header>Data Transfer Compliance Tool</Header>
+            <NavBar 
+              unreadCount={unreadCount} 
+              onNotificationClick={handleNotificationClick}
+              onChatbotClick={handleChatbotClick}
+            />
+            <NotificationModal
+              open={modalOpen}
+              onClose={handleModalClose}
+              onMarkAllRead={handleMarkAllRead}
+              onNotificationClick={handleNotificationItemClick}
+            />
+            <Main>
+              <Routes>
+                <Route path="/" element={<Home homeContentHtml={homeContentHtml} />} />
+                <Route path="/guidance" element={<Guidance />} />
+                <Route path="/admin" element={<Administration setNotifications={setNotifications} />} />
+                <Route path="/my-transfers" element={<PersonaRouter route="/my-transfers" />} />
+                <Route path="/dct" element={<PersonaRouter route="/dct" />} />
+                <Route path="/legal" element={<PersonaRouter route="/legal" />} />
+                <Route path="/legal-content" element={<PersonaRouter route="/legal-content" />} />
+                <Route path="/business" element={<PersonaRouter route="/business" />} />
+                <Route path="/diso" element={<PersonaRouter route="/diso" />} />
+                <Route path="/requirement/:id" element={<RequirementDetails requirementId="req-1" />} />
+              </Routes>
+            </Main>
+            
+            <SupportChatbotPanel
+              isOpen={chatbotOpen}
+              onClose={handleChatbotClose}
+            />
+          </AppContainer>
+        </PersonaProvider>
       </BrowserRouter>
     </QueryClientProvider>
   );
