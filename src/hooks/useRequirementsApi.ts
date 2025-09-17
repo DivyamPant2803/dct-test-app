@@ -1,22 +1,26 @@
 import React, { useState, useCallback } from 'react';
-import { Requirement, ChangeRequest, RequirementVersion, CRStatus } from '../types/index';
+import { Requirement, ChangeRequest, RequirementVersion, CRStatus, RequirementCombination, BulkReaffirmationRequest } from '../types/index';
 
 // Helper functions for localStorage
 const getStoredRequirements = (): Requirement[] => {
   const requirements: Requirement[] = [];
+  console.log('Getting stored requirements from localStorage...');
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (key && key.startsWith('requirement_')) {
       try {
         const stored = localStorage.getItem(key);
         if (stored) {
-          requirements.push(JSON.parse(stored));
+          const requirement = JSON.parse(stored);
+          requirements.push(requirement);
+          console.log(`Found stored requirement: ${requirement.id} - ${requirement.title}`);
         }
       } catch (error) {
         console.error('Error parsing stored requirement:', error);
       }
     }
   }
+  console.log(`Total stored requirements: ${requirements.length}`);
   return requirements;
 };
 
@@ -131,6 +135,7 @@ export const useRequirementsApi = () => {
   };
 
   const initializeSampleData = useCallback(() => {
+    console.log('Initializing sample data...');
     // Always clear existing localStorage data to start fresh
     const keys = Object.keys(localStorage);
     keys.forEach(key => {
@@ -138,6 +143,7 @@ export const useRequirementsApi = () => {
         localStorage.removeItem(key);
       }
     });
+    console.log('Cleared existing requirements from localStorage');
     
     // Always create new sample data
       const now = new Date();
@@ -149,6 +155,8 @@ export const useRequirementsApi = () => {
       const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
       const twoWeeksAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 14);
       const oneWeekAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+      const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, now.getDate());
+      const fourMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 4, now.getDate());
 
       const sampleRequirements: Requirement[] = [
         // OVERDUE scenarios
@@ -543,6 +551,226 @@ export const useRequirementsApi = () => {
             }
           ],
           nextReaffirmationDue: calculateNextReaffirmationDue(oneYearAgo.toISOString(), oneYearAgo.toISOString())
+        },
+        // Additional requirements for enhanced bulk testing
+        {
+          id: 'req-17',
+          version: 1,
+          title: 'GDPR Data Protection by Design',
+          jurisdiction: 'Germany',
+          entity: 'Deutsche Technologie und Datendienste GmbH',
+          subjectType: 'Employee',
+          text: 'Data protection by design and by default requires that data protection measures are built into the design of systems and processes from the outset, rather than being added as an afterthought.',
+          updatedAt: eightMonthsAgo.toISOString(),
+          effectiveDate: eightMonthsAgo.toISOString(),
+          createdBy: 'admin-user',
+          lastModifiedBy: 'admin-user',
+          // OVERDUE - never reaffirmed, due 2 months ago
+          originalIngestionDate: eightMonthsAgo.toISOString(),
+          lastReaffirmedAt: undefined,
+          lastReaffirmedBy: undefined,
+          reaffirmationHistory: [],
+          nextReaffirmationDue: calculateNextReaffirmationDue(eightMonthsAgo.toISOString())
+        },
+        {
+          id: 'req-18',
+          version: 2,
+          title: 'CCPA Data Minimization',
+          jurisdiction: 'United States',
+          entity: 'US Global Technology Solutions Corporation',
+          subjectType: 'Client',
+          text: 'Businesses must collect only the personal information that is necessary for the disclosed purpose and must not collect additional categories of personal information without providing notice.',
+          updatedAt: sixMonthsAgo.toISOString(),
+          effectiveDate: sixMonthsAgo.toISOString(),
+          createdBy: 'admin-user',
+          lastModifiedBy: 'legal-user-2',
+          // OVERDUE - last reaffirmed 6 months ago, due 3 months ago
+          originalIngestionDate: sixMonthsAgo.toISOString(),
+          lastReaffirmedAt: sixMonthsAgo.toISOString(),
+          lastReaffirmedBy: 'legal-user-2',
+          reaffirmationHistory: [
+            {
+              id: 'reaff-10',
+              requirementId: 'req-18',
+              reaffirmedAt: sixMonthsAgo.toISOString(),
+              reaffirmedBy: 'legal-user-2',
+              action: 'REAFFIRMED_WITH_CHANGES',
+              comment: 'Updated to reflect new CCPA enforcement guidelines',
+              changes: 'Added specific data minimization requirements'
+            }
+          ],
+          nextReaffirmationDue: calculateNextReaffirmationDue(sixMonthsAgo.toISOString(), sixMonthsAgo.toISOString())
+        },
+        {
+          id: 'req-19',
+          version: 1,
+          title: 'PDPA Consent Management',
+          jurisdiction: 'Singapore',
+          entity: 'Singapore Advanced Technology Solutions Pte Ltd',
+          subjectType: 'Candidate',
+          text: 'Organizations must obtain valid consent before collecting, using, or disclosing personal data. Consent must be voluntary, specific, and informed. Individuals have the right to withdraw consent at any time.',
+          updatedAt: oneMonthAgo.toISOString(),
+          effectiveDate: oneMonthAgo.toISOString(),
+          createdBy: 'admin-user',
+          lastModifiedBy: 'admin-user',
+          // DUE SOON - never reaffirmed, due in 2 weeks
+          originalIngestionDate: oneMonthAgo.toISOString(),
+          lastReaffirmedAt: undefined,
+          lastReaffirmedBy: undefined,
+          reaffirmationHistory: [],
+          nextReaffirmationDue: calculateNextReaffirmationDue(oneMonthAgo.toISOString())
+        },
+        {
+          id: 'req-20',
+          version: 1,
+          title: 'LGPD Data Subject Rights',
+          jurisdiction: 'Brazil',
+          entity: 'Singapore Advanced Technology Solutions Pte Ltd',
+          subjectType: 'Prospect',
+          text: 'Data subjects have the right to confirmation of the existence of processing, access to data, correction of incomplete or inaccurate data, anonymization or deletion, data portability, and information about data sharing.',
+          updatedAt: twoWeeksAgo.toISOString(),
+          effectiveDate: twoWeeksAgo.toISOString(),
+          createdBy: 'admin-user',
+          lastModifiedBy: 'legal-user-3',
+          // DUE SOON - last reaffirmed 1 year ago, due in 5 days
+          originalIngestionDate: oneYearAgo.toISOString(),
+          lastReaffirmedAt: oneYearAgo.toISOString(),
+          lastReaffirmedBy: 'legal-user-3',
+          reaffirmationHistory: [
+            {
+              id: 'reaff-11',
+              requirementId: 'req-20',
+              reaffirmedAt: oneYearAgo.toISOString(),
+              reaffirmedBy: 'legal-user-3',
+              action: 'REAFFIRMED_AS_IS',
+              comment: 'Requirement remains valid and current'
+            }
+          ],
+          nextReaffirmationDue: calculateNextReaffirmationDue(oneYearAgo.toISOString(), oneYearAgo.toISOString())
+        },
+        {
+          id: 'req-21',
+          version: 1,
+          title: 'GDPR Cross-Border Data Transfers',
+          jurisdiction: 'Germany',
+          entity: 'Deutsche Technologie und Datendienste GmbH',
+          subjectType: 'Client',
+          text: 'Personal data may only be transferred to third countries if the European Commission has decided that the third country ensures an adequate level of protection, or if appropriate safeguards are in place.',
+          updatedAt: threeMonthsAgo.toISOString(),
+          effectiveDate: threeMonthsAgo.toISOString(),
+          createdBy: 'admin-user',
+          lastModifiedBy: 'legal-user-1',
+          // CURRENT - reaffirmed 3 months ago, not due for 9 months
+          originalIngestionDate: oneYearAgo.toISOString(),
+          lastReaffirmedAt: threeMonthsAgo.toISOString(),
+          lastReaffirmedBy: 'legal-user-1',
+          reaffirmationHistory: [
+            {
+              id: 'reaff-12',
+              requirementId: 'req-21',
+              reaffirmedAt: threeMonthsAgo.toISOString(),
+              reaffirmedBy: 'legal-user-1',
+              action: 'REAFFIRMED_WITH_CHANGES',
+              comment: 'Updated to include new adequacy decisions',
+              changes: 'Added references to new adequacy decisions for UK and South Korea'
+            }
+          ],
+          nextReaffirmationDue: calculateNextReaffirmationDue(oneYearAgo.toISOString(), threeMonthsAgo.toISOString())
+        },
+        {
+          id: 'req-22',
+          version: 1,
+          title: 'PIPEDA Privacy Impact Assessment',
+          jurisdiction: 'Canada',
+          entity: 'US Global Technology Solutions Corporation',
+          subjectType: 'Employee',
+          text: 'Organizations must conduct privacy impact assessments for activities that involve the collection, use, or disclosure of personal information in a manner that may affect the privacy of individuals.',
+          updatedAt: new Date().toISOString(),
+          effectiveDate: new Date().toISOString(),
+          createdBy: 'admin-user',
+          lastModifiedBy: 'admin-user',
+          // CURRENT - just created today
+          originalIngestionDate: new Date().toISOString(),
+          lastReaffirmedAt: undefined,
+          lastReaffirmedBy: undefined,
+          reaffirmationHistory: [],
+          nextReaffirmationDue: calculateNextReaffirmationDue(new Date().toISOString())
+        },
+        {
+          id: 'req-23',
+          version: 1,
+          title: 'UK GDPR Data Protection Officer',
+          jurisdiction: 'United Kingdom',
+          entity: 'Deutsche Technologie und Datendienste GmbH',
+          subjectType: 'Candidate',
+          text: 'Organizations must designate a Data Protection Officer when their core activities consist of processing operations which require regular and systematic monitoring of data subjects on a large scale.',
+          updatedAt: oneWeekAgo.toISOString(),
+          effectiveDate: oneWeekAgo.toISOString(),
+          createdBy: 'admin-user',
+          lastModifiedBy: 'admin-user',
+          // CURRENT - recently created, not due for 11 months
+          originalIngestionDate: oneWeekAgo.toISOString(),
+          lastReaffirmedAt: undefined,
+          lastReaffirmedBy: undefined,
+          reaffirmationHistory: [],
+          nextReaffirmationDue: calculateNextReaffirmationDue(oneWeekAgo.toISOString())
+        },
+        {
+          id: 'req-24',
+          version: 2,
+          title: 'CCPA Third-Party Data Sharing',
+          jurisdiction: 'United States',
+          entity: 'US Global Technology Solutions Corporation',
+          subjectType: 'Client',
+          text: 'Businesses must disclose whether they sell or share personal information to third parties and must provide consumers with the right to opt-out of the sale or sharing of their personal information.',
+          updatedAt: twoMonthsAgo.toISOString(),
+          effectiveDate: twoMonthsAgo.toISOString(),
+          createdBy: 'admin-user',
+          lastModifiedBy: 'legal-user-2',
+          // DUE SOON - last reaffirmed 1 year ago, due in 3 weeks
+          originalIngestionDate: oneYearAgo.toISOString(),
+          lastReaffirmedAt: oneYearAgo.toISOString(),
+          lastReaffirmedBy: 'legal-user-2',
+          reaffirmationHistory: [
+            {
+              id: 'reaff-13',
+              requirementId: 'req-24',
+              reaffirmedAt: oneYearAgo.toISOString(),
+              reaffirmedBy: 'legal-user-2',
+              action: 'REAFFIRMED_AS_IS',
+              comment: 'No changes required - requirement remains current'
+            }
+          ],
+          nextReaffirmationDue: calculateNextReaffirmationDue(oneYearAgo.toISOString(), oneYearAgo.toISOString())
+        },
+        {
+          id: 'req-25',
+          version: 1,
+          title: 'PDPA Data Retention',
+          jurisdiction: 'Singapore',
+          entity: 'Singapore Advanced Technology Solutions Pte Ltd',
+          subjectType: 'Prospect',
+          text: 'Organizations must not retain personal data for longer than is necessary for the fulfillment of the purpose for which it was collected, unless retention is required by law or for legitimate business purposes.',
+          updatedAt: fourMonthsAgo.toISOString(),
+          effectiveDate: fourMonthsAgo.toISOString(),
+          createdBy: 'admin-user',
+          lastModifiedBy: 'legal-user-3',
+          // OVERDUE - last reaffirmed 6 months ago, due 2 months ago
+          originalIngestionDate: sixMonthsAgo.toISOString(),
+          lastReaffirmedAt: sixMonthsAgo.toISOString(),
+          lastReaffirmedBy: 'legal-user-3',
+          reaffirmationHistory: [
+            {
+              id: 'reaff-14',
+              requirementId: 'req-25',
+              reaffirmedAt: sixMonthsAgo.toISOString(),
+              reaffirmedBy: 'legal-user-3',
+              action: 'REAFFIRMED_WITH_CHANGES',
+              comment: 'Updated retention periods based on new guidance',
+              changes: 'Extended retention period for HR records to 7 years'
+            }
+          ],
+          nextReaffirmationDue: calculateNextReaffirmationDue(sixMonthsAgo.toISOString(), sixMonthsAgo.toISOString())
         }
       ];
 
@@ -568,8 +796,14 @@ export const useRequirementsApi = () => {
         }
         
         localStorage.setItem(`requirement_${req.id}`, JSON.stringify(req));
+        console.log(`Stored requirement: ${req.id} - ${req.title}`);
       });
       setRequirements(sampleRequirements);
+      console.log(`Stored ${sampleRequirements.length} requirements in localStorage`);
+      
+      // Verify storage
+      const verification = getStoredRequirements();
+      console.log(`Verification: Found ${verification.length} requirements after storage`);
   }, [setRequirements]);
 
   const getRequirements = useCallback(async (filters?: {
@@ -582,7 +816,7 @@ export const useRequirementsApi = () => {
     // Only initialize sample data if no requirements exist
     const existingRequirements = getStoredRequirements();
     if (existingRequirements.length === 0) {
-      initializeSampleData();
+    initializeSampleData();
     }
     
     const storedRequirements = getStoredRequirements();
@@ -610,8 +844,27 @@ export const useRequirementsApi = () => {
 
   const getRequirementById = useCallback(async (id: string): Promise<Requirement | null> => {
     await new Promise(resolve => setTimeout(resolve, 200));
-    const storedRequirements = getStoredRequirements();
-    return storedRequirements.find(req => req.id === id) || null;
+    console.log(`Looking for requirement with ID: ${id}`);
+    
+    // Use direct localStorage access instead of getStoredRequirements
+    const directCheck = localStorage.getItem(`requirement_${id}`);
+    console.log(`Direct localStorage check for requirement_${id}:`, directCheck ? 'EXISTS' : 'NOT FOUND');
+    
+    if (!directCheck) {
+      console.log(`Requirement ${id} not found in localStorage`);
+      return null;
+    }
+    
+    try {
+      const requirement = JSON.parse(directCheck);
+      console.log(`Found requirement:`, requirement.title);
+      console.log(`Found requirement object:`, requirement);
+      console.log(`Returning:`, `requirement with id ${requirement.id}`);
+      return requirement;
+    } catch (error) {
+      console.error(`Error parsing requirement ${id}:`, error);
+      return null;
+    }
   }, []);
 
   const createChangeRequest = useCallback(async (changeRequestData: {
@@ -848,6 +1101,178 @@ export const useRequirementsApi = () => {
     console.log('Requirement reaffirmed:', updatedRequirement);
   }, [getRequirementById]);
 
+  // Generate requirement combinations from requirements
+  const generateRequirementCombinations = useCallback(async (): Promise<RequirementCombination[]> => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    const requirements = getStoredRequirements();
+    console.log(`Generating combinations for ${requirements.length} requirements:`, requirements.map(r => r.id));
+    const combinations: RequirementCombination[] = [];
+    
+    // Define possible values for each combination factor
+    const dataSubjectTypes = ['Employee', 'Client', 'Candidate', 'Prospect'];
+    const transferLocations = ['Germany', 'United States', 'Singapore', 'United Kingdom', 'Canada', 'Brazil'];
+    const recipientTypes = ['Entity', 'Service Provider', 'Third Party', 'External Authorities'];
+    const reviewDataTransferPurposes = [
+      'Facilitation of Outsourcing/Nearshoring/Offshoring',
+      'Administration of Employment Contract',
+      'Monitoring',
+      'Ad-Hoc Provision of Services',
+      'Compliance with Legal or Regulatory Obligations',
+      'Other Purposes',
+      'Compliance with Voluntary Disclosure',
+      'Client Relationship Management',
+      'KYC/AML'
+    ];
+    
+    // Generate combinations for each requirement
+    requirements.forEach(requirement => {
+      // Generate multiple combinations per requirement (simulating real-world scenarios)
+      const numCombinations = Math.floor(Math.random() * 5) + 2; // 2-6 combinations per requirement
+      
+      for (let i = 0; i < numCombinations; i++) {
+        const combination: RequirementCombination = {
+          id: `combo-${requirement.id}-${i}`,
+          entity: requirement.entity,
+          dataSubjectType: dataSubjectTypes[Math.floor(Math.random() * dataSubjectTypes.length)],
+          transferLocation: transferLocations[Math.floor(Math.random() * transferLocations.length)],
+          recipientType: recipientTypes[Math.floor(Math.random() * recipientTypes.length)],
+          reviewDataTransferPurpose: reviewDataTransferPurposes[Math.floor(Math.random() * reviewDataTransferPurposes.length)],
+          requirement: requirement,
+          reaffirmationStatus: getReaffirmationStatus(requirement),
+          nextReaffirmationDue: requirement.nextReaffirmationDue,
+          lastReaffirmedAt: requirement.lastReaffirmedAt,
+          lastReaffirmedBy: requirement.lastReaffirmedBy
+        };
+        
+        combinations.push(combination);
+      }
+    });
+    
+    console.log(`Generated ${combinations.length} combinations`);
+    return combinations;
+  }, []);
+
+  // Helper function to get reaffirmation status
+  const getReaffirmationStatus = (requirement: Requirement): 'CURRENT' | 'DUE_SOON' | 'OVERDUE' => {
+    if (!requirement.nextReaffirmationDue) {
+      return 'CURRENT';
+    }
+    
+    const now = new Date();
+    const dueDate = new Date(requirement.nextReaffirmationDue);
+    
+    if (isNaN(dueDate.getTime())) {
+      return 'CURRENT';
+    }
+    
+    const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysUntilDue < 0) {
+      return 'OVERDUE';
+    } else if (daysUntilDue <= 30) {
+      return 'DUE_SOON';
+    } else {
+      return 'CURRENT';
+    }
+  };
+
+  // Bulk reaffirmation function
+  const bulkReaffirmRequirements = useCallback(async (request: BulkReaffirmationRequest): Promise<void> => {
+    console.log('Starting bulk reaffirmation with request:', request);
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate processing time
+    
+    const now = new Date().toISOString();
+    
+    // Process each combination
+    for (const combinationId of request.combinationIds) {
+      try {
+        console.log(`Processing combination: ${combinationId}`);
+        
+        // Extract requirement ID from combination ID
+        const requirementId = combinationId.split('-')[1]; // combo-req-1-0 -> req-1
+        console.log(`Extracted requirement ID: ${requirementId}`);
+        
+        const requirement = await getRequirementById(requirementId);
+        console.log(`[bulkReaffirmRequirements] Result of getRequirementById for ${requirementId}:`, requirement ? requirement.id : 'null');
+        console.log(`[bulkReaffirmRequirements] About to check if (!requirement), requirement is:`, requirement);
+        console.log(`[bulkReaffirmRequirements] typeof requirement:`, typeof requirement);
+        console.log(`[bulkReaffirmRequirements] requirement === null:`, requirement === null);
+        console.log(`[bulkReaffirmRequirements] requirement === undefined:`, requirement === undefined);
+        console.log(`[bulkReaffirmRequirements] !requirement evaluates to:`, !requirement);
+        if (!requirement) {
+          throw new Error(`Requirement not found for combination ${combinationId}`);
+        }
+        
+        console.log(`Found requirement: ${requirement.title}`);
+
+        // Handle new requirements if action is REAFFIRMED_WITH_CHANGES
+        let updatedText = requirement.text;
+        let updatedTitle = requirement.title;
+        let changesDescription = 'Bulk reaffirmation with changes';
+        
+        if (request.action === 'REAFFIRMED_WITH_CHANGES' && request.newRequirements && request.newRequirements.length > 0) {
+          console.log(`Processing ${request.newRequirements.length} new requirements`);
+          
+          // For now, we'll update the requirement text with the new requirements
+          // In a real implementation, you might want to create separate requirements or handle this differently
+          const newRequirementsText = request.newRequirements
+            .map(req => `${req.title}: ${req.text}`)
+            .join('\n\n');
+          
+          updatedText = `${requirement.text}\n\n--- Updated Requirements ---\n${newRequirementsText}`;
+          updatedTitle = `${requirement.title} (Updated)`;
+          changesDescription = `Bulk reaffirmation with ${request.newRequirements.length} new requirements`;
+          
+          console.log(`Updated requirement text length: ${updatedText.length}`);
+        }
+
+        // Create new reaffirmation entry
+        const newReaffirmationEntry = {
+          id: `reaff-${Date.now()}-${Math.random()}`,
+          requirementId: requirementId,
+          reaffirmedAt: now,
+          reaffirmedBy: 'current-user',
+          action: request.action,
+          comment: request.comment,
+          changes: changesDescription,
+          previousVersion: requirement.version,
+          newVersion: requirement.version + 1
+        };
+
+        // Update the requirement
+        const updatedRequirement: Requirement = {
+          ...requirement,
+          title: updatedTitle,
+          text: updatedText,
+          version: requirement.version + 1,
+          lastReaffirmedAt: now,
+          lastReaffirmedBy: 'current-user',
+          reaffirmationHistory: [...requirement.reaffirmationHistory, newReaffirmationEntry],
+          nextReaffirmationDue: calculateNextReaffirmationDue(requirement.originalIngestionDate, now),
+          updatedAt: now,
+          lastModifiedBy: 'current-user'
+        };
+
+        // Store updated requirement
+        localStorage.setItem(`requirement_${requirement.id}`, JSON.stringify(updatedRequirement));
+        console.log(`Stored updated requirement: ${requirement.id}`);
+        
+        // Update state
+        setRequirements(prev => prev.map(req => 
+          req.id === requirement.id ? updatedRequirement : req
+        ));
+        console.log(`Updated state for requirement: ${requirement.id}`);
+        
+      } catch (error) {
+        console.error(`Failed to reaffirm combination ${combinationId}:`, error);
+        throw error;
+      }
+    }
+    
+    console.log(`Bulk reaffirmation completed successfully for ${request.combinationIds.length} combinations`);
+  }, [getRequirementById]);
+
   return {
     getRequirements,
     getRequirementById,
@@ -858,6 +1283,8 @@ export const useRequirementsApi = () => {
     getRequirementVersions,
     initializeSampleData,
     reaffirmRequirement,
-    debugChangeRequests
+    debugChangeRequests,
+    generateRequirementCombinations,
+    bulkReaffirmRequirements
   };
 };

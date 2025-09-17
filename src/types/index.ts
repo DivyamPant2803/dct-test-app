@@ -229,4 +229,63 @@ export interface ReaffirmationRequest {
   proposedChanges?: string;
 }
 
-export type ReaffirmationStatus = 'CURRENT' | 'DUE_SOON' | 'OVERDUE'; 
+export type ReaffirmationStatus = 'CURRENT' | 'DUE_SOON' | 'OVERDUE';
+
+// Enhanced Requirement Combination System
+export interface RequirementCombination {
+  id: string;
+  entity: string;
+  dataSubjectType: string;
+  transferLocation: string;
+  recipientType: string;
+  reviewDataTransferPurpose: string;
+  requirement: Requirement;
+  reaffirmationStatus: ReaffirmationStatus;
+  nextReaffirmationDue: string;
+  lastReaffirmedAt?: string;
+  lastReaffirmedBy?: string;
+}
+
+export interface EntityGroup {
+  entity: string;
+  combinations: RequirementCombination[];
+  totalRequirements: number;
+  dueRequirements: number;
+  overdueRequirements: number;
+}
+
+export interface FilterCriteria {
+  entities: string[];
+  dataSubjectTypes: string[];
+  transferLocations: string[];
+  recipientTypes: string[];
+  reviewDataTransferPurposes: string[];
+  reaffirmationStatuses: ReaffirmationStatus[];
+}
+
+export interface BulkReaffirmationRequest {
+  combinationIds: string[];
+  action: 'REAFFIRMED_AS_IS' | 'REAFFIRMED_WITH_CHANGES';
+  comment: string;
+  newRequirements?: Array<{
+    id: string;
+    title: string;
+    text: string;
+  }>;
+  individualOverrides?: Record<string, {
+    action?: 'REAFFIRMED_AS_IS' | 'REAFFIRMED_WITH_CHANGES';
+    comment?: string;
+  }>;
+}
+
+export interface BulkOperationProgress {
+  operationId: string;
+  totalItems: number;
+  processedItems: number;
+  completedItems: number;
+  failedItems: number;
+  status: 'RUNNING' | 'COMPLETED' | 'FAILED';
+  startTime: string;
+  endTime?: string;
+  errors?: string[];
+} 

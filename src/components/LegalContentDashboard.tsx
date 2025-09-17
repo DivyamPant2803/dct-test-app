@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
-import { Requirement, ChangeRequest, ReaffirmationStatus, ReaffirmationRequest } from '../types/index';
+import { Requirement, ChangeRequest, ReaffirmationStatus, ReaffirmationRequest, RequirementCombination, BulkReaffirmationRequest } from '../types/index';
 import { useRequirementsApi } from '../hooks/useRequirementsApi';
+import { useBulkReaffirmation } from '../hooks/useBulkReaffirmation';
 import ProposeEditModal from './ProposeEditModal';
 import ReaffirmModal from './ReaffirmModal';
-import BulkReaffirmModal from './BulkReaffirmModal';
+import EnhancedBulkReaffirmation from './EnhancedBulkReaffirmation';
+import EnhancedReaffirmModal from './EnhancedReaffirmModal';
+import BulkOperationProgress from './BulkOperationProgress';
 import StyledSelect from './common/StyledSelect';
 import { FiEdit3, FiClock, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 
@@ -23,20 +26,20 @@ const Tabs = styled.div`
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   overflow: hidden;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   flex-shrink: 0;
 `;
 
 const Tab = styled.button<{ $active: boolean }>`
   flex: 1;
-  padding: 1rem 1.5rem;
+  padding: 0.75rem 1.25rem;
   border: none;
   background: ${props => props.$active ? '#222' : 'white'};
   color: ${props => props.$active ? 'white' : '#222'};
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 1rem;
+  font-size: 0.9rem;
   
   &:hover {
     background: ${props => props.$active ? '#444' : '#f8f8f8'};
@@ -45,9 +48,9 @@ const Tab = styled.button<{ $active: boolean }>`
 
 const Section = styled.div`
   background: white;
-  border-radius: 12px;
+  border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  padding: 1.25rem;
+  padding: 1rem;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -106,36 +109,6 @@ const Th = styled.th<{ $width?: string }>`
   text-overflow: ellipsis;
 `;
 
-const ThRight = styled.th<{ $width?: string }>`
-  background: #f8f8f8;
-  padding: 0.5rem 0.75rem;
-  text-align: right;
-  font-weight: 500;
-  color: #333;
-  border-bottom: 2px solid #eee;
-  white-space: nowrap;
-  width: ${props => props.$width || 'auto'};
-  overflow: hidden;
-  text-overflow: ellipsis;
-`;
-
-const ThCheckbox = styled.th`
-  background: #f8f8f8;
-  padding: 0.5rem 0.25rem;
-  text-align: center;
-  font-weight: 500;
-  color: #333;
-  border-bottom: 2px solid #eee;
-  width: 40px;
-`;
-
-const TdCheckbox = styled.td`
-  padding: 0.5rem 0.25rem;
-  text-align: center;
-  width: 40px;
-  vertical-align: middle;
-`;
-
 const Td = styled.td<{ $width?: string }>`
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid #eee;
@@ -146,18 +119,6 @@ const Td = styled.td<{ $width?: string }>`
   text-overflow: ellipsis;
   white-space: nowrap;
   word-wrap: break-word;
-`;
-
-const TdRight = styled.td<{ $width?: string }>`
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #eee;
-  color: #666;
-  vertical-align: top;
-  text-align: right;
-  width: ${props => props.$width || 'auto'};
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 `;
 
 const Tr = styled.tr`
@@ -273,52 +234,21 @@ const LoadingMessage = styled.div`
   font-size: 0.9rem;
 `;
 
-const SelectionBar = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 1rem;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  margin-top: 1rem;
-  font-size: 0.9rem;
-  color: #495057;
-  flex-shrink: 0; /* Prevent shrinking */
-  z-index: 10; /* Ensure it's above table content */
-`;
 
-const SelectionInfo = styled.span`
-  font-weight: 500;
-`;
-
-const SelectionActions = styled.div`
-  display: flex;
-  gap: 0.5rem;
-`;
-
-const TableAndSelectionWrapper = styled.div`
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-`;
-
-type TabType = 'explore' | 'reaffirmation-due' | 'my-requests';
+type TabType = 'explore' | 'enhanced-bulk' | 'my-requests';
 
 const LegalContentDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('explore');
   const [requirements, setRequirements] = useState<Requirement[]>([]);
-  const [reaffirmationDueRequirements, setReaffirmationDueRequirements] = useState<Requirement[]>([]);
+  const [requirementCombinations, setRequirementCombinations] = useState<RequirementCombination[]>([]);
   const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [showProposeModal, setShowProposeModal] = useState(false);
   const [showReaffirmModal, setShowReaffirmModal] = useState(false);
-  const [showBulkReaffirmModal, setShowBulkReaffirmModal] = useState(false);
+  const [showEnhancedReaffirmModal, setShowEnhancedReaffirmModal] = useState(false);
   const [selectedRequirement, setSelectedRequirement] = useState<Requirement | null>(null);
-  
-  // Bulk selection state
-  const [selectedRequirements, setSelectedRequirements] = useState<Set<string>>(new Set());
+  const [selectedCombination, setSelectedCombination] = useState<RequirementCombination | null>(null);
+  const [selectedCombinations, setSelectedCombinations] = useState<RequirementCombination[]>([]);
   
   // Filters for explore tab
   const [filters, setFilters] = useState({
@@ -332,8 +262,12 @@ const LegalContentDashboard: React.FC = () => {
     getChangeRequests, 
     createChangeRequest,
     initializeSampleData,
-    reaffirmRequirement
+    reaffirmRequirement,
+    generateRequirementCombinations,
+    bulkReaffirmRequirements
   } = useRequirementsApi();
+
+  const { progress } = useBulkReaffirmation();
 
   // Initialize sample data on component mount
   useEffect(() => {
@@ -361,35 +295,25 @@ const LegalContentDashboard: React.FC = () => {
     }
   }, [filters, getRequirements]);
 
-  // Load reaffirmation due requirements
-  const loadReaffirmationDueRequirements = useCallback(async () => {
+
+  // Load requirement combinations
+  const loadRequirementCombinations = useCallback(async () => {
     setLoading(true);
     try {
-      const filterParams = {
-        jurisdiction: filters.jurisdiction ? [filters.jurisdiction] : undefined,
-        entity: filters.entity ? [filters.entity] : undefined,
-        subjectType: filters.subjectType ? [filters.subjectType] : undefined,
-      };
+      console.log('Loading requirement combinations...');
       
-      console.log('Loading requirements with filters:', filterParams);
-      const data = await getRequirements(filterParams);
-      console.log('All requirements loaded:', data.length);
+      // Ensure requirements are loaded first
+      await loadRequirements();
       
-      // Filter for requirements that are due or overdue for reaffirmation
-      const dueRequirements = data.filter(req => {
-        const status = getReaffirmationStatus(req);
-        console.log(`Requirement ${req.id} (${req.title}): status=${status}, nextDue=${req.nextReaffirmationDue}, lastReaffirmed=${req.lastReaffirmedAt}`);
-        return status === 'DUE_SOON' || status === 'OVERDUE';
-      });
-      
-      console.log('Due requirements found:', dueRequirements.length);
-      setReaffirmationDueRequirements(dueRequirements);
+      const combinations = await generateRequirementCombinations();
+      console.log('Generated combinations:', combinations.length);
+      setRequirementCombinations(combinations);
     } catch (error) {
-      console.error('Error loading reaffirmation due requirements:', error);
+      console.error('Error loading requirement combinations:', error);
     } finally {
       setLoading(false);
     }
-  }, [filters, getRequirements]);
+  }, [generateRequirementCombinations, loadRequirements]);
 
   // Load change requests
   const loadChangeRequests = useCallback(async () => {
@@ -410,12 +334,12 @@ const LegalContentDashboard: React.FC = () => {
   useEffect(() => {
     if (activeTab === 'explore') {
       loadRequirements();
-    } else if (activeTab === 'reaffirmation-due') {
-      loadReaffirmationDueRequirements();
+    } else if (activeTab === 'enhanced-bulk') {
+      loadRequirementCombinations();
     } else {
       loadChangeRequests();
     }
-  }, [activeTab, loadRequirements, loadReaffirmationDueRequirements, loadChangeRequests]);
+  }, [activeTab, loadRequirements, loadRequirementCombinations, loadChangeRequests]);
 
   const handleFilterChange = (field: string, value: string) => {
     setFilters(prev => ({ ...prev, [field]: value }));
@@ -426,48 +350,7 @@ const LegalContentDashboard: React.FC = () => {
     setShowProposeModal(true);
   };
 
-  const handleReaffirm = (requirement: Requirement) => {
-    setSelectedRequirement(requirement);
-    setShowReaffirmModal(true);
-  };
 
-  // Bulk selection handlers
-  const handleSelectRequirement = (requirementId: string) => {
-    setSelectedRequirements(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(requirementId)) {
-        newSet.delete(requirementId);
-      } else {
-        // Enforce 10-item limit
-        if (newSet.size >= 10) {
-          return prev;
-        }
-        newSet.add(requirementId);
-      }
-      return newSet;
-    });
-  };
-
-  const handleSelectAll = () => {
-    const allIds = reaffirmationDueRequirements.map(req => req.id);
-    const maxSelectable = Math.min(allIds.length, 10);
-    
-    if (selectedRequirements.size === maxSelectable) {
-      // Deselect all
-      setSelectedRequirements(new Set());
-    } else {
-      // Select up to limit
-      setSelectedRequirements(new Set(allIds.slice(0, maxSelectable)));
-    }
-  };
-
-  const clearSelection = () => {
-    setSelectedRequirements(new Set());
-  };
-
-  const handleBulkReaffirm = () => {
-    setShowBulkReaffirmModal(true);
-  };
 
   const handleSubmitChangeRequest = async (data: {
     requirementId: string;
@@ -499,14 +382,10 @@ const LegalContentDashboard: React.FC = () => {
       await reaffirmRequirement(data);
       console.log('Reaffirmation completed successfully');
       
-      // Reload data for both tabs to reflect changes
+      // Reload data to reflect changes
       console.log('Reloading all requirements...');
       await loadRequirements();
       console.log('All requirements reloaded');
-      
-      console.log('Reloading reaffirmation due requirements...');
-      await loadReaffirmationDueRequirements();
-      console.log('Reaffirmation due requirements reloaded');
       
       setShowReaffirmModal(false);
       setSelectedRequirement(null);
@@ -520,42 +399,35 @@ const LegalContentDashboard: React.FC = () => {
     }
   };
 
-  const handleSubmitBulkReaffirmation = async (data: {
-    requirementIds: string[];
-    comment: string;
-    action: 'REAFFIRMED_AS_IS' | 'REAFFIRMED_WITH_CHANGES';
-  }) => {
+
+  // Enhanced bulk reaffirmation handlers
+  const handleEnhancedBulkReaffirm = async (request: BulkReaffirmationRequest) => {
     try {
-      console.log('Submitting bulk reaffirmation:', data);
+      console.log('Starting enhanced bulk reaffirmation:', request);
       
-      // TODO: Implement bulk reaffirmation API call
-      // For now, process each requirement individually
-      for (const requirementId of data.requirementIds) {
-        await reaffirmRequirement({
-          requirementId,
-          action: data.action,
-          comment: data.comment
-        });
-      }
+      // Use the bulk reaffirmation API
+      await bulkReaffirmRequirements(request);
       
-      setShowBulkReaffirmModal(false);
-      setSelectedRequirements(new Set());
-      
-      // Reload data for both tabs to reflect changes
-      console.log('Reloading all requirements...');
+      // Reload all data
       await loadRequirements();
-      console.log('All requirements reloaded');
+      await loadRequirementCombinations();
       
-      console.log('Reloading reaffirmation due requirements...');
-      await loadReaffirmationDueRequirements();
-      console.log('Reaffirmation due requirements reloaded');
+      setShowEnhancedReaffirmModal(false);
+      setSelectedCombinations([]);
       
-      // Show success message
-      alert(`Successfully reaffirmed ${data.requirementIds.length} requirements!`);
+      console.log('Enhanced bulk reaffirmation completed successfully');
     } catch (error) {
-      console.error('Error submitting bulk reaffirmation:', error);
-      alert('Failed to reaffirm some requirements. Please try again.');
+      console.error('Error in enhanced bulk reaffirmation:', error);
       throw error;
+    }
+  };
+
+  const handleIndividualReaffirm = (combinationId: string) => {
+    const combination = requirementCombinations.find(c => c.id === combinationId);
+    if (combination) {
+      setSelectedCombination(combination);
+      setSelectedCombinations([]); // Clear bulk selection for individual reaffirmation
+      setShowEnhancedReaffirmModal(true);
     }
   };
 
@@ -647,10 +519,10 @@ const LegalContentDashboard: React.FC = () => {
           Explore Requirements
         </Tab>
         <Tab 
-          $active={activeTab === 'reaffirmation-due'} 
-          onClick={() => setActiveTab('reaffirmation-due')}
+          $active={activeTab === 'enhanced-bulk'} 
+          onClick={() => setActiveTab('enhanced-bulk')}
         >
-          Reaffirmation Due
+          Enhanced Bulk Reaffirmation
         </Tab>
         <Tab 
           $active={activeTab === 'my-requests'} 
@@ -783,177 +655,13 @@ const LegalContentDashboard: React.FC = () => {
         </Section>
       )}
 
-      {activeTab === 'reaffirmation-due' && (
-        <Section>
-          <Filters>
-            <FilterGroup>
-              <FilterLabel>Jurisdiction</FilterLabel>
-              <SelectWrapper>
-                <StyledSelect
-                  value={filters.jurisdiction}
-                  onChange={(value) => handleFilterChange('jurisdiction', value)}
-                  options={[
-                    { value: '', label: 'All Jurisdictions' },
-                    { value: 'Germany', label: 'Germany' },
-                    { value: 'United States', label: 'United States' },
-                    { value: 'Singapore', label: 'Singapore' },
-                    { value: 'United Kingdom', label: 'United Kingdom' },
-                    { value: 'Canada', label: 'Canada' },
-                    { value: 'Brazil', label: 'Brazil' }
-                  ]}
-                  placeholder="All Jurisdictions"
-                />
-              </SelectWrapper>
-            </FilterGroup>
-            
-            <FilterGroup>
-              <FilterLabel>Entity</FilterLabel>
-              <SelectWrapper>
-                <StyledSelect
-                  value={filters.entity}
-                  onChange={(value) => handleFilterChange('entity', value)}
-                  options={[
-                    { value: '', label: 'All Entities' },
-                    { value: 'Deutsche Technologie und Datendienste GmbH', label: 'Deutsche Technologie und Datendienste GmbH' },
-                    { value: 'US Global Technology Solutions Corporation', label: 'US Global Technology Solutions Corporation' },
-                    { value: 'Singapore Advanced Technology Solutions Pte Ltd', label: 'Singapore Advanced Technology Solutions Pte Ltd' }
-                  ]}
-                  placeholder="All Entities"
-                />
-              </SelectWrapper>
-            </FilterGroup>
-            
-            <FilterGroup>
-              <FilterLabel>Subject Type</FilterLabel>
-              <SelectWrapper>
-                <StyledSelect
-                  value={filters.subjectType}
-                  onChange={(value) => handleFilterChange('subjectType', value)}
-                  options={[
-                    { value: '', label: 'All Types' },
-                    { value: 'Employee', label: 'Employee' },
-                    { value: 'Client', label: 'Client' },
-                    { value: 'Candidate', label: 'Candidate' },
-                    { value: 'Prospect', label: 'Prospect' },
-                    { value: 'Candidate', label: 'Candidate' }
-                  ]}
-                  placeholder="All Types"
-                />
-              </SelectWrapper>
-            </FilterGroup>
-          </Filters>
 
-          {loading ? (
-            <LoadingMessage>Loading reaffirmation due requirements...</LoadingMessage>
-          ) : (
-            <TableAndSelectionWrapper>
-              <TableContainer>
-                <Table>
-                  <thead>
-                    <tr>
-                      <ThCheckbox>
-                        <input
-                          type="checkbox"
-                          checked={selectedRequirements.size > 0 && selectedRequirements.size === Math.min(reaffirmationDueRequirements.length, 10)}
-                          onChange={handleSelectAll}
-                          style={{ width: '16px', height: '16px' }}
-                        />
-                      </ThCheckbox>
-                      <Th $width="22%">Title</Th>
-                      <Th $width="11%">Jurisdiction</Th>
-                      <Th $width="18%">Entity</Th>
-                      <Th $width="9%">Subject Type</Th>
-                      <Th $width="6%">Version</Th>
-                      <Th $width="9%">Original Date</Th>
-                      <Th $width="9%">Last Reaffirmed</Th>
-                      <Th $width="10%">Status</Th>
-                      <ThRight $width="8%">Days Until Due</ThRight>
-                      <ThRight $width="8%">Actions</ThRight>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reaffirmationDueRequirements.length === 0 ? (
-                      <tr>
-                        <Td colSpan={11}>
-                          <NoDataMessage>No requirements due for reaffirmation</NoDataMessage>
-                        </Td>
-                      </tr>
-                    ) : (
-                      reaffirmationDueRequirements.map((req) => {
-                        const reaffirmationStatus = getReaffirmationStatus(req);
-                        const now = new Date();
-                        const dueDate = new Date(req.nextReaffirmationDue);
-                        const daysUntilDue = isNaN(dueDate.getTime()) ? 0 : Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                        const isSelected = selectedRequirements.has(req.id);
-                        const isDisabled = !isSelected && selectedRequirements.size >= 10;
-                        
-                        return (
-                          <Tr key={req.id} style={{ 
-                            backgroundColor: isSelected ? '#f8f9fa' : 'transparent',
-                            opacity: isDisabled ? 0.6 : 1
-                          }}>
-                          <TdCheckbox>
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => handleSelectRequirement(req.id)}
-                              disabled={isDisabled}
-                              style={{ width: '16px', height: '16px' }}
-                            />
-                          </TdCheckbox>
-                          <Td $width="22%">{req.title}</Td>
-                          <Td $width="11%">{req.jurisdiction}</Td>
-                          <Td $width="18%">{req.entity}</Td>
-                          <Td $width="9%">{req.subjectType}</Td>
-                          <Td $width="6%">v{req.version}</Td>
-                          <Td $width="9%">{formatDateCompact(req.originalIngestionDate)}</Td>
-                          <Td $width="9%">{req.lastReaffirmedAt ? formatDateCompact(req.lastReaffirmedAt) : 'Never'}</Td>
-                          <Td $width="10%">
-                            <ReaffirmationBadge $status={reaffirmationStatus}>
-                              {getReaffirmationStatusText(reaffirmationStatus)}
-                            </ReaffirmationBadge>
-                          </Td>
-                          <TdRight $width="8%">
-                            <span style={{ 
-                              color: daysUntilDue < 0 ? '#991b1b' : daysUntilDue <= 7 ? '#92400e' : '#065f46',
-                              fontWeight: '500'
-                            }}>
-                              {daysUntilDue < 0 ? `${Math.abs(daysUntilDue)} days overdue` : `${daysUntilDue} days`}
-                            </span>
-                          </TdRight>
-                          <TdRight $width="8%">
-                            <Button $variant="primary" onClick={() => handleReaffirm(req)}>
-                              Reaffirm
-                            </Button>
-                          </TdRight>
-                          </Tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </Table>
-              </TableContainer>
-
-              {/* Selection Summary Bar */}
-              {selectedRequirements.size > 0 && (
-                <SelectionBar>
-                  <SelectionInfo>
-                    {selectedRequirements.size} requirement{selectedRequirements.size !== 1 ? 's' : ''} selected
-                    {selectedRequirements.size >= 10 && ' (maximum reached)'}
-                  </SelectionInfo>
-                  <SelectionActions>
-                    <Button $variant="primary" onClick={handleBulkReaffirm}>
-                      Bulk Reaffirm
-                    </Button>
-                    <Button $variant="secondary" onClick={clearSelection}>
-                      Clear Selection
-                    </Button>
-                  </SelectionActions>
-                </SelectionBar>
-              )}
-            </TableAndSelectionWrapper>
-          )}
-        </Section>
+      {activeTab === 'enhanced-bulk' && (
+        <EnhancedBulkReaffirmation
+          combinations={requirementCombinations}
+          onBulkReaffirm={handleEnhancedBulkReaffirm}
+          onIndividualReaffirm={handleIndividualReaffirm}
+        />
       )}
 
       {activeTab === 'my-requests' && (
@@ -1011,7 +719,7 @@ const LegalContentDashboard: React.FC = () => {
           setSelectedRequirement(null);
         }}
         requirement={selectedRequirement}
-        requirements={[...requirements, ...reaffirmationDueRequirements]}
+        requirements={requirements}
         onSubmit={handleSubmitChangeRequest}
       />
 
@@ -1022,18 +730,30 @@ const LegalContentDashboard: React.FC = () => {
           setSelectedRequirement(null);
         }}
         requirement={selectedRequirement}
-        requirements={[...requirements, ...reaffirmationDueRequirements]}
+        requirements={requirements}
         onSubmit={handleSubmitReaffirmation}
       />
 
-      <BulkReaffirmModal
-        isOpen={showBulkReaffirmModal}
+      <EnhancedReaffirmModal
+        isOpen={showEnhancedReaffirmModal}
         onClose={() => {
-          setShowBulkReaffirmModal(false);
+          setShowEnhancedReaffirmModal(false);
+          setSelectedCombination(null);
+          setSelectedCombinations([]);
         }}
-        requirements={reaffirmationDueRequirements.filter(req => selectedRequirements.has(req.id))}
-        onSubmit={handleSubmitBulkReaffirmation}
+        combination={selectedCombination || undefined}
+        combinations={selectedCombinations}
+        onSubmit={handleEnhancedBulkReaffirm}
       />
+
+      {progress && (
+        <BulkOperationProgress
+          progress={progress}
+          onClose={() => {
+            // Progress modal will handle its own closing
+          }}
+        />
+      )}
     </DashboardContainer>
   );
 };
