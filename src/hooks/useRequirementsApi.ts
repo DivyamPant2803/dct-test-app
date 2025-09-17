@@ -1190,7 +1190,9 @@ export const useRequirementsApi = () => {
         console.log(`Processing combination: ${combinationId}`);
         
         // Extract requirement ID from combination ID
-        const requirementId = combinationId.split('-')[1]; // combo-req-1-0 -> req-1
+        // combo-req-1-0 -> req-1 (need to get req-1, not just req)
+        const parts = combinationId.split('-');
+        const requirementId = `${parts[1]}-${parts[2]}`; // req-1
         console.log(`Extracted requirement ID: ${requirementId}`);
         
         const requirement = await getRequirementById(requirementId);

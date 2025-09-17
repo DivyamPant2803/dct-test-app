@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import styled from 'styled-components';
 import { 
   RequirementCombination, 
@@ -27,12 +27,6 @@ const Header = styled.div`
   flex-shrink: 0;
 `;
 
-const Title = styled.h1`
-  margin: 0 0 0.75rem 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #222;
-`;
 
 const StatsRow = styled.div`
   display: flex;
@@ -520,10 +514,6 @@ const EnhancedBulkReaffirmation: React.FC<EnhancedBulkReaffirmationProps> = ({
     });
   };
 
-  const handleSelectAll = () => {
-    const allCombinationIds = filteredEntityGroups.flatMap(g => g.combinations.map(c => c.id));
-    setSelectedCombinations(new Set(allCombinationIds));
-  };
 
   const handleClearSelection = () => {
     setSelectedCombinations(new Set());
@@ -532,9 +522,9 @@ const EnhancedBulkReaffirmation: React.FC<EnhancedBulkReaffirmationProps> = ({
   const handleFilterChange = (filterType: keyof FilterCriteria, value: string) => {
     setFilters(prev => ({
       ...prev,
-      [filterType]: prev[filterType].includes(value)
-        ? prev[filterType].filter(v => v !== value)
-        : [...prev[filterType], value]
+      [filterType]: (prev[filterType] as string[]).includes(value)
+        ? (prev[filterType] as string[]).filter(v => v !== value)
+        : [...(prev[filterType] as string[]), value]
     }));
   };
 

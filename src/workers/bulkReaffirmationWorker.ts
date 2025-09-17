@@ -18,7 +18,7 @@ interface WorkerResponse {
 const simulateApiCall = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Simulate reaffirmation API call
-const reaffirmRequirement = async (combinationId: string, request: BulkReaffirmationRequest): Promise<void> => {
+const reaffirmRequirement = async (combinationId: string, _request: BulkReaffirmationRequest): Promise<void> => {
   // Simulate API call delay (100-500ms)
   const delay = Math.random() * 400 + 100;
   await simulateApiCall(delay);
