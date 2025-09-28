@@ -240,7 +240,6 @@ type TabType = 'explore' | 'enhanced-bulk' | 'my-requests';
 const LegalContentDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('explore');
   const [requirements, setRequirements] = useState<Requirement[]>([]);
-  const [requirementCombinations, setRequirementCombinations] = useState<RequirementCombination[]>([]);
   const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [showProposeModal, setShowProposeModal] = useState(false);
@@ -307,7 +306,6 @@ const LegalContentDashboard: React.FC = () => {
       
       const combinations = await generateRequirementCombinations();
       console.log('Generated combinations:', combinations.length);
-      setRequirementCombinations(combinations);
     } catch (error) {
       console.error('Error loading requirement combinations:', error);
     } finally {
@@ -422,14 +420,6 @@ const LegalContentDashboard: React.FC = () => {
     }
   };
 
-  const handleIndividualReaffirm = (combinationId: string) => {
-    const combination = requirementCombinations.find(c => c.id === combinationId);
-    if (combination) {
-      setSelectedCombination(combination);
-      setSelectedCombinations([]); // Clear bulk selection for individual reaffirmation
-      setShowEnhancedReaffirmModal(true);
-    }
-  };
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
@@ -657,11 +647,7 @@ const LegalContentDashboard: React.FC = () => {
 
 
       {activeTab === 'enhanced-bulk' && (
-        <EnhancedBulkReaffirmation
-          combinations={requirementCombinations}
-          onBulkReaffirm={handleEnhancedBulkReaffirm}
-          onIndividualReaffirm={handleIndividualReaffirm}
-        />
+        <EnhancedBulkReaffirmation />
       )}
 
       {activeTab === 'my-requests' && (
