@@ -288,4 +288,42 @@ export interface BulkOperationProgress {
   startTime: string;
   endTime?: string;
   errors?: string[];
+}
+
+// Legal Templates System Types
+export interface DataSubjectTypeConfig {
+  type: string;  // Client, Employee, Prospect, Candidate
+  transferLocation: string[];  // Inside/Outside
+  categoryOfData: string[];  // Personal, Sensitive
+  purpose: string[];  // KYC, Compliance
+  output: string[];  // OK, OKC, NOK
+  conditions: string;
+  remediations: string;
+}
+
+export interface LegalTemplate {
+  id: string;
+  version: string;
+  jurisdiction: string;
+  entityId: string;
+  entityName: string;
+  ingestedAt: string;
+  ingestedBy: string;
+  recipientType: string[];  // Entity, ServiceProvider, ThirdParty
+  contactPerson: string;
+  dataSubjectTypes: DataSubjectTypeConfig[];
+}
+
+export interface TemplateSelection {
+  recipientType: string[];
+  contactPerson: boolean;
+  dataSubjectTypes: Record<string, {
+    selected: boolean;
+    transferLocation: string[];
+    categoryOfData: string[];
+    purpose: string[];
+    output: string[];
+    conditions: boolean;
+    remediations: boolean;
+  }>;
 } 

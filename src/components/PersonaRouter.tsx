@@ -11,6 +11,7 @@ import DISODashboard from './DISODashboard';
 
 interface PersonaRouterProps {
   route: string;
+  
 }
 
 const PersonaRouter: React.FC<PersonaRouterProps> = ({ route }) => {

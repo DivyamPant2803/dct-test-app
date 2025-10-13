@@ -5,6 +5,7 @@ import { useEvidenceApi } from '../hooks/useEvidenceApi';
 import ReviewDrawer from './ReviewDrawer';
 import StatusChip from './StatusChip';
 import LegalContentDashboard from './LegalContentDashboard';
+import LegalTemplates from './LegalTemplates';
 import Sidebar, { SidebarGroup } from './common/Sidebar';
 
 const Container = styled.div`
@@ -172,7 +173,7 @@ const PriorityBadge = styled.span<{ $priority: 'high' | 'medium' | 'low' }>`
   color: white;
 `;
 
-type SidebarItemType = 'escalated-evidence' | 'content-management';
+type SidebarItemType = 'escalated-evidence' | 'content-management' | 'templates';
 
 const LegalReview: React.FC = () => {
   const [activeItem, setActiveItem] = useState<SidebarItemType>('escalated-evidence');
@@ -191,6 +192,14 @@ const LegalReview: React.FC = () => {
       isExpanded: false,
       items: [
         { id: 'content-management', label: 'Content Management' }
+      ]
+    },
+    {
+      id: 'templates',
+      label: 'Templates',
+      isExpanded: false,
+      items: [
+        { id: 'templates', label: 'Templates' }
       ]
     }
   ]);
@@ -369,6 +378,7 @@ const LegalReview: React.FC = () => {
   );
 
 
+
   return (
     <Container>
       <SidebarWrapper>
@@ -387,6 +397,10 @@ const LegalReview: React.FC = () => {
         
         <ContentWrapper $isVisible={activeItem === 'content-management'}>
           <LegalContentDashboard />
+        </ContentWrapper>
+        
+        <ContentWrapper $isVisible={activeItem === 'templates'}>
+          <LegalTemplates />
         </ContentWrapper>
       </MainContent>
 
