@@ -41,23 +41,23 @@ const mockTemplates: LegalTemplate[] = [
     entityName: 'Deutsche Technologie und Datendienste GmbH',
     ingestedAt: '2024-03-20T14:15:00Z',
     ingestedBy: 'legal.team@deutsche-tech.com',
-    recipientType: ['Entity', 'ThirdParty'],
+    recipientType: ['Entity', 'Service Provider', 'Third Party', 'External Authorities'],
     contactPerson: 'Dr. Anna Mueller (anna.mueller@deutsche-tech.com)',
     dataSubjectTypes: [
       {
         type: 'Client',
-        transferLocation: ['Outside Country'],
-        categoryOfData: ['Sensitive'],
-        purpose: ['KYC'],
-        output: ['OKC'],
-        conditions: 'Enhanced due diligence required for cross-border transfers. Standard Contractual Clauses (SCCs) implementation.',
-        remediations: 'Third-party vendor assessment framework. Regular compliance monitoring.'
+        transferLocation: ['Inside Country', 'Outside Country'],
+        categoryOfData: ['Personal', 'Sensitive'],
+        purpose: ['Client Relationship Management', 'KYC/AML', 'Compliance with legal or regulatory obligations', 'Facilitation of Outsourcing/Nearshoring/Offshoring (ONO)'],
+        output: ['OK', 'OKC', 'NOK'],
+        conditions: 'This comprehensive data processing framework encompasses multiple legal bases under GDPR Article 6, including consent (Article 6(1)(a)), contract performance (Article 6(1)(b)), legal obligation (Article 6(1)(c)), vital interests (Article 6(1)(d)), public task (Article 6(1)(e)), and legitimate interests (Article 6(1)(f)). All data processing activities must comply with the principle of data minimization (Article 5(1)(c)), ensuring that only necessary and relevant personal data is collected and processed. Cross-border transfers require appropriate safeguards including Standard Contractual Clauses (SCCs), Binding Corporate Rules (BCRs), or adequacy decisions by the European Commission. Data subjects have comprehensive rights including access (Article 15), rectification (Article 16), erasure (Article 17), restriction of processing (Article 18), data portability (Article 20), and objection (Article 21). All processing activities must be documented and subject to regular Data Protection Impact Assessments (DPIAs) as required under Article 35. Data retention periods must be clearly defined and regularly reviewed, with automatic deletion mechanisms implemented where technically feasible. Third-party processors must be subject to data processing agreements containing all mandatory clauses under Article 28. Regular training programs must be conducted for all staff handling personal data, with annual refresher courses and incident response procedures clearly documented and tested.',
+        remediations: 'Implement comprehensive data governance framework including Data Protection Officer (DPO) appointment with direct reporting line to senior management and board of directors. Establish cross-functional privacy committee with representatives from legal, IT, HR, marketing, and business operations to ensure privacy by design principles are embedded throughout all business processes. Deploy automated data discovery and classification tools to identify and catalog all personal data across the organization, including structured and unstructured data repositories, cloud services, and third-party systems. Implement privacy-preserving technologies including differential privacy, homomorphic encryption, and secure multi-party computation where appropriate. Establish comprehensive vendor management program with mandatory privacy assessments for all third-party processors, including on-site audits and continuous monitoring capabilities. Deploy advanced threat detection and response systems with 24/7 security operations center (SOC) monitoring, automated incident response playbooks, and regular penetration testing by certified ethical hackers. Implement comprehensive data loss prevention (DLP) solutions across all endpoints, networks, and cloud environments with real-time monitoring and automated response capabilities. Establish regular compliance monitoring and reporting mechanisms with quarterly privacy impact assessments, annual compliance audits by independent third parties, and monthly privacy metrics dashboards for senior management. Deploy advanced analytics and machine learning capabilities for privacy risk assessment, automated compliance checking, and predictive privacy impact analysis. Implement comprehensive staff training programs including role-based privacy training modules, regular phishing simulations, and mandatory privacy awareness certification for all employees handling personal data.'
       },
       {
         type: 'Prospect',
         transferLocation: ['Inside Country'],
         categoryOfData: ['Personal'],
-        purpose: ['Marketing'],
+        purpose: ['Marketing', 'Client Relationship Management'],
         output: ['OK'],
         conditions: 'Marketing consent under GDPR Article 6(1)(a). Opt-out mechanism required.',
         remediations: 'Marketing preference center. Consent management platform integration.'
