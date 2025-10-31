@@ -6,6 +6,7 @@ import ReviewDrawer from './ReviewDrawer';
 import StatusChip from './StatusChip';
 import AdminAIInsights from './AdminAIInsights';
 import AdminCRDashboard from './AdminCRDashboard';
+import PublishSummary from './PublishSummary';
 import StyledSelect from './common/StyledSelect';
 import Sidebar, { SidebarGroup } from './common/Sidebar';
 
@@ -355,7 +356,7 @@ const StatLabel = styled.div`
   letter-spacing: 0.3px;
 `;
 
-type SidebarItemType = 'evidence-queue' | 'my-reviews' | 'all-transfers' | 'ai-insights' | 'document-library' | 'change-requests';
+type SidebarItemType = 'evidence-queue' | 'my-reviews' | 'all-transfers' | 'ai-insights' | 'document-library' | 'change-requests' | 'publish-summary';
 
 const AdminDashboard: React.FC = () => {
   const [activeItem, setActiveItem] = useState<SidebarItemType>('evidence-queue');
@@ -369,7 +370,8 @@ const AdminDashboard: React.FC = () => {
         { id: 'my-reviews', label: 'My Reviews' },
         { id: 'all-transfers', label: 'All Transfers' },
         { id: 'ai-insights', label: 'AI Insights' },
-        { id: 'document-library', label: 'Document Library' }
+        { id: 'document-library', label: 'Document Library' },
+        { id: 'publish-summary', label: 'Publish Summary' }
       ]
     },
     {
@@ -1168,6 +1170,8 @@ const AdminDashboard: React.FC = () => {
             {renderDocumentLibrary()}
           </Section>
         );
+      case 'publish-summary':
+        return <PublishSummary />;
       default:
         return (
           <Section>
