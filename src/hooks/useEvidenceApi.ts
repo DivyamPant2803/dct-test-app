@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { RequirementRow, Evidence, ReviewDecision, AuditEntry, Transfer, RequirementStatus } from '../types/index';
+import { createNotifications } from '../services/notificationService';
 
 // Helper functions for localStorage + FileReader
 const fileToBase64 = (file: File): Promise<string> => {
@@ -104,8 +105,50 @@ export const useEvidenceApi = () => {
       base64Data // Store the actual file data
     };
 
-    // Create or update transfer record if uploading from Guidance page
-    if (entityName && country && legalRequirement) {
+    // Check if requirementId already contains a transferId (from Central Inventory)
+    // Pattern: req-transfer-xxx-... means evidence is already linked to a transfer
+    const hasExistingTransferId = requirementId.includes('req-transfer-');
+    
+    // If uploading from Central Inventory, update the existing transfer's requirements
+    if (hasExistingTransferId && entityName && country && legalRequirement) {
+      // Find the transfer by checking if requirementId starts with req-{transferId}
+      const storedTransfers = getStoredTransfers();
+      const existingTransfer = storedTransfers.find(t => 
+        requirementId.startsWith(`req-${t.id}-`)
+      );
+      
+      if (existingTransfer) {
+        // Check if requirement already exists
+        const existingRequirement = existingTransfer.requirements.find((r: RequirementRow) => r.id === requirementId);
+        
+        if (!existingRequirement) {
+          // Add new requirement to the transfer
+          const newRequirement: RequirementRow = {
+            id: requirementId,
+            name: legalRequirement || 'End User Action',
+            jurisdiction: country,
+            entity: entityName,
+            subjectType: existingTransfer.subjectType || 'Client',
+            status: 'PENDING',
+            updatedAt: new Date().toISOString(),
+            transferId: existingTransfer.id,
+            description: description
+          };
+          
+          existingTransfer.requirements.push(newRequirement);
+          
+          // Update transfer in localStorage
+          localStorage.setItem(`transfer_${existingTransfer.id}`, JSON.stringify(existingTransfer));
+          
+          // Update transfers state
+          setTransfers(prev => prev.map(t => t.id === existingTransfer.id ? existingTransfer : t));
+        }
+      }
+    }
+    
+    // Only create/update transfer record if uploading from Guidance page
+    // (not from Central Inventory, which already has a transfer)
+    if (entityName && country && legalRequirement && !hasExistingTransferId) {
       const transferId = `transfer-${entityName.replace(/\s+/g, '-').toLowerCase()}-${country.replace(/\s+/g, '-').toLowerCase()}`;
       
       // Check if transfer already exists
@@ -278,6 +321,48 @@ export const useEvidenceApi = () => {
       console.log('Transfer not found:', transferKey);
     }
     
+    // Create notifications based on decision
+    const notifications = [];
+    const requestId = transferId || currentEvidence.requirementId;
+    
+    if (decision.decision === 'APPROVE') {
+      notifications.push({
+        message: `Your Data Transfer request #${requestId} has been approved.`,
+        recipient: 'End User' as const,
+        type: 'approve' as const,
+        requestId,
+        sender: 'system',
+      });
+    } else if (decision.decision === 'REJECT') {
+      notifications.push({
+        message: `Your Data Transfer request #${requestId} has been rejected.`,
+        recipient: 'End User' as const,
+        type: 'reject' as const,
+        requestId,
+        sender: 'system',
+      });
+    } else if (decision.decision === 'ESCALATE') {
+      notifications.push({
+        message: `Your Data Transfer request #${requestId} has been escalated for review.`,
+        recipient: 'End User' as const,
+        type: 'escalate' as const,
+        requestId,
+        sender: 'system',
+      });
+      // Also notify Legal when escalated
+      notifications.push({
+        message: `Data Transfer request #${requestId} has been escalated to Legal for review.`,
+        recipient: 'Legal' as const,
+        type: 'escalate' as const,
+        requestId,
+        sender: 'system',
+      });
+    }
+    
+    if (notifications.length > 0) {
+      createNotifications(notifications);
+    }
+    
     console.log('Review decision submitted:', decision);
   }, [evidence]);
 
@@ -331,6 +416,107 @@ export const useEvidenceApi = () => {
     }
   }, []);
 
+  const escalateTransfer = useCallback(async (
+    transferId: string,
+    escalationReason?: string
+  ): Promise<void> => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Get the transfer from localStorage
+    const transferKey = `transfer_${transferId}`;
+    const storedTransfer = localStorage.getItem(transferKey);
+    
+    if (!storedTransfer) {
+      throw new Error('Transfer not found');
+    }
+    
+    const transfer: Transfer = JSON.parse(storedTransfer);
+    
+    // Update transfer with escalation details
+    const updatedTransfer: Transfer = {
+      ...transfer,
+      escalatedTo: 'Admin',
+      escalatedBy: 'End User',
+      escalatedAt: new Date().toISOString(),
+      isHighPriority: true,
+      escalationReason: escalationReason || 'SLA breach or approaching breach',
+      status: 'PENDING' // Set status to PENDING when escalated
+    };
+    
+    // Update all requirements in the transfer to ESCALATED status
+    updatedTransfer.requirements = transfer.requirements.map(req => ({
+      ...req,
+      status: 'ESCALATED' as RequirementStatus,
+      updatedAt: new Date().toISOString()
+    }));
+    
+    // Update transfer in localStorage
+    localStorage.setItem(transferKey, JSON.stringify(updatedTransfer));
+    
+    // Update state
+    setTransfers(prev => prev.map(t => t.id === transferId ? updatedTransfer : t));
+    
+    // Also update related evidence to ESCALATED status
+    const storedEvidence = getStoredEvidence();
+    const relatedEvidence = storedEvidence.filter(e => 
+      e.requirementId.includes(transferId) || 
+      transfer.requirements.some(req => e.requirementId.includes(req.id))
+    );
+    
+    relatedEvidence.forEach(evidence => {
+      const updatedEvidence: Evidence = {
+        ...evidence,
+        status: 'ESCALATED',
+        escalatedTo: 'Admin',
+        escalatedBy: 'End User',
+        escalatedAt: new Date().toISOString(),
+        escalationReason: escalationReason || 'SLA breach or approaching breach'
+      };
+      localStorage.setItem(`evidence_${evidence.id}`, JSON.stringify(updatedEvidence));
+    });
+    
+    // Update evidence state
+    setEvidence(prev => prev.map(e => {
+      const related = relatedEvidence.find(rel => rel.id === e.id);
+      if (related) {
+        return {
+          ...e,
+          status: 'ESCALATED',
+          escalatedTo: 'Admin',
+          escalatedBy: 'End User',
+          escalatedAt: new Date().toISOString(),
+          escalationReason: escalationReason || 'SLA breach or approaching breach'
+        };
+      }
+      return e;
+    }));
+    
+    // Create audit trail entry
+    const auditEntry: AuditEntry = {
+      id: `audit-${Date.now()}`,
+      requirementId: transfer.requirements[0]?.id || transferId,
+      action: 'ESCALATED',
+      performedBy: 'End User',
+      performedAt: new Date().toISOString(),
+      note: escalationReason || 'Transfer escalated due to SLA breach or approaching breach',
+      previousStatus: transfer.requirements[0]?.status || 'PENDING',
+      newStatus: 'ESCALATED'
+    };
+    
+    localStorage.setItem(`audit_${auditEntry.id}`, JSON.stringify(auditEntry));
+    
+    // Create notification for Admin
+    createNotifications([{
+      message: `Transfer request #${transferId} has been escalated by End User. Priority: High`,
+      recipient: 'Admin' as const,
+      type: 'escalate' as const,
+      requestId: transferId,
+      sender: 'End User',
+    }]);
+    
+    console.log('Transfer escalated:', updatedTransfer);
+  }, []);
+
   return {
     getTransfers,
     getTransferRequirements,
@@ -340,6 +526,7 @@ export const useEvidenceApi = () => {
     submitReviewDecision,
     getAuditTrail,
     deleteEvidence,
-    previewEvidence
+    previewEvidence,
+    escalateTransfer
   };
 };

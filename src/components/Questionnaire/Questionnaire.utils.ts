@@ -51,7 +51,7 @@ const getRequirementsByCategory = (category: string) => {
   }
 };
 
-const getActionsBySubjectType = (subjectType: string) => {
+export const getActionsBySubjectType = (subjectType: string) => {
   switch (subjectType) {
     case 'Current Employee':
       return [
@@ -100,7 +100,7 @@ const getRemediationByRecipientType = (recipientType: string) => {
   }
 };
 
-const getTransferStatus = (country: string): 'allowed' | 'restricted' | 'prohibited' => {
+export const getTransferStatus = (country: string): 'allowed' | 'restricted' | 'prohibited' => {
   const restrictedCountries = ['China', 'Russia', 'India'];
   const prohibitedCountries = ['North Korea', 'Iran', 'Mexico'];
   if (prohibitedCountries.includes(country)) return 'prohibited';
@@ -121,7 +121,7 @@ const getContactPerson = (country: string) => {
   return contacts[country] || 'Global Data Protection Officer';
 };
 
-const getLegalRequirements = (category: string, transferStatus: 'allowed' | 'restricted' | 'prohibited') => {
+export const getLegalRequirements = (category: string, transferStatus: 'allowed' | 'restricted' | 'prohibited') => {
   if (transferStatus === 'allowed') return [];
   const baseRequirements = getRequirementsByCategory(category);
   const additionalRequirements = transferStatus === 'prohibited' 

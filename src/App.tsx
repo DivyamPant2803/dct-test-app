@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import styled from 'styled-components'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './App.css'
@@ -7,13 +7,15 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import NavBar from './components/NavBar'
 import Home from './pages/Home'
 import Guidance from './pages/Guidance'
+import CentralInventory from './pages/CentralInventory'
 import { Administration } from './pages/Administration'
-import NotificationModal, { Notification } from './components/NotificationModal'
+import NotificationModal from './components/NotificationModal'
 import homeContentHtml from './static/homeContentHtml'
 import RequirementDetails from './components/RequirementDetails'
 import SupportChatbotPanel from './components/SupportChatbotPanel'
-import { PersonaProvider } from './contexts/PersonaContext'
+import { PersonaProvider, usePersona } from './contexts/PersonaContext'
 import PersonaRouter from './components/PersonaRouter'
+import { getUnreadCount } from './services/notificationService'
 
 const queryClient = new QueryClient()
 
@@ -148,109 +150,87 @@ const Main = styled.main`
   overflow: auto;
 `
 
-const exampleNotifications: Notification[] = [
-  {
-    id: '1',
-    sender: 'Admin',
-    message: 'A Business Logic Flow mapping has been published for Stamford Branch on 27 April 2025',
-    timeAgo: 'a day ago',
-    read: false,
-    senderInitials: 'SP',
-    category: 'business',
-  },
-  {
-    id: '2',
-    sender: 'Admin',
-    message: 'A Business Logic Flow mapping has been published for Real Estate Securities Inc. on 27 April 2025',
-    timeAgo: 'a day ago',
-    read: false,
-    senderInitials: 'SO',
-    category: 'business',
-  },
-  {
-    id: '3',
-    sender: 'Admin',
-    message: 'A Legal Logic Flow mapping has been published for Securities Inc. on 27 April 2025',
-    timeAgo: '2 days ago',
-    read: true,
-    senderInitials: 'SW',
-    category: 'legal',
-  },
-  {
-    id: '4',
-    sender: 'Legal Team',
-    message: 'New change request submitted for GDPR Data Processing Agreement',
-    timeAgo: '2 hours ago',
-    read: false,
-    senderInitials: 'LT',
-    category: 'legal',
-  },
-  {
-    id: '5',
-    sender: 'Admin',
-    message: 'Your change request for CCPA Consumer Rights Compliance has been approved',
-    timeAgo: '1 hour ago',
-    read: false,
-    senderInitials: 'AD',
-    category: 'legal',
-  },
-];
-
-const App = () => {
-  const [notifications, setNotifications] = useState<Notification[]>(exampleNotifications);
+const AppContent = () => {
+  const { currentPersona } = usePersona();
   const [modalOpen, setModalOpen] = useState(false);
   const [chatbotOpen, setChatbotOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  // Update unread count when persona changes or periodically
+  useEffect(() => {
+    const updateUnreadCount = () => {
+      const count = getUnreadCount(currentPersona);
+      setUnreadCount(count);
+    };
+    
+    updateUnreadCount();
+    const interval = setInterval(updateUnreadCount, 2000); // Check every 2 seconds
+    
+    return () => clearInterval(interval);
+  }, [currentPersona]);
 
   const handleNotificationClick = () => setModalOpen(true);
-  const handleModalClose = () => setModalOpen(false);
-  const handleMarkAllRead = () => setNotifications(notifications => notifications.map(n => ({ ...n, read: true })));
-  const handleNotificationItemClick = (id: string) => {
-    setNotifications(notifications => notifications.map(n => n.id === id ? { ...n, read: true } : n));
-    // Optionally close modal or trigger navigation/action here
+  const handleModalClose = () => {
+    setModalOpen(false);
+    // Refresh unread count when modal closes
+    setUnreadCount(getUnreadCount(currentPersona));
+  };
+  const handleMarkAllRead = () => {
+    // NotificationModal handles marking as read, just refresh count
+    setUnreadCount(getUnreadCount(currentPersona));
+  };
+  const handleNotificationItemClick = (_id: string) => {
+    // NotificationModal handles marking as read, just refresh count
+    setUnreadCount(getUnreadCount(currentPersona));
   };
   const handleChatbotClick = () => setChatbotOpen(true);
   const handleChatbotClose = () => setChatbotOpen(false);
 
   return (
+    <AppContainer>
+      <Header>Data Transfer Compliance Tool</Header>
+      <NavBar 
+        unreadCount={unreadCount} 
+        onNotificationClick={handleNotificationClick}
+        onChatbotClick={handleChatbotClick}
+      />
+      <NotificationModal
+        open={modalOpen}
+        onClose={handleModalClose}
+        onMarkAllRead={handleMarkAllRead}
+        onNotificationClick={handleNotificationItemClick}
+      />
+      <Main>
+        <Routes>
+          <Route path="/" element={<Home homeContentHtml={homeContentHtml} />} />
+          <Route path="/guidance" element={<Guidance />} />
+          <Route path="/central-inventory" element={<CentralInventory />} />
+          <Route path="/admin" element={<Administration />} />
+          <Route path="/my-transfers" element={<PersonaRouter route="/my-transfers" />} />
+          <Route path="/dct" element={<PersonaRouter route="/dct" />} />
+          <Route path="/legal" element={<PersonaRouter route="/legal" />} />
+          <Route path="/legal-content" element={<PersonaRouter route="/legal-content" />} />
+          <Route path="/business" element={<PersonaRouter route="/business" />} />
+          <Route path="/diso" element={<PersonaRouter route="/diso" />} />
+          <Route path="/requirement/:id" element={<RequirementDetails requirementId="req-1" />} />
+        </Routes>
+      </Main>
+      
+      <SupportChatbotPanel
+        isOpen={chatbotOpen}
+        onClose={handleChatbotClose}
+      />
+    </AppContainer>
+  );
+};
+
+const App = () => {
+  return (
     <QueryClientProvider client={queryClient}>
       <GlobalStyle />
       <BrowserRouter>
         <PersonaProvider>
-          <AppContainer>
-            <Header>Data Transfer Compliance Tool</Header>
-            <NavBar 
-              unreadCount={unreadCount} 
-              onNotificationClick={handleNotificationClick}
-              onChatbotClick={handleChatbotClick}
-            />
-            <NotificationModal
-              open={modalOpen}
-              onClose={handleModalClose}
-              onMarkAllRead={handleMarkAllRead}
-              onNotificationClick={handleNotificationItemClick}
-            />
-            <Main>
-              <Routes>
-                <Route path="/" element={<Home homeContentHtml={homeContentHtml} />} />
-                <Route path="/guidance" element={<Guidance />} />
-                <Route path="/admin" element={<Administration setNotifications={setNotifications} />} />
-                <Route path="/my-transfers" element={<PersonaRouter route="/my-transfers" />} />
-                <Route path="/dct" element={<PersonaRouter route="/dct" />} />
-                <Route path="/legal" element={<PersonaRouter route="/legal" />} />
-                <Route path="/legal-content" element={<PersonaRouter route="/legal-content" />} />
-                <Route path="/business" element={<PersonaRouter route="/business" />} />
-                <Route path="/diso" element={<PersonaRouter route="/diso" />} />
-                <Route path="/requirement/:id" element={<RequirementDetails requirementId="req-1" />} />
-              </Routes>
-            </Main>
-            
-            <SupportChatbotPanel
-              isOpen={chatbotOpen}
-              onClose={handleChatbotClose}
-            />
-          </AppContainer>
+          <AppContent />
         </PersonaProvider>
       </BrowserRouter>
     </QueryClientProvider>

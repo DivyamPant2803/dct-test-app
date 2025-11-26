@@ -6,7 +6,7 @@ import UploadEvidenceModal from './UploadEvidenceModal';
 import StatusChip from './StatusChip';
 import AuditTrailModal from './AuditTrailModal';
 import StyledSelect from './common/StyledSelect';
-import { FiEye, FiTrash2, FiDownload, FiRefreshCw } from 'react-icons/fi';
+import { FiEye, FiTrash2, FiDownload, FiRefreshCw, FiAlertTriangle } from 'react-icons/fi';
 
 const DashboardContainer = styled.div`
   width: 100%;
@@ -213,8 +213,10 @@ const EndUserDashboard: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [uploadedEvidence, setUploadedEvidence] = useState<Evidence[]>([]);
   const [showEvidencePreview, setShowEvidencePreview] = useState<Evidence | null>(null);
+  const [showEscalateConfirm, setShowEscalateConfirm] = useState(false);
+  const [escalating, setEscalating] = useState(false);
 
-  const { getTransfers, getTransferRequirements, getAllEvidence, deleteEvidence, previewEvidence } = useEvidenceApi();
+  const { getTransfers, getTransferRequirements, getAllEvidence, deleteEvidence, previewEvidence, escalateTransfer } = useEvidenceApi();
 
   // Function to refresh all data
   const refreshAllData = useCallback(async () => {
@@ -223,14 +225,34 @@ const EndUserDashboard: React.FC = () => {
       const transfersData = await getTransfers();
       const evidenceData = await getAllEvidence();
       
-      const transfersWithEvidence = transfersData.filter(transfer => 
-        evidenceData.some(evidence => 
+      // Use the same filter logic as loadTransfers
+      const transfersWithEvidence = transfersData.filter(transfer => {
+        // Show transfers created by current user (Central Inventory transfers)
+        if (transfer.createdBy === 'current-user') {
+          return true;
+        }
+        
+        // Check if evidence is linked via transferId in requirementId
+        const hasLinkedEvidence = evidenceData.some(evidence => 
+          evidence.requirementId.includes(transfer.id)
+        );
+        if (hasLinkedEvidence) {
+          return true;
+        }
+        
+        // Check if evidence matches entity/jurisdiction pattern (Guidance page)
+        return evidenceData.some(evidence => 
           evidence.requirementId.includes(transfer.entity.toLowerCase().replace(/\s+/g, '-')) &&
           evidence.requirementId.includes(transfer.jurisdiction.toLowerCase().replace(/\s+/g, '-'))
-        )
+        );
+      });
+      
+      // Deduplicate transfers by id to ensure each transfer appears only once
+      const uniqueTransfers = Array.from(
+        new Map(transfersWithEvidence.map(transfer => [transfer.id, transfer])).values()
       );
       
-      setTransfers(transfersWithEvidence);
+      setTransfers(uniqueTransfers);
       
       // Refresh requirements if a transfer is selected
       if (selectedTransferId) {
@@ -249,21 +271,42 @@ const EndUserDashboard: React.FC = () => {
     const loadTransfers = async () => {
       setLoading(true);
       try {
-        // Only load transfers that have evidence uploaded from Guidance page
         const transfersData = await getTransfers();
         const evidenceData = await getAllEvidence();
         
-        // Filter transfers to only show those with uploaded evidence
-        const transfersWithEvidence = transfersData.filter(transfer => 
-          evidenceData.some(evidence => 
+        // Filter transfers to show:
+        // 1. Transfers created by current-user (for Central Inventory)
+        // 2. Transfers that have evidence linked via transferId in requirementId
+        // 3. Transfers that have evidence matching entity/jurisdiction (for Guidance page)
+        const transfersWithEvidence = transfersData.filter(transfer => {
+          // Show transfers created by current user (Central Inventory transfers)
+          if (transfer.createdBy === 'current-user') {
+            return true;
+          }
+          
+          // Check if evidence is linked via transferId in requirementId
+          const hasLinkedEvidence = evidenceData.some(evidence => 
+            evidence.requirementId.includes(transfer.id)
+          );
+          if (hasLinkedEvidence) {
+            return true;
+          }
+          
+          // Check if evidence matches entity/jurisdiction pattern (Guidance page)
+          return evidenceData.some(evidence => 
             evidence.requirementId.includes(transfer.entity.toLowerCase().replace(/\s+/g, '-')) &&
             evidence.requirementId.includes(transfer.jurisdiction.toLowerCase().replace(/\s+/g, '-'))
-          )
+          );
+        });
+        
+        // Deduplicate transfers by id to ensure each transfer appears only once
+        const uniqueTransfers = Array.from(
+          new Map(transfersWithEvidence.map(transfer => [transfer.id, transfer])).values()
         );
         
-        setTransfers(transfersWithEvidence);
-        if (transfersWithEvidence.length > 0) {
-          setSelectedTransferId(transfersWithEvidence[0].id);
+        setTransfers(uniqueTransfers);
+        if (uniqueTransfers.length > 0) {
+          setSelectedTransferId(uniqueTransfers[0].id);
         }
       } catch (error) {
         console.error('Failed to load transfers:', error);
@@ -410,14 +453,81 @@ const EndUserDashboard: React.FC = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // Calculate SLA status for a transfer
+  const getSLAStatus = (transfer: Transfer): { status: 'breached' | 'approaching' | 'ok'; daysRemaining: number; slaDueDate: Date | null } => {
+    // Find the oldest pending requirement or evidence upload date
+    const oldestRequirement = transfer.requirements
+      .filter(req => req.status === 'PENDING' || req.status === 'UNDER_REVIEW')
+      .sort((a, b) => new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime())[0];
+    
+    if (!oldestRequirement) {
+      return { status: 'ok', daysRemaining: 0, slaDueDate: null };
+    }
+    
+    // Find related evidence for this requirement
+    const relatedEvidence = uploadedEvidence.filter(e => 
+      e.requirementId.includes(transfer.id) || 
+      e.requirementId.includes(oldestRequirement.id)
+    );
+    
+    // Use the oldest upload date (either requirement update or evidence upload)
+    const oldestDate = relatedEvidence.length > 0
+      ? new Date(Math.min(
+          ...relatedEvidence.map(e => new Date(e.uploadedAt).getTime()),
+          new Date(oldestRequirement.updatedAt).getTime()
+        ))
+      : new Date(oldestRequirement.updatedAt);
+    
+    // SLA is 7 days from the oldest date
+    const slaDueDate = new Date(oldestDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const now = new Date();
+    const daysRemaining = Math.ceil((slaDueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysRemaining < 0) {
+      return { status: 'breached', daysRemaining: Math.abs(daysRemaining), slaDueDate };
+    } else if (daysRemaining <= 2) {
+      return { status: 'approaching', daysRemaining, slaDueDate };
+    }
+    
+    return { status: 'ok', daysRemaining, slaDueDate };
+  };
+
+  const handleEscalate = async () => {
+    if (!selectedTransfer) return;
+    
+    setEscalating(true);
+    try {
+      await escalateTransfer(selectedTransfer.id, 'SLA breach or approaching breach - escalated by End User');
+      setShowEscalateConfirm(false);
+      // Refresh data after escalation
+      await refreshAllData();
+      alert('Transfer has been escalated to Admin with high priority.');
+    } catch (error) {
+      console.error('Failed to escalate transfer:', error);
+      alert('Failed to escalate transfer. Please try again.');
+    } finally {
+      setEscalating(false);
+    }
+  };
+
   const selectedTransfer = transfers.find(t => t.id === selectedTransferId);
 
   // Filter evidence based on selected transfer
   const filteredEvidence = selectedTransferId 
-    ? uploadedEvidence.filter(evidence => 
-        evidence.requirementId.includes(selectedTransfer?.entity.toLowerCase().replace(/\s+/g, '-') || '') &&
-        evidence.requirementId.includes(selectedTransfer?.jurisdiction.toLowerCase().replace(/\s+/g, '-') || '')
-      )
+    ? uploadedEvidence.filter(evidence => {
+        // Check if evidence is linked via transferId in requirementId (Central Inventory)
+        if (evidence.requirementId.includes(selectedTransferId)) {
+          return true;
+        }
+        
+        // Check if evidence matches entity/jurisdiction pattern (Guidance page)
+        if (selectedTransfer) {
+          return evidence.requirementId.includes(selectedTransfer.entity.toLowerCase().replace(/\s+/g, '-')) &&
+                 evidence.requirementId.includes(selectedTransfer.jurisdiction.toLowerCase().replace(/\s+/g, '-'));
+        }
+        
+        return false;
+      })
     : uploadedEvidence;
 
   return (
@@ -445,20 +555,65 @@ const EndUserDashboard: React.FC = () => {
           </SelectWrapper>
         </TransferSelector>
         
-        {selectedTransfer && (
-          <div style={{ marginBottom: '1rem', padding: '1rem', background: '#f8f9fa', borderRadius: '6px' }}>
-            <h4 style={{ margin: '0 0 0.5rem 0', color: '#222' }}>Transfer Details</h4>
-            <p style={{ margin: '0.25rem 0', color: '#666' }}>
-              <strong>Entity:</strong> {selectedTransfer.entity}
-            </p>
-            <p style={{ margin: '0.25rem 0', color: '#666' }}>
-              <strong>Subject Type:</strong> {selectedTransfer.subjectType}
-            </p>
-            <p style={{ margin: '0.25rem 0', color: '#666' }}>
-              <strong>Status:</strong> {selectedTransfer.status}
-            </p>
-          </div>
-        )}
+        {selectedTransfer && (() => {
+          const slaStatus = getSLAStatus(selectedTransfer);
+          const canEscalate = (slaStatus.status === 'breached' || slaStatus.status === 'approaching') && 
+                             !selectedTransfer.escalatedTo && 
+                             selectedTransfer.status !== 'COMPLETED';
+          
+          return (
+            <div style={{ marginBottom: '1rem', padding: '1rem', background: '#f8f9fa', borderRadius: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                <h4 style={{ margin: 0, color: '#222' }}>Transfer Details</h4>
+                {canEscalate && (
+                  <Button
+                    variant="primary"
+                    onClick={() => setShowEscalateConfirm(true)}
+                    style={{ 
+                      background: '#dc2626',
+                      borderColor: '#dc2626',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}
+                  >
+                    <FiAlertTriangle size={16} />
+                    Escalate
+                  </Button>
+                )}
+              </div>
+              <p style={{ margin: '0.25rem 0', color: '#666' }}>
+                <strong>Entity:</strong> {selectedTransfer.entity}
+              </p>
+              <p style={{ margin: '0.25rem 0', color: '#666' }}>
+                <strong>Subject Type:</strong> {selectedTransfer.subjectType}
+              </p>
+              <p style={{ margin: '0.25rem 0', color: '#666' }}>
+                <strong>Status:</strong> {selectedTransfer.status}
+              </p>
+              {selectedTransfer.escalatedTo && (
+                <p style={{ margin: '0.25rem 0', color: '#dc2626', fontWeight: '500' }}>
+                  <strong>Escalated to:</strong> {selectedTransfer.escalatedTo} (High Priority)
+                </p>
+              )}
+              {slaStatus.slaDueDate && (
+                <p style={{ 
+                  margin: '0.25rem 0', 
+                  color: slaStatus.status === 'breached' ? '#dc2626' : slaStatus.status === 'approaching' ? '#f59e0b' : '#666',
+                  fontWeight: slaStatus.status !== 'ok' ? '500' : 'normal'
+                }}>
+                  <strong>SLA Status:</strong> {
+                    slaStatus.status === 'breached' 
+                      ? `Breached (${slaStatus.daysRemaining} days overdue)` 
+                      : slaStatus.status === 'approaching'
+                      ? `Approaching breach (${slaStatus.daysRemaining} days remaining)`
+                      : `On track (${slaStatus.daysRemaining} days remaining)`
+                  }
+                </p>
+              )}
+            </div>
+          );
+        })()}
       </Section>
 
       {transfers.length > 0 && (
@@ -543,10 +698,34 @@ const EndUserDashboard: React.FC = () => {
             </thead>
             <tbody>
               {filteredEvidence.map((evidence) => {
-                // Extract entity and country from requirement ID
-                const parts = evidence.requirementId.split('-');
-                const entity = parts[1]?.replace(/-/g, ' ') || 'Unknown Entity';
-                const country = parts[2]?.replace(/-/g, ' ') || 'Unknown Country';
+                // Extract entity and country - prefer from selected transfer if available
+                let entity = 'Unknown Entity';
+                let country = 'Unknown Country';
+                
+                if (selectedTransfer) {
+                  // If evidence is linked via transferId, use transfer's entity/jurisdiction
+                  if (evidence.requirementId.includes(selectedTransfer.id)) {
+                    entity = selectedTransfer.entity || 'Unknown Entity';
+                    country = selectedTransfer.jurisdiction || 'Unknown Country';
+                  } else {
+                    // Try to extract from requirementId (Guidance page format)
+                    const parts = evidence.requirementId.split('-');
+                    if (parts.length >= 3) {
+                      entity = parts[1]?.replace(/-/g, ' ') || selectedTransfer.entity || 'Unknown Entity';
+                      country = parts[2]?.replace(/-/g, ' ') || selectedTransfer.jurisdiction || 'Unknown Country';
+                    } else {
+                      entity = selectedTransfer.entity || 'Unknown Entity';
+                      country = selectedTransfer.jurisdiction || 'Unknown Country';
+                    }
+                  }
+                } else {
+                  // Fallback: try to extract from requirementId
+                  const parts = evidence.requirementId.split('-');
+                  if (parts.length >= 3) {
+                    entity = parts[1]?.replace(/-/g, ' ') || 'Unknown Entity';
+                    country = parts[2]?.replace(/-/g, ' ') || 'Unknown Country';
+                  }
+                }
                 
                 return (
                 <Tr key={evidence.id}>
@@ -666,6 +845,93 @@ const EndUserDashboard: React.FC = () => {
                 File preview would be implemented here
               </div>
             </FilePreview>
+          </div>
+        </div>
+      )}
+
+      {showEscalateConfirm && selectedTransfer && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 2000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2rem'
+        }} onClick={() => !escalating && setShowEscalateConfirm(false)}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '100%'
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#222', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <FiAlertTriangle size={24} color="#dc2626" />
+                Escalate Transfer
+              </h3>
+              {!escalating && (
+                <button
+                  onClick={() => setShowEscalateConfirm(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '1.5rem',
+                    cursor: 'pointer',
+                    color: '#666',
+                    padding: '0.5rem',
+                    borderRadius: '4px'
+                  }}
+                >
+                  &times;
+                </button>
+              )}
+            </div>
+            
+            <p style={{ marginBottom: '1rem', color: '#666' }}>
+              Are you sure you want to escalate this transfer request to Admin? This will mark it as high priority.
+            </p>
+            
+            {selectedTransfer && (() => {
+              const slaStatus = getSLAStatus(selectedTransfer);
+              return (
+                <div style={{ 
+                  padding: '1rem', 
+                  background: slaStatus.status === 'breached' ? '#fef2f2' : '#fffbeb', 
+                  borderRadius: '6px',
+                  marginBottom: '1.5rem'
+                }}>
+                  <p style={{ margin: 0, color: slaStatus.status === 'breached' ? '#dc2626' : '#f59e0b', fontWeight: '500' }}>
+                    {slaStatus.status === 'breached' 
+                      ? `SLA Breached: ${slaStatus.daysRemaining} days overdue`
+                      : `SLA Approaching: ${slaStatus.daysRemaining} days remaining`}
+                  </p>
+                </div>
+              );
+            })()}
+            
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <Button
+                variant="secondary"
+                onClick={() => setShowEscalateConfirm(false)}
+                disabled={escalating}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleEscalate}
+                disabled={escalating}
+                style={{ background: '#dc2626', borderColor: '#dc2626' }}
+              >
+                {escalating ? 'Escalating...' : 'Confirm Escalation'}
+              </Button>
+            </div>
           </div>
         </div>
       )}

@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@playwright/test": "^1.56.1",
     "@reduxjs/toolkit": "^2.8.2",
     "@tanstack/react-query": "^5.74.4",
     "@tanstack/react-table": "^8.21.3",
@@ -20,6 +21,7 @@
     "file-saver": "^2.0.5",
     "html-react-parser": "^5.2.5",
     "lodash": "^4.17.21",
+    "playwright-mcp-automation": "file:playwright-mcp-automation-1.0.3.tgz",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.55.0",

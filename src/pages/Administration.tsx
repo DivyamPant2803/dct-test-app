@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useStaticContent } from '../contexts/StaticContentContext';
 import { SectionContentItem } from '../utils/parseHomeHtml';
-import { Notification } from '../components/NotificationModal';
 
 const Layout = styled.div`
   display: flex;
@@ -118,7 +117,6 @@ const categories = [
 ];
 
 interface AdministrationProps {
-  setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
 }
 
 const Collapsible: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => {
@@ -150,7 +148,7 @@ const Collapsible: React.FC<{ title: string; children: React.ReactNode }> = ({ t
   );
 };
 
-const Administration: React.FC<AdministrationProps> = ({ setNotifications }) => {
+const Administration: React.FC<AdministrationProps> = () => {
   const [activeTile, setActiveTile] = useState('static');
   const [activeTab, setActiveTab] = useState<CategoryKey>('announcements');
   const { content, setContent } = useStaticContent();
@@ -165,27 +163,12 @@ const Administration: React.FC<AdministrationProps> = ({ setNotifications }) => 
     e.preventDefault();
     setContent(prev => {
       const arr = [...(prev as any)[activeTab]];
-      let action = '';
       if (editIdx !== null) {
         arr[editIdx] = { ...form };
-        action = 'updated';
       } else {
         arr.unshift({ ...form });
-        action = 'added';
       }
-      // Add notification
-      setNotifications(prevNotifs => [
-        {
-          id: `${Date.now()}`,
-          sender: 'Admin',
-          message: `${action === 'added' ? 'added' : 'updated'} static content: "${form.title}" in ${categories.find(c => c.key === activeTab)?.label}`,
-          timeAgo: 'just now',
-          read: false,
-          senderInitials: 'AD',
-          category: 'other',
-        },
-        ...prevNotifs,
-      ]);
+      // Notification removed - using notification service for Data Transfer requests only
       return { ...prev, [activeTab as CategoryKey]: arr };
     });
     setForm({ title: '', body: '' });

@@ -219,7 +219,8 @@ export const PERSONA_DASHBOARD_CONFIGS: Record<string, PersonaDashboardConfig> =
 export const getPersonaNavigation = (persona: string) => {
   const baseItems = [
     { name: 'Home', route: '/' },
-    { name: 'Guidance', route: '/guidance' }
+    { name: 'Guidance', route: '/guidance' },
+    { name: 'Central Inventory', route: '/central-inventory' }
   ];
 
   switch (persona) {

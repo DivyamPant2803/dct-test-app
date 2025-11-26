@@ -1,0 +1,252 @@
+{
+  "config": {
+    "configFile": "/Users/divyampant/Documents/Projects/DCT_Cursor/dct-test-app/playwright.config.ts",
+    "rootDir": "/Users/divyampant/Documents/Projects/DCT_Cursor/dct-test-app/tests",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 2
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/results.json"
+        }
+      ],
+      [
+        "list",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/Users/divyampant/Documents/Projects/DCT_Cursor/dct-test-app/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "api",
+        "name": "api",
+        "testDir": "/Users/divyampant/Documents/Projects/DCT_Cursor/dct-test-app/tests/api",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/divyampant/Documents/Projects/DCT_Cursor/dct-test-app/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "ui",
+        "name": "ui",
+        "testDir": "/Users/divyampant/Documents/Projects/DCT_Cursor/dct-test-app/tests/ui",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/divyampant/Documents/Projects/DCT_Cursor/dct-test-app/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "e2e",
+        "name": "e2e",
+        "testDir": "/Users/divyampant/Documents/Projects/DCT_Cursor/dct-test-app/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.56.1",
+    "workers": 4,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "ui/error-test.spec.ts",
+      "file": "ui/error-test.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "should capture error details when user makes selection on Guidance page",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui",
+              "projectName": "ui",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 313,
+                  "error": {
+                    "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n",
+                    "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n\n    at /Users/divyampant/Documents/Projects/DCT_Cursor/dct-test-app/tests/ui/error-test.spec.ts:5:14",
+                    "location": {
+                      "file": "/Users/divyampant/Documents/Projects/DCT_Cursor/dct-test-app/tests/ui/error-test.spec.ts",
+                      "column": 14,
+                      "line": 5
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 3 |\u001b[39m test(\u001b[32m'should capture error details when user makes selection on Guidance page'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 4 |\u001b[39m   \u001b[90m// Navigate to home page\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 5 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m   |\u001b[39m              \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 6 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForLoadState(\u001b[32m'networkidle'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 7 |\u001b[39m   \n \u001b[90m 8 |\u001b[39m   \u001b[90m// Verify we're on the home page\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/Users/divyampant/Documents/Projects/DCT_Cursor/dct-test-app/tests/ui/error-test.spec.ts",
+                        "column": 14,
+                        "line": 5
+                      },
+                      "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n\n\n\u001b[0m \u001b[90m 3 |\u001b[39m test(\u001b[32m'should capture error details when user makes selection on Guidance page'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 4 |\u001b[39m   \u001b[90m// Navigate to home page\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 5 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m   |\u001b[39m              \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 6 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForLoadState(\u001b[32m'networkidle'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 7 |\u001b[39m   \n \u001b[90m 8 |\u001b[39m   \u001b[90m// Verify we're on the home page\u001b[39m\u001b[0m\n\u001b[2m    at /Users/divyampant/Documents/Projects/DCT_Cursor/dct-test-app/tests/ui/error-test.spec.ts:5:14\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2025-11-11T11:46:57.212Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/Users/divyampant/Documents/Projects/DCT_Cursor/dct-test-app/test-results/error-test-should-capture--e7a98--selection-on-Guidance-page-ui/test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "/Users/divyampant/Documents/Projects/DCT_Cursor/dct-test-app/test-results/error-test-should-capture--e7a98--selection-on-Guidance-page-ui/video.webm"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/Users/divyampant/Documents/Projects/DCT_Cursor/dct-test-app/tests/ui/error-test.spec.ts",
+                    "column": 14,
+                    "line": 5
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "56de49c6f8ebe8d3be66-fa1c45063a7e97758f89",
+          "file": "ui/error-test.spec.ts",
+          "line": 3,
+          "column": 1
+        },
+        {
+          "title": "should capture error when page breaks after user interaction",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "ui",
+              "projectName": "ui",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "failed",
+                  "duration": 313,
+                  "error": {
+                    "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n",
+                    "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n\n    at /Users/divyampant/Documents/Projects/DCT_Cursor/dct-test-app/tests/ui/error-test.spec.ts:66:14",
+                    "location": {
+                      "file": "/Users/divyampant/Documents/Projects/DCT_Cursor/dct-test-app/tests/ui/error-test.spec.ts",
+                      "column": 14,
+                      "line": 66
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 64 |\u001b[39m test(\u001b[32m'should capture error when page breaks after user interaction'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 65 |\u001b[39m   \u001b[90m// Navigate to home page\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 66 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m              \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 67 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForLoadState(\u001b[32m'networkidle'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 68 |\u001b[39m   \n \u001b[90m 69 |\u001b[39m   \u001b[90m// Navigate to Guidance page\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/Users/divyampant/Documents/Projects/DCT_Cursor/dct-test-app/tests/ui/error-test.spec.ts",
+                        "column": 14,
+                        "line": 66
+                      },
+                      "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:5173/\", waiting until \"load\"\u001b[22m\n\n\n\u001b[0m \u001b[90m 64 |\u001b[39m test(\u001b[32m'should capture error when page breaks after user interaction'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 65 |\u001b[39m   \u001b[90m// Navigate to home page\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 66 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m              \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 67 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForLoadState(\u001b[32m'networkidle'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 68 |\u001b[39m   \n \u001b[90m 69 |\u001b[39m   \u001b[90m// Navigate to Guidance page\u001b[39m\u001b[0m\n\u001b[2m    at /Users/divyampant/Documents/Projects/DCT_Cursor/dct-test-app/tests/ui/error-test.spec.ts:66:14\u001b[22m"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2025-11-11T11:46:57.212Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "/Users/divyampant/Documents/Projects/DCT_Cursor/dct-test-app/test-results/error-test-should-capture--a8966-eaks-after-user-interaction-ui/test-failed-1.png"
+                    },
+                    {
+                      "name": "video",
+                      "contentType": "video/webm",
+                      "path": "/Users/divyampant/Documents/Projects/DCT_Cursor/dct-test-app/test-results/error-test-should-capture--a8966-eaks-after-user-interaction-ui/video.webm"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/Users/divyampant/Documents/Projects/DCT_Cursor/dct-test-app/tests/ui/error-test.spec.ts",
+                    "column": 14,
+                    "line": 66
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "56de49c6f8ebe8d3be66-bba23d13ae278cd2bc8e",
+          "file": "ui/error-test.spec.ts",
+          "line": 64,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-11-11T11:46:56.849Z",
+    "duration": 910.6780000000001,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 2,
+    "flaky": 0
+  }
+}

@@ -98,6 +98,12 @@ export interface Transfer {
   entity: string;
   subjectType: string;
   requirements: RequirementRow[];
+  // Escalation fields
+  escalatedTo?: string;
+  escalatedBy?: string;
+  escalatedAt?: string;
+  isHighPriority?: boolean;
+  escalationReason?: string;
 }
 
 export interface AuditEntry {

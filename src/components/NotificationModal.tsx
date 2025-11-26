@@ -1,5 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
+import { usePersona } from '../contexts/PersonaContext';
+import { getNotifications, markNotificationAsRead, markAllAsRead, NotificationData } from '../services/notificationService';
 
 export type NotificationCategory = 'business' | 'legal' | 'ediscovery' | 'other';
 export interface Notification {
@@ -12,6 +14,52 @@ export interface Notification {
   avatarUrl?: string;
   senderInitials?: string;
 }
+
+// Helper to convert NotificationData to display format
+const formatNotification = (data: NotificationData): Notification => {
+  const timeAgo = getTimeAgo(data.timestamp);
+  const category = getCategoryFromType(data.type);
+  
+  return {
+    id: data.id,
+    sender: data.sender,
+    message: data.message,
+    timeAgo,
+    read: data.status === 'read',
+    category,
+    senderInitials: data.sender === 'system' ? 'SYS' : data.sender.substring(0, 2).toUpperCase(),
+  };
+};
+
+const getTimeAgo = (timestamp: string): string => {
+  const now = new Date();
+  const then = new Date(timestamp);
+  const diffMs = now.getTime() - then.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return then.toLocaleDateString();
+};
+
+const getCategoryFromType = (type: string): NotificationCategory => {
+  switch (type) {
+    case 'submit_request':
+    case 'approve':
+    case 'reject':
+      return 'business';
+    case 'escalate':
+      return 'legal';
+    case 'upload':
+      return 'ediscovery';
+    default:
+      return 'other';
+  }
+};
 
 const CATEGORY_META: Record<NotificationCategory, { label: string; color: string; }> = {
   business: {
@@ -119,78 +167,38 @@ const ViewAllLink = styled.button`
   }
 `;
 
-// Sample notifications for demo/testing
-const sampleNotifications: Notification[] = [
-  {
-    id: '1',
-    sender: '43843804',
-    message: 'A Business Logic Flow mapping has been published for 1213 and AG Stamford Branch',
-    timeAgo: '2m ago',
-    read: false,
-    category: 'business',
-  },
-  {
-    id: '2',
-    sender: '43843241',
-    message: 'A Legal Logic Flow mapping has been published for 1312 and Asset Management (Americas) LLC',
-    timeAgo: '10m ago',
-    read: false,
-    category: 'legal',
-  },
-  {
-    id: '3',
-    sender: '43843451',
-    message: 'E-Discovery: A Legal Logic Flow mapping has been published for Taiwan',
-    timeAgo: '30m ago',
-    read: true,
-    category: 'ediscovery',
-  },
-  {
-    id: '4',
-    sender: 'System',
-    message: 'Static content "Important Announcement" updated.',
-    timeAgo: '1h ago',
-    read: false,
-    category: 'other',
-  },
-  {
-    id: '5',
-    sender: '4382123',
-    message: 'A Business Logic Flow mapping is sent for Version in QA for entity Europe SE, and is up for review',
-    timeAgo: '2h ago',
-    read: true,
-    category: 'business',
-  },
-  {
-    id: '6',
-    sender: '43843123',
-    message: 'Legal Input Jurisdiction Logic Flow - Re-Affirmation due for Switzerland jurisdiction / entitiy has turned to Red Zone',
-    timeAgo: '3h ago',
-    read: false,
-    category: 'legal',
-  },
-  {
-    id: '7',
-    sender: '43843126',
-    message: 'E-Discovery: Input flow for Germany jurisdiction has changed',
-    timeAgo: '4h ago',
-    read: true,
-    category: 'ediscovery',
-  },
-  {
-    id: '8',
-    sender: 'System',
-    message: '11221 has been added as a controller',
-    timeAgo: '5h ago',
-    read: true,
-    category: 'other',
-  },
-];
 
-const NotificationModal: React.FC<NotificationModalProps> = ({ open, onClose, onNotificationClick }) => {
+const NotificationModal: React.FC<NotificationModalProps> = ({ open, onClose, onMarkAllRead, onNotificationClick }) => {
+  const { currentPersona } = usePersona();
   const [expanded, setExpanded] = React.useState(false);
   const [activeCategory, setActiveCategory] = React.useState<'all' | NotificationCategory>('all');
-  const [notifications, setNotifications] = React.useState<Notification[]>(sampleNotifications);
+  
+  // Load notifications from service based on current persona
+  const [notificationData, setNotificationData] = React.useState(() => getNotifications(currentPersona));
+  
+  // Refresh notifications when modal opens or persona changes
+  React.useEffect(() => {
+    if (open) {
+      setNotificationData(getNotifications(currentPersona));
+    }
+  }, [currentPersona, open]);
+  
+  const notifications = React.useMemo(() => {
+    return notificationData.map(formatNotification);
+  }, [notificationData]);
+  
+  const handleMarkAllRead = () => {
+    markAllAsRead(currentPersona);
+    setNotificationData(getNotifications(currentPersona));
+    onMarkAllRead();
+  };
+  
+  const handleNotificationClick = (id: string) => {
+    markNotificationAsRead(id);
+    setNotificationData(getNotifications(currentPersona));
+    onNotificationClick(id);
+  };
+  
   if (!open) return null;
   return (
     <Overlay onClick={onClose}>
@@ -200,7 +208,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ open, onClose, on
       >
         <Header>
           <Title>Notifications</Title>
-          <MarkAll onClick={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}>Mark all as read</MarkAll>
+          <MarkAll onClick={handleMarkAllRead}>Mark all as read</MarkAll>
         </Header>
         <div style={{ display: 'flex', gap: 6, margin: '10px 0', padding: '0 1.25rem', flexWrap: 'wrap' }}>
           {(['all', ...Object.keys(CATEGORY_META)] as const).map(cat => (
@@ -225,14 +233,15 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ open, onClose, on
           ))}
         </div>
         <NotificationList style={expanded ? { maxHeight: 'calc(100vh - 180px)' } : {}}>
-          {Object.entries(CATEGORY_META).map(([catKey, meta]) => {
-            const cat = catKey as NotificationCategory;
-            const catNotifs = notifications.filter(n => n.category === cat && (activeCategory === 'all' || activeCategory === cat));
-            if (!catNotifs.length) return null;
-            return (
-              <div key={cat}>
-                <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-                  {catNotifs.map(n => (
+          {notifications.length === 0 ? (
+            <li style={{ padding: '1.5rem', textAlign: 'center', color: '#888' }}>No notifications</li>
+          ) : (
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+              {notifications
+                .filter(n => activeCategory === 'all' || n.category === activeCategory)
+                .map(n => {
+                  const meta = CATEGORY_META[n.category];
+                  return (
                     <li
                       key={n.id}
                       style={{
@@ -242,23 +251,16 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ open, onClose, on
                         borderLeft: n.read ? '4px solid transparent' : `4px solid ${meta.color}`,
                         transition: 'background 0.2s',
                       }}
-                      onClick={() => {
-                        setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, read: true } : item));
-                        onNotificationClick(n.id);
-                      }}
+                      onClick={() => handleNotificationClick(n.id)}
                     >
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 400 }}>{n.message}</div>
                         <div style={{ fontSize: 12, color: '#888', fontWeight: 400 }}>{n.timeAgo}</div>
                       </div>
                     </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
-          {notifications.length === 0 && (
-            <li style={{ padding: '1.5rem', textAlign: 'center', color: '#888' }}>No notifications</li>
+                  );
+                })}
+            </ul>
           )}
         </NotificationList>
         <ViewAll>

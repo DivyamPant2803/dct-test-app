@@ -146,6 +146,29 @@ const LoadingMessage = styled.div`
   font-size: 0.9rem;
 `;
 
+const PriorityBadge = styled.span<{ $priority: 'high' | 'medium' | 'low' }>`
+  display: inline-block;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: white;
+  
+  background-color: ${props => {
+    switch (props.$priority) {
+      case 'high':
+        return '#F44336';
+      case 'medium':
+        return '#FFA000';
+      case 'low':
+        return '#4CAF50';
+      default:
+        return '#666';
+    }
+  }};
+`;
 
 // Transfer Grouping Styles
 const TransferGroups = styled.div`
@@ -690,44 +713,77 @@ const AdminDashboard: React.FC = () => {
     );
   };
 
-  const renderAllTransfers = () => (
-    <>
-      {loading ? (
-        <LoadingMessage>Loading transfers...</LoadingMessage>
-      ) : transfers.length > 0 ? (
-        <Table>
-          <thead>
-            <tr>
-              <Th>Transfer Name</Th>
-              <Th>Jurisdiction</Th>
-              <Th>Entity</Th>
-              <Th>Subject Type</Th>
-              <Th>Status</Th>
-              <Th>Created At</Th>
-              <Th>Requirements</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {transfers.map((transfer) => (
-              <Tr key={transfer.id}>
-                <Td>{transfer.name}</Td>
-                <Td>{transfer.jurisdiction}</Td>
-                <Td>{transfer.entity}</Td>
-                <Td>{transfer.subjectType}</Td>
-                <Td>
-                  <StatusChip status={transfer.status as any} />
-                </Td>
-                <Td>{new Date(transfer.createdAt).toLocaleDateString()}</Td>
-                <Td>{transfer.requirements.length}</Td>
-              </Tr>
-            ))}
-          </tbody>
-        </Table>
-      ) : (
-        <NoDataMessage>No transfers found</NoDataMessage>
-      )}
-    </>
-  );
+  const renderAllTransfers = () => {
+    // Sort transfers: escalated/high priority first
+    const sortedTransfers = [...transfers].sort((a, b) => {
+      const aPriority = a.isHighPriority ? 1 : 0;
+      const bPriority = b.isHighPriority ? 1 : 0;
+      if (aPriority !== bPriority) return bPriority - aPriority;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+    return (
+      <>
+        {loading ? (
+          <LoadingMessage>Loading transfers...</LoadingMessage>
+        ) : sortedTransfers.length > 0 ? (
+          <Table>
+            <thead>
+              <tr>
+                <Th>Transfer Name</Th>
+                <Th>Jurisdiction</Th>
+                <Th>Entity</Th>
+                <Th>Subject Type</Th>
+                <Th>Status</Th>
+                <Th>Priority</Th>
+                <Th>Created At</Th>
+                <Th>Requirements</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedTransfers.map((transfer) => (
+                <Tr 
+                  key={transfer.id}
+                  style={{
+                    background: transfer.isHighPriority ? '#fff5f5' : undefined
+                  }}
+                >
+                  <Td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {transfer.isHighPriority && <span style={{ color: '#dc2626' }}>⚠️</span>}
+                      {transfer.name}
+                    </div>
+                    {transfer.escalatedBy && (
+                      <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>
+                        Escalated by: {transfer.escalatedBy}
+                      </div>
+                    )}
+                  </Td>
+                  <Td>{transfer.jurisdiction}</Td>
+                  <Td>{transfer.entity}</Td>
+                  <Td>{transfer.subjectType}</Td>
+                  <Td>
+                    <StatusChip status={transfer.status as any} />
+                  </Td>
+                  <Td>
+                    {transfer.isHighPriority ? (
+                      <PriorityBadge $priority="high">High</PriorityBadge>
+                    ) : (
+                      <PriorityBadge $priority="low">Normal</PriorityBadge>
+                    )}
+                  </Td>
+                  <Td>{new Date(transfer.createdAt).toLocaleDateString()}</Td>
+                  <Td>{transfer.requirements.length}</Td>
+                </Tr>
+              ))}
+            </tbody>
+          </Table>
+        ) : (
+          <NoDataMessage>No transfers found</NoDataMessage>
+        )}
+      </>
+    );
+  };
 
   const renderDocumentLibrary = () => {
     // Get all evidence from the evidence API
