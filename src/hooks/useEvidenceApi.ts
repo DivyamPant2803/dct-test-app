@@ -287,38 +287,90 @@ export const useEvidenceApi = () => {
     
     // Update corresponding requirement status
     const requirementId = currentEvidence.requirementId;
-    // Extract transferId from requirementId: req-entity-country -> transfer-entity-country
-    const transferId = requirementId.replace('req-', 'transfer-');
+    
+    // Extract transferId from requirementId
+    // Format: req-${transferId}-${row.id}-action-${actionIndex}-${Date.now()}
+    // We need to find which transfer this requirement belongs to
+    let transferId: string | null = null;
+    const storedTransfers = getStoredTransfers();
+    
+    // Try to find the transfer by matching the requirementId prefix
+    // The requirementId starts with req-${transferId}-
+    for (const transfer of storedTransfers) {
+      const prefix = `req-${transfer.id}-`;
+      if (requirementId.startsWith(prefix)) {
+        transferId = transfer.id;
+        break;
+      }
+    }
+    
+    // If not found by prefix, try the old format: req-entity-country
+    if (!transferId) {
+      // Fallback: try to extract by replacing req- with transfer-
+      const potentialTransferId = requirementId.replace('req-', 'transfer-');
+      const potentialTransfer = storedTransfers.find(t => t.id === potentialTransferId);
+      if (potentialTransfer) {
+        transferId = potentialTransferId;
+      }
+    }
     
     // Find and update the transfer's requirement
-    const transferKey = `transfer_${transferId}`;
-    const storedTransfer = localStorage.getItem(transferKey);
-    if (storedTransfer) {
-      const transfer = JSON.parse(storedTransfer);
-      const requirementIndex = transfer.requirements.findIndex((req: RequirementRow) => req.id === requirementId);
-      if (requirementIndex !== -1) {
-        transfer.requirements[requirementIndex].status = newStatus;
-        transfer.requirements[requirementIndex].updatedAt = new Date().toISOString();
-        localStorage.setItem(transferKey, JSON.stringify(transfer));
-        
-        // Update transfers state
-        setTransfers(prev => prev.map(t => t.id === transfer.id ? transfer : t));
-        
-        console.log('Updated requirement status:', {
-          requirementId,
-          transferId,
-          newStatus,
-          requirement: transfer.requirements[requirementIndex]
-        });
+    if (transferId) {
+      const transferKey = `transfer_${transferId}`;
+      const storedTransfer = localStorage.getItem(transferKey);
+      if (storedTransfer) {
+        const transfer = JSON.parse(storedTransfer);
+        const requirementIndex = transfer.requirements.findIndex((req: RequirementRow) => req.id === requirementId);
+        if (requirementIndex !== -1) {
+          transfer.requirements[requirementIndex].status = newStatus;
+          transfer.requirements[requirementIndex].updatedAt = new Date().toISOString();
+          
+          // Update transfer status based on requirements status
+          // If all requirements are approved, set transfer status to COMPLETED
+          // If any requirement is rejected, keep status as ACTIVE (or could be REJECTED)
+          // If any requirement is under review, set status to ACTIVE
+          const allApproved = transfer.requirements.every((req: RequirementRow) => req.status === 'APPROVED');
+          const hasRejected = transfer.requirements.some((req: RequirementRow) => req.status === 'REJECTED');
+          const hasEscalated = transfer.requirements.some((req: RequirementRow) => req.status === 'ESCALATED');
+          const hasUnderReview = transfer.requirements.some((req: RequirementRow) => req.status === 'UNDER_REVIEW');
+          
+          if (hasEscalated) {
+            transfer.escalatedTo = decision.escalatedTo || 'Legal';
+            transfer.escalatedAt = new Date().toISOString();
+            transfer.isHighPriority = true;
+          }
+          
+          // Update transfer status based on requirements
+          if (allApproved && transfer.requirements.length > 0) {
+            transfer.status = 'COMPLETED';
+          } else if (hasUnderReview || hasRejected || hasEscalated) {
+            transfer.status = 'ACTIVE';
+          }
+          
+          localStorage.setItem(transferKey, JSON.stringify(transfer));
+          
+          // Update transfers state
+          setTransfers(prev => prev.map(t => t.id === transfer.id ? transfer : t));
+          
+          console.log('Updated requirement status:', {
+            requirementId,
+            transferId,
+            newStatus,
+            requirement: transfer.requirements[requirementIndex],
+            transferStatus: transfer.status
+          });
+        } else {
+          console.log('Requirement not found:', {
+            requirementId,
+            transferId,
+            availableRequirements: transfer.requirements.map((r: any) => r.id)
+          });
+        }
       } else {
-        console.log('Requirement not found:', {
-          requirementId,
-          transferId,
-          availableRequirements: transfer.requirements.map((r: any) => r.id)
-        });
+        console.log('Transfer not found:', transferKey);
       }
     } else {
-      console.log('Transfer not found:', transferKey);
+      console.log('Could not extract transferId from requirementId:', requirementId);
     }
     
     // Create notifications based on decision

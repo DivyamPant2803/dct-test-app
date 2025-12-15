@@ -141,6 +141,7 @@ export interface Requirement {
   jurisdiction: string;
   entity: string;
   subjectType: string;
+  status?: string;
   text: string;
   updatedAt: string;
   effectiveDate: string;
@@ -152,6 +153,17 @@ export interface Requirement {
   lastReaffirmedBy?: string;
   reaffirmationHistory: ReaffirmationEntry[];
   nextReaffirmationDue: string;
+  // Additional fields for comprehensive modal display
+  contactPersons?: string[];
+  recipientTypes?: string[];
+  dataSubjectTypeDetails?: {
+    type: string;
+    transferLocation: string; // Inside/Outside country
+    categoryOfData: string; // Personal/Sensitive/Private
+    dataTransferPurpose: string;
+  }[];
+  output?: string; // OK/OKC/NOK
+  remediation?: string;
 }
 
 export type CRStatus = "PENDING" | "APPROVED" | "REJECTED";
@@ -250,6 +262,13 @@ export interface RequirementCombination {
   nextReaffirmationDue: string;
   lastReaffirmedAt?: string;
   lastReaffirmedBy?: string;
+  // Additional fields for comprehensive modal display
+  jurisdiction?: string;
+  status?: string;
+  contactPersons?: string[];
+  categoryOfData?: string; // Personal/Sensitive/Private
+  output?: string; // OK/OKC/NOK
+  remediation?: string;
 }
 
 export interface EntityGroup {

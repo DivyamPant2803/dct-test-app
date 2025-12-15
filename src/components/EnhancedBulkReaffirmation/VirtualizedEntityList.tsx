@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useMemo } from 'react';
-import { List, AutoSizer } from 'react-virtualized';
+import { List, AutoSizer, WindowScroller } from 'react-virtualized';
 import styled from 'styled-components';
 import { EntitySummary } from '../../types/requirements';
 import EntityTreeItemComponent from './EntityTreeItem';
@@ -8,7 +8,6 @@ import VersionItem from './VersionItem';
 const ListContainer = styled.div`
   flex: 1;
   min-height: 0;
-  overflow: hidden;
 `;
 
 interface VirtualizedEntityListProps {
@@ -26,7 +25,6 @@ interface VirtualizedEntityListProps {
   onEntityReaffirm: (entityId: string) => Promise<void>;
   onVersionReaffirm: (versionId: string) => Promise<void>;
   onCombinationReaffirm: (combinationId: string) => Promise<void>;
-  height: number;
 }
 
 
@@ -185,8 +183,7 @@ const VirtualizedEntityList: React.FC<VirtualizedEntityListProps> = ({
   onCombinationSelect,
   onEntityReaffirm,
   onVersionReaffirm,
-  onCombinationReaffirm,
-  height
+  onCombinationReaffirm
 }) => {
   const listRef = useRef<List>(null);
 
@@ -208,38 +205,46 @@ const VirtualizedEntityList: React.FC<VirtualizedEntityListProps> = ({
 
   return (
     <ListContainer>
-      <AutoSizer>
-        {({ width }) => (
-          <List
-            ref={listRef}
-            height={height}
-            width={width}
-            rowCount={flattenedItems.length}
-            rowHeight={({ index }) => getItemSizeWithData(index)}
-            rowRenderer={({ index, key, style }) => (
-              <TreeItemRenderer
-                key={key}
-                index={index}
-                style={style}
-                flattenedItems={flattenedItems}
-                expandedEntities={expandedEntities}
-                expandedVersions={expandedVersions}
-                selectedVersions={selectedVersions}
-                selectedCombinations={selectedCombinations}
-                onEntityToggle={onEntityToggle}
-                onVersionToggle={onVersionToggle}
-                onEntitySelect={onEntitySelect}
-                onVersionSelect={onVersionSelect}
-                onCombinationSelect={onCombinationSelect}
-                onEntityReaffirm={onEntityReaffirm}
-                onVersionReaffirm={onVersionReaffirm}
-                onCombinationReaffirm={onCombinationReaffirm}
+      <WindowScroller>
+        {({ height, isScrolling, onChildScroll, scrollTop }) => (
+          <AutoSizer disableHeight>
+            {({ width }) => (
+              <List
+                ref={listRef}
+                autoHeight
+                height={height}
+                isScrolling={isScrolling}
+                onScroll={onChildScroll}
+                scrollTop={scrollTop}
+                width={width}
+                rowCount={flattenedItems.length}
+                rowHeight={({ index }) => getItemSizeWithData(index)}
+                rowRenderer={({ index, key, style }) => (
+                  <TreeItemRenderer
+                    key={key}
+                    index={index}
+                    style={style}
+                    flattenedItems={flattenedItems}
+                    expandedEntities={expandedEntities}
+                    expandedVersions={expandedVersions}
+                    selectedVersions={selectedVersions}
+                    selectedCombinations={selectedCombinations}
+                    onEntityToggle={onEntityToggle}
+                    onVersionToggle={onVersionToggle}
+                    onEntitySelect={onEntitySelect}
+                    onVersionSelect={onVersionSelect}
+                    onCombinationSelect={onCombinationSelect}
+                    onEntityReaffirm={onEntityReaffirm}
+                    onVersionReaffirm={onVersionReaffirm}
+                    onCombinationReaffirm={onCombinationReaffirm}
+                  />
+                )}
+                overscanRowCount={5}
               />
             )}
-            overscanRowCount={5}
-          />
+          </AutoSizer>
         )}
-      </AutoSizer>
+      </WindowScroller>
     </ListContainer>
   );
 };

@@ -7,17 +7,17 @@ interface UseVirtualizedRequirementsReturn {
   // Data
   entities: EntitySummary[];
   virtualizedItems: VirtualizedEntityItem[];
-  
+
   // Loading states
   loadingEntities: boolean;
   loadingVersions: Set<string>;
-  
+
   // Tree management
   expandedEntities: Set<string>;
   expandedVersions: Set<string>;
   handleEntityToggle: (entityId: string) => Promise<void>;
   handleVersionToggle: (versionId: string) => Promise<void>;
-  
+
   // Selection
   selectedVersions: Set<string>;
   selectedCombinations: Set<string>;
@@ -25,18 +25,19 @@ interface UseVirtualizedRequirementsReturn {
   handleCombinationSelect: (combinationId: string) => void;
   handleEntitySelect: (entityId: string, selectAll: boolean) => void;
   handleClearSelection: () => void;
-  
+
   // Filtering
   filters: FilterCriteria;
   setFilters: (filters: FilterCriteria) => void;
-  
+
   // Actions
   handleEntityReaffirm: (entityId: string) => Promise<void>;
   handleVersionReaffirm: (versionId: string) => Promise<void>;
   handleCombinationReaffirm: (combinationId: string) => Promise<void>;
   handleBulkReaffirm: (request: BulkReaffirmationRequest) => Promise<void>;
   refreshData: () => Promise<void>;
-  
+  loadEntityVersions: (entityId: string) => Promise<void>;
+
   // Summary
   summary: {
     totalRequirements: number;
@@ -87,57 +88,57 @@ export const useVirtualizedRequirements = (): UseVirtualizedRequirementsReturn =
   // Load versions for a specific entity
   const loadEntityVersions = useCallback(async (entityId: string) => {
     if (loadingVersions.has(entityId)) return;
-    
+
     setLoadingVersions(prev => new Set(prev).add(entityId));
-    
+
     try {
-      // TODO: Update API call to get versions instead of combinations
+      // Get all combinations for the entity
       const response = await requirementsService.getEntityCombinations(entityId, 0, 1000, filters);
-      
-      // For now, create mock versions from combinations
-      const mockVersions: RequirementVersion[] = [
-        {
-          id: `${entityId}-v1`,
-          versionNo: 1,
-          status: 'CURRENT',
-          lastReaffirmedDate: '2024-01-15',
-          nextReaffirmationDate: '2025-01-15',
-          combinations: response.combinations.slice(0, Math.ceil(response.combinations.length / 2)),
-          totalCombinations: Math.ceil(response.combinations.length / 2),
-          dueCombinations: 0,
-          overdueCombinations: 0,
-          isActive: true,
-          createdAt: '2024-01-15',
-          createdBy: 'system'
-        },
-        {
-          id: `${entityId}-v2`,
-          versionNo: 2,
-          status: 'DUE_SOON',
-          lastReaffirmedDate: '2023-12-01',
-          nextReaffirmationDate: '2024-12-01',
-          combinations: response.combinations.slice(Math.ceil(response.combinations.length / 2)),
-          totalCombinations: Math.floor(response.combinations.length / 2),
-          dueCombinations: Math.floor(response.combinations.length / 2),
-          overdueCombinations: 0,
-          isActive: true,
-          createdAt: '2023-12-01',
-          createdBy: 'system'
+
+      // Group combinations by jurisdiction to create versions
+      const combinationsByJurisdiction = new Map<string, typeof response.combinations>();
+      response.combinations.forEach(combo => {
+        const jurisdiction = combo.jurisdiction || combo.requirement.jurisdiction;
+        if (!combinationsByJurisdiction.has(jurisdiction)) {
+          combinationsByJurisdiction.set(jurisdiction, []);
         }
-      ];
-      
-      setEntities(prev => prev.map(entity => 
-        entity.id === entityId 
-          ? { 
-              ...entity, 
-              versions: mockVersions,
-              versionsLoaded: true,
-              totalVersions: mockVersions.length,
-              // Keep combinations for backward compatibility
-              combinations: response.combinations, 
-              combinationsLoaded: true,
-              totalCombinations: response.total 
-            }
+        combinationsByJurisdiction.get(jurisdiction)!.push(combo);
+      });
+
+      // Create a version for each jurisdiction
+      const mockVersions: RequirementVersion[] = Array.from(combinationsByJurisdiction.entries()).map(([, combos], index) => {
+        const dueCount = combos.filter(c => c.reaffirmationStatus === 'DUE_SOON').length;
+        const overdueCount = combos.filter(c => c.reaffirmationStatus === 'OVERDUE').length;
+        const status = overdueCount > 0 ? 'OVERDUE' : dueCount > 0 ? 'DUE_SOON' : 'CURRENT';
+
+        return {
+          id: `${entityId}-v${index + 1}`,
+          versionNo: index + 1,
+          status,
+          lastReaffirmedDate: status === 'CURRENT' ? '2024-01-15' : undefined,
+          nextReaffirmationDate: status === 'OVERDUE' ? '2024-06-01' : status === 'DUE_SOON' ? '2024-12-01' : '2025-01-15',
+          combinations: combos,
+          totalCombinations: combos.length,
+          dueCombinations: dueCount,
+          overdueCombinations: overdueCount,
+          isActive: true,
+          createdAt: new Date(Date.now() - (index * 30 * 24 * 60 * 60 * 1000)).toISOString(),
+          createdBy: 'system'
+        };
+      });
+
+      setEntities(prev => prev.map(entity =>
+        entity.id === entityId
+          ? {
+            ...entity,
+            versions: mockVersions,
+            versionsLoaded: true,
+            totalVersions: mockVersions.length,
+            // Keep combinations for backward compatibility
+            combinations: response.combinations,
+            combinationsLoaded: true,
+            totalCombinations: response.total
+          }
           : entity
       ));
     } catch (error) {
@@ -154,10 +155,10 @@ export const useVirtualizedRequirements = (): UseVirtualizedRequirementsReturn =
   // Handle entity expand/collapse
   const handleEntityToggle = useCallback(async (entityId: string) => {
     const isExpanding = !expandedEntities.has(entityId);
-    
+
     if (isExpanding) {
       setExpandedEntities(prev => new Set(prev).add(entityId));
-      
+
       // Load versions if not already loaded
       const entity = entities.find(e => e.id === entityId);
       if (entity && !entity.versionsLoaded) {
@@ -175,7 +176,7 @@ export const useVirtualizedRequirements = (): UseVirtualizedRequirementsReturn =
   // Handle version expand/collapse
   const handleVersionToggle = useCallback(async (versionId: string) => {
     const isExpanding = !expandedVersions.has(versionId);
-    
+
     if (isExpanding) {
       setExpandedVersions(prev => new Set(prev).add(versionId));
     } else {
@@ -192,7 +193,7 @@ export const useVirtualizedRequirements = (): UseVirtualizedRequirementsReturn =
     const version = entities
       .flatMap(e => e.versions || [])
       .find(v => v.id === versionId);
-    
+
     if (!version) return;
 
     setSelectedCombinations(prev => {
@@ -308,26 +309,26 @@ export const useVirtualizedRequirements = (): UseVirtualizedRequirementsReturn =
     try {
       // In a real implementation, this would call the API
       console.log('Bulk reaffirmation request:', request);
-      
+
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       // Update local state optimistically
       setEntities(prev => prev.map(entity => ({
         ...entity,
-        combinations: entity.combinations.map(combo => 
+        combinations: entity.combinations.map(combo =>
           request.combinationIds.includes(combo.id)
             ? { ...combo, reaffirmationStatus: 'CURRENT' as const }
             : combo
         )
       })));
-      
+
       // Clear selection
       setSelectedCombinations(new Set());
-      
+
       // Refresh data to get updated counts
       await loadEntities();
-      
+
     } catch (error) {
       console.error('Bulk reaffirmation failed:', error);
       throw error;
@@ -337,7 +338,7 @@ export const useVirtualizedRequirements = (): UseVirtualizedRequirementsReturn =
   // Refresh all data
   const refreshData = useCallback(async () => {
     await loadEntities();
-    
+
     // Reload versions for expanded entities
     const expandedEntityIds = Array.from(expandedEntities);
     for (const entityId of expandedEntityIds) {
@@ -372,17 +373,17 @@ export const useVirtualizedRequirements = (): UseVirtualizedRequirementsReturn =
     // Data
     entities,
     virtualizedItems,
-    
+
     // Loading states
     loadingEntities,
     loadingVersions,
-    
+
     // Tree management
     expandedEntities,
     expandedVersions,
     handleEntityToggle,
     handleVersionToggle,
-    
+
     // Selection
     selectedVersions,
     selectedCombinations,
@@ -390,18 +391,19 @@ export const useVirtualizedRequirements = (): UseVirtualizedRequirementsReturn =
     handleCombinationSelect,
     handleEntitySelect,
     handleClearSelection,
-    
+
     // Filtering
     filters,
     setFilters,
-    
+
     // Actions
     handleEntityReaffirm,
     handleVersionReaffirm,
     handleCombinationReaffirm,
     handleBulkReaffirm,
     refreshData,
-    
+    loadEntityVersions,
+
     // Summary
     summary
   };

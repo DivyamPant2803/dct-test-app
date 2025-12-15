@@ -355,6 +355,7 @@ const BulkReaffirmModal: React.FC<BulkReaffirmModalProps> = ({
         
         <form onSubmit={handleSubmit}>
           <ModalBody>
+            {/* Section 1: Basic Information Summary */}
             <BatchInfo>
               <InfoRow>
                 <InfoLabel>Total Requirements:</InfoLabel>
@@ -364,12 +365,112 @@ const BulkReaffirmModal: React.FC<BulkReaffirmModalProps> = ({
                 <InfoLabel>Jurisdictions:</InfoLabel>
                 <InfoValue>{[...new Set(requirements.map(r => r.jurisdiction))].join(', ')}</InfoValue>
               </InfoRow>
+              {requirements.some(r => r.status) && (
+                <InfoRow>
+                  <InfoLabel>Statuses:</InfoLabel>
+                  <InfoValue>{[...new Set(requirements.filter(r => r.status).map(r => r.status))].join(', ')}</InfoValue>
+                </InfoRow>
+              )}
               <InfoRow>
                 <InfoLabel>Entities:</InfoLabel>
                 <InfoValue>{[...new Set(requirements.map(r => r.entity))].join(', ')}</InfoValue>
               </InfoRow>
+              <InfoRow>
+                <InfoLabel>Data Subject Types:</InfoLabel>
+                <InfoValue>{[...new Set(requirements.map(r => r.subjectType))].join(', ')}</InfoValue>
+              </InfoRow>
             </BatchInfo>
 
+            {/* Section 2: Contact Persons */}
+            {requirements.some(r => r.contactPersons && r.contactPersons.length > 0) && (
+              <FormGroup>
+                <Label>Contact Persons</Label>
+                <BatchInfo>
+                  <InfoRow>
+                    <InfoValue>
+                      {[...new Set(requirements.flatMap(r => r.contactPersons || []))].join(', ')}
+                    </InfoValue>
+                  </InfoRow>
+                </BatchInfo>
+              </FormGroup>
+            )}
+
+            {/* Section 3: Recipient Types */}
+            {requirements.some(r => r.recipientTypes && r.recipientTypes.length > 0) && (
+              <FormGroup>
+                <Label>Recipient Types</Label>
+                <BatchInfo>
+                  <InfoRow>
+                    <InfoValue>
+                      {[...new Set(requirements.flatMap(r => r.recipientTypes || []))].join(', ')}
+                    </InfoValue>
+                  </InfoRow>
+                </BatchInfo>
+              </FormGroup>
+            )}
+
+            {/* Section 4: Data Subject Type Details */}
+            {requirements.some(r => r.dataSubjectTypeDetails && r.dataSubjectTypeDetails.length > 0) && (
+              <FormGroup>
+                <Label>Data Subject Type Details</Label>
+                <BatchInfo>
+                  <InfoRow>
+                    <InfoLabel>Transfer Locations:</InfoLabel>
+                    <InfoValue>
+                      {[...new Set(requirements.flatMap(r => 
+                        (r.dataSubjectTypeDetails || []).map(d => d.transferLocation)
+                      ))].join(', ')}
+                    </InfoValue>
+                  </InfoRow>
+                  <InfoRow>
+                    <InfoLabel>Categories of Data:</InfoLabel>
+                    <InfoValue>
+                      {[...new Set(requirements.flatMap(r => 
+                        (r.dataSubjectTypeDetails || []).map(d => d.categoryOfData)
+                      ))].join(', ')}
+                    </InfoValue>
+                  </InfoRow>
+                  <InfoRow>
+                    <InfoLabel>Data Transfer Purposes:</InfoLabel>
+                    <InfoValue>
+                      {[...new Set(requirements.flatMap(r => 
+                        (r.dataSubjectTypeDetails || []).map(d => d.dataTransferPurpose)
+                      ))].join(', ')}
+                    </InfoValue>
+                  </InfoRow>
+                </BatchInfo>
+              </FormGroup>
+            )}
+
+            {/* Section 5: Output */}
+            {requirements.some(r => r.output) && (
+              <FormGroup>
+                <Label>Output (Common for all)</Label>
+                <BatchInfo>
+                  <InfoRow>
+                    <InfoValue>
+                      {[...new Set(requirements.filter(r => r.output).map(r => r.output))].join(', ')}
+                    </InfoValue>
+                  </InfoRow>
+                </BatchInfo>
+              </FormGroup>
+            )}
+
+            {/* Section 6: Remediation */}
+            {requirements.some(r => r.remediation) && (
+              <FormGroup>
+                <Label>Remediation (Common for all)</Label>
+                <BatchInfo>
+                  <InfoRow>
+                    <InfoValue>
+                      {[...new Set(requirements.filter(r => r.remediation).map(r => r.remediation))].join(' | ')}
+                    </InfoValue>
+                  </InfoRow>
+                </BatchInfo>
+              </FormGroup>
+            )}
+
+            {/* Selected Requirements List */}
             <FormGroup>
               <Label>Selected Requirements</Label>
               <RequirementsList>
@@ -377,7 +478,8 @@ const BulkReaffirmModal: React.FC<BulkReaffirmModalProps> = ({
                   <RequirementItem key={req.id}>
                     <RequirementTitle>{req.title}</RequirementTitle>
                     <RequirementMeta>
-                      {req.jurisdiction} • {req.entity} • {req.subjectType} • 
+                      {req.jurisdiction} • {req.entity} • {req.subjectType}
+                      {req.status && ` • ${req.status}`} • 
                       Last reaffirmed: {req.lastReaffirmedAt ? formatDate(req.lastReaffirmedAt) : 'Never'}
                     </RequirementMeta>
                   </RequirementItem>

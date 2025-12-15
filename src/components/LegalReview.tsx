@@ -7,6 +7,10 @@ import StatusChip from './StatusChip';
 import LegalContentDashboard from './LegalContentDashboard';
 import LegalTemplates from './LegalTemplates';
 import Sidebar, { SidebarGroup } from './common/Sidebar';
+import { EscalationTimeline, useToast } from './common';
+import { colors } from '../styles/designTokens';
+import { FiAlertCircle, FiChevronsUp, FiChevronUp, FiMinus } from 'react-icons/fi';
+import { DashboardStats, StatItem } from './common/DashboardStats';
 
 const Container = styled.div`
   width: 100%;
@@ -118,35 +122,7 @@ const LoadingMessage = styled.div`
   font-size: 0.9rem;
 `;
 
-const StatsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  flex-shrink: 0;
-`;
 
-const StatCard = styled.div`
-  background: white;
-  padding: 0.75rem;
-  border-radius: 4px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-  text-align: center;
-`;
-
-const StatValue = styled.div`
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #222;
-  margin-bottom: 0.25rem;
-`;
-
-const StatLabel = styled.div`
-  font-size: 0.7rem;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-`;
 
 const PriorityBadge = styled.span<{ $priority: 'high' | 'medium' | 'low' }>`
   display: inline-block;
@@ -207,6 +183,7 @@ const LegalReview: React.FC = () => {
   const [selectedEvidence, setSelectedEvidence] = useState<Evidence | null>(null);
   const [showReviewDrawer, setShowReviewDrawer] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { showToast } = useToast();
 
   const { getAllEvidence, submitReviewDecision } = useEvidenceApi();
 
@@ -261,10 +238,10 @@ const LegalReview: React.FC = () => {
       await refreshEscalatedEvidence();
       
       // Show success message
-      alert(`Evidence ${decision.decision.toLowerCase()}d successfully!`);
+      showToast(`Evidence ${decision.decision.toLowerCase()}d successfully!`, 'success');
     } catch (error) {
       console.error('Failed to submit review decision:', error);
-      alert('Failed to submit review decision. Please try again.');
+      showToast('Failed to submit review decision. Please try again.', 'error');
     }
   };
 
@@ -297,26 +274,42 @@ const LegalReview: React.FC = () => {
     lowPriority: escalatedEvidence.filter(e => getPriority(e) === 'low').length
   };
 
-  const renderEscalatedEvidence = () => (
-    <>
-      <StatsGrid>
-        <StatCard>
-          <StatValue>{stats.total}</StatValue>
-          <StatLabel>Total Escalations</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatValue>{stats.highPriority}</StatValue>
-          <StatLabel>High Priority</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatValue>{stats.mediumPriority}</StatValue>
-          <StatLabel>Medium Priority</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatValue>{stats.lowPriority}</StatValue>
-          <StatLabel>Low Priority</StatLabel>
-        </StatCard>
-      </StatsGrid>
+  const renderEscalatedEvidence = () => {
+    const statItems: StatItem[] = [
+      {
+        label: 'Total Escalations',
+        value: stats.total,
+        icon: <FiAlertCircle />,
+        color: colors.status.escalated,
+        subtext: 'Pending legal review'
+      },
+      {
+        label: 'High Priority',
+        value: stats.highPriority,
+        icon: <FiChevronsUp />,
+        color: colors.semantic.error,
+        subtext: '> 7 days old',
+        highlight: stats.highPriority > 0
+      },
+      {
+        label: 'Medium Priority',
+        value: stats.mediumPriority,
+        icon: <FiChevronUp />,
+        color: colors.semantic.warning,
+        subtext: '3-7 days old'
+      },
+      {
+        label: 'Low Priority',
+        value: stats.lowPriority,
+        icon: <FiMinus />,
+        color: colors.status.approved,
+        subtext: '< 3 days old'
+      }
+    ];
+
+    return (
+      <>
+        <DashboardStats items={statItems} />
 
       <Section>
         {loading ? (
@@ -376,6 +369,7 @@ const LegalReview: React.FC = () => {
       </Section>
     </>
   );
+  };
 
 
 
@@ -411,6 +405,11 @@ const LegalReview: React.FC = () => {
           onDecision={handleReviewDecision}
           hideEscalateButton={true}
         />
+      )}
+      
+      {/* Show escalation timeline when evidence is selected but drawer is not open */}
+      {selectedEvidence && !showReviewDrawer && (
+        <EscalationTimeline evidence={selectedEvidence} />
       )}
     </Container>
   );

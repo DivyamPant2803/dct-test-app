@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import styled from 'styled-components';
 import { Transfer, RequirementRow, Evidence } from '../types/index';
 import { useEvidenceApi } from '../hooks/useEvidenceApi';
@@ -6,16 +6,20 @@ import UploadEvidenceModal from './UploadEvidenceModal';
 import StatusChip from './StatusChip';
 import AuditTrailModal from './AuditTrailModal';
 import StyledSelect from './common/StyledSelect';
-import { FiEye, FiTrash2, FiDownload, FiRefreshCw, FiAlertTriangle } from 'react-icons/fi';
+import { TransferCard, EmptyState } from './common';
+import { FiEye, FiTrash2, FiDownload, FiRefreshCw, FiAlertTriangle, FiSearch, FiLayers, FiCheckCircle } from 'react-icons/fi';
+import { DashboardStats } from './common/DashboardStats';
+import { colors, borderRadius, shadows, spacing, transitions } from '../styles/designTokens';
 
 const DashboardContainer = styled.div`
   width: 100%;
   height: 100%;
-  background: #f5f5f5;
-  padding: 2rem;
+  background: ${colors.background.default};
+  padding: ${spacing.xl};
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: ${spacing.xl};
+  overflow-y: auto;
 `;
 
 const RefreshButton = styled.button`
@@ -43,19 +47,58 @@ const RefreshButton = styled.button`
 `;
 
 const Section = styled.div`
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  padding: 1.5rem;
+  background: ${colors.background.paper};
+  border-radius: ${borderRadius.lg};
+  box-shadow: ${shadows.base};
+  padding: ${spacing.xl};
 `;
 
 const SectionTitle = styled.h2`
   font-size: 1.5rem;
   font-weight: 600;
-  color: #222;
-  margin-bottom: 1.5rem;
-  border-bottom: 2px solid #f0f0f0;
-  padding-bottom: 0.5rem;
+  color: ${colors.text.primary};
+  margin-bottom: ${spacing.lg};
+  border-bottom: 2px solid ${colors.neutral.gray300};
+  padding-bottom: ${spacing.sm};
+  display: flex;
+  align-items: center;
+  gap: ${spacing.sm};
+`;
+
+
+
+const FilterBar = styled.div`
+  display: flex;
+  gap: ${spacing.base};
+  margin-bottom: ${spacing.lg};
+  flex-wrap: wrap;
+  align-items: center;
+`;
+
+const SearchInput = styled.input`
+  flex: 1;
+  min-width: 200px;
+  padding: ${spacing.sm} ${spacing.base};
+  border: 1px solid ${colors.neutral.gray300};
+  border-radius: ${borderRadius.base};
+  font-size: 0.875rem;
+  transition: all ${transitions.base};
+  
+  &:focus {
+    outline: none;
+    border-color: ${colors.status.underReview};
+    box-shadow: 0 0 0 3px ${colors.status.underReview}20;
+  }
+`;
+
+const FilterSelect = styled(StyledSelect)`
+  min-width: 150px;
+`;
+
+const TransfersGrid = styled.div`
+  display: grid;
+  gap: ${spacing.lg};
+  margin-top: ${spacing.lg};
 `;
 
 const Table = styled.table`
@@ -194,13 +237,6 @@ const NoDataMessage = styled.div`
   font-size: 0.9rem;
 `;
 
-const TransferSelector = styled.div`
-  margin-bottom: 1.5rem;
-`;
-
-const SelectWrapper = styled.div`
-  min-width: 300px;
-`;
 
 
 const EndUserDashboard: React.FC = () => {
@@ -215,6 +251,8 @@ const EndUserDashboard: React.FC = () => {
   const [showEvidencePreview, setShowEvidencePreview] = useState<Evidence | null>(null);
   const [showEscalateConfirm, setShowEscalateConfirm] = useState(false);
   const [escalating, setEscalating] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
 
   const { getTransfers, getTransferRequirements, getAllEvidence, deleteEvidence, previewEvidence, escalateTransfer } = useEvidenceApi();
 
@@ -512,6 +550,34 @@ const EndUserDashboard: React.FC = () => {
 
   const selectedTransfer = transfers.find(t => t.id === selectedTransferId);
 
+  // Calculate stats
+  const stats = useMemo(() => {
+    const total = transfers.length;
+    const pending = transfers.filter(t => t.status === 'PENDING' || t.status === 'ACTIVE').length;
+    const approved = transfers.filter(t => t.status === 'COMPLETED').length;
+    const escalated = transfers.filter(t => !!t.escalatedTo).length;
+    
+    return { total, pending, approved, escalated };
+  }, [transfers]);
+
+  // Filter transfers based on search and status
+  const filteredTransfers = useMemo(() => {
+    return transfers.filter(transfer => {
+      const matchesSearch = !searchQuery || 
+        transfer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        transfer.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        transfer.jurisdiction.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        transfer.entity.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesStatus = !statusFilter || 
+        (statusFilter === 'pending' && (transfer.status === 'PENDING' || transfer.status === 'ACTIVE')) ||
+        (statusFilter === 'completed' && transfer.status === 'COMPLETED') ||
+        (statusFilter === 'escalated' && !!transfer.escalatedTo);
+      
+      return matchesSearch && matchesStatus;
+    });
+  }, [transfers, searchQuery, statusFilter]);
+
   // Filter evidence based on selected transfer
   const filteredEvidence = selectedTransferId 
     ? uploadedEvidence.filter(evidence => {
@@ -536,24 +602,99 @@ const EndUserDashboard: React.FC = () => {
         <FiRefreshCw size={20} />
       </RefreshButton>
       
+      {/* Stats Cards */}
+      <DashboardStats 
+        items={[
+          {
+            label: 'Total Transfers',
+            value: stats.total,
+            icon: <FiLayers />,
+            subtext: 'All active transfers'
+          },
+          {
+            label: 'Pending Review',
+            value: stats.pending,
+            icon: <FiRefreshCw />,
+            color: colors.status.pending,
+            subtext: 'Awaiting action'
+          },
+          {
+            label: 'Approved',
+            value: stats.approved,
+            icon: <FiCheckCircle />,
+            color: colors.status.approved,
+            subtext: 'Successfully completed'
+          },
+          {
+            label: 'Escalated',
+            value: stats.escalated,
+            icon: <FiAlertTriangle />,
+            color: colors.status.escalated,
+            subtext: 'Requires attention',
+            highlight: stats.escalated > 0
+          }
+        ]}
+      />
+
+      {/* My Transfers Section */}
       <Section>
-        <SectionTitle>My Transfers</SectionTitle>
-        <TransferSelector>
-          <SelectWrapper>
-            <StyledSelect
-              value={selectedTransferId}
-              onChange={setSelectedTransferId}
-              options={[
-                { value: '', label: 'Select a transfer...' },
-                ...transfers.map(transfer => ({
-                  value: transfer.id,
-                  label: `${transfer.name} - ${transfer.jurisdiction}`
-                }))
-              ]}
-              placeholder="Select a transfer..."
+        <SectionTitle>
+          <FiLayers />
+          My Transfers
+        </SectionTitle>
+        
+        <FilterBar>
+          <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
+            <FiSearch 
+              style={{ 
+                position: 'absolute', 
+                left: spacing.sm, 
+                top: '50%', 
+                transform: 'translateY(-50%)',
+                color: colors.text.tertiary,
+                pointerEvents: 'none'
+              }} 
             />
-          </SelectWrapper>
-        </TransferSelector>
+            <SearchInput
+              type="text"
+              placeholder="Search transfers..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ paddingLeft: '2.5rem' }}
+            />
+          </div>
+          <FilterSelect
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={[
+              { value: '', label: 'All Status' },
+              { value: 'pending', label: 'Pending' },
+              { value: 'completed', label: 'Completed' },
+              { value: 'escalated', label: 'Escalated' },
+            ]}
+          />
+        </FilterBar>
+
+        {filteredTransfers.length > 0 ? (
+          <TransfersGrid>
+            {filteredTransfers.map(transfer => (
+              <TransferCard
+                key={transfer.id}
+                transfer={transfer}
+                onClick={() => setSelectedTransferId(transfer.id)}
+                showTimeline={true}
+              />
+            ))}
+          </TransfersGrid>
+        ) : (
+          <EmptyState
+            title="No Transfers Found"
+            message={searchQuery || statusFilter 
+              ? "No transfers match your search criteria. Try adjusting your filters."
+              : "You haven't created any transfer requests yet. Start by creating a new transfer in Central Inventory."}
+            icon={<FiLayers size={48} />}
+          />
+        )}
         
         {selectedTransfer && (() => {
           const slaStatus = getSLAStatus(selectedTransfer);

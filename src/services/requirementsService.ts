@@ -1,8 +1,8 @@
-import { 
-  EntitySummary, 
-  EntitiesResponse, 
-  EntityCombinationsResponse, 
-  FilterCriteria 
+import {
+  EntitySummary,
+  EntitiesResponse,
+  EntityCombinationsResponse,
+  FilterCriteria
 } from '../types/requirements';
 import { RequirementCombination } from '../types/index';
 import { generateEntitySummaries, generateMockCombinations } from './mockData';
@@ -29,23 +29,23 @@ export class RequirementsService {
   async getEntities(filters?: FilterCriteria): Promise<EntitiesResponse> {
     await simulateDelay(500); // Simulate API call
     initializeMockData();
-    
+
     let filteredEntities = [...mockEntities];
-    
+
     // Apply filters if provided
     if (filters?.entities && filters.entities.length > 0) {
-      filteredEntities = filteredEntities.filter(entity => 
+      filteredEntities = filteredEntities.filter(entity =>
         filters.entities.includes(entity.name)
       );
     }
-    
+
     // Calculate summary statistics
     const totalRequirements = filteredEntities.reduce((sum, entity) => sum + entity.totalRequirements, 0);
-    const currentCount = filteredEntities.reduce((sum, entity) => 
+    const currentCount = filteredEntities.reduce((sum, entity) =>
       sum + (entity.totalRequirements - entity.dueRequirements - entity.overdueRequirements), 0);
     const dueSoonCount = filteredEntities.reduce((sum, entity) => sum + entity.dueRequirements, 0);
     const overdueCount = filteredEntities.reduce((sum, entity) => sum + entity.overdueRequirements, 0);
-    
+
     return {
       entities: filteredEntities,
       totalEntities: filteredEntities.length,
@@ -62,27 +62,47 @@ export class RequirementsService {
    * Get combinations for a specific entity
    */
   async getEntityCombinations(
-    entityId: string, 
-    offset: number = 0, 
+    entityId: string,
+    offset: number = 0,
     limit: number = 100,
     filters?: FilterCriteria
   ): Promise<EntityCombinationsResponse> {
     await simulateDelay(200); // Simulate API call
     initializeMockData();
-    
+
     const entity = mockEntities.find(e => e.id === entityId);
     if (!entity) {
       throw new Error(`Entity not found: ${entityId}`);
     }
-    
+
     // Generate combinations if not cached
     if (!mockCombinationsCache.has(entityId)) {
-      const combinations = generateMockCombinations(entity.name, entity.totalCombinations);
-      mockCombinationsCache.set(entityId, combinations);
+      const JURISDICTIONS = ['Germany', 'United States', 'Singapore', 'United Kingdom', 'Canada', 'Brazil', 'France', 'Japan', 'Australia', 'Netherlands'];
+
+      // Pick 3-5 random jurisdictions for this entity
+      const numJurisdictions = Math.floor(Math.random() * 3) + 3; // 3-5 jurisdictions
+      const selectedJurisdictions = JURISDICTIONS
+        .sort(() => Math.random() - 0.5)
+        .slice(0, numJurisdictions);
+
+      // Distribute combinations across jurisdictions
+      const combinationsPerJurisdiction = Math.floor(entity.totalCombinations / selectedJurisdictions.length);
+      const allCombinations: RequirementCombination[] = [];
+
+      selectedJurisdictions.forEach((jurisdiction, index) => {
+        const count = index === selectedJurisdictions.length - 1
+          ? entity.totalCombinations - (combinationsPerJurisdiction * (selectedJurisdictions.length - 1))
+          : combinationsPerJurisdiction;
+
+        const combos = generateMockCombinations(entity.name, count, jurisdiction);
+        allCombinations.push(...combos);
+      });
+
+      mockCombinationsCache.set(entityId, allCombinations);
     }
-    
+
     let combinations = mockCombinationsCache.get(entityId) || [];
-    
+
     // Apply filters
     if (filters) {
       combinations = combinations.filter(combo => {
@@ -94,12 +114,12 @@ export class RequirementsService {
         return true;
       });
     }
-    
+
     // Apply pagination
     const paginatedCombinations = combinations.slice(offset, offset + limit);
     const hasMore = offset + limit < combinations.length;
     const nextOffset = hasMore ? offset + limit : undefined;
-    
+
     return {
       combinations: paginatedCombinations,
       total: combinations.length,
@@ -112,16 +132,16 @@ export class RequirementsService {
    * Get filter options based on current data
    */
   async getFilterOptions(): Promise<{
-    entities: Array<{value: string, label: string, count: number}>;
-    dataSubjectTypes: Array<{value: string, label: string, count: number}>;
-    transferLocations: Array<{value: string, label: string, count: number}>;
-    recipientTypes: Array<{value: string, label: string, count: number}>;
-    reviewDataTransferPurposes: Array<{value: string, label: string, count: number}>;
-    reaffirmationStatuses: Array<{value: string, label: string, count: number}>;
+    entities: Array<{ value: string, label: string, count: number }>;
+    dataSubjectTypes: Array<{ value: string, label: string, count: number }>;
+    transferLocations: Array<{ value: string, label: string, count: number }>;
+    recipientTypes: Array<{ value: string, label: string, count: number }>;
+    reviewDataTransferPurposes: Array<{ value: string, label: string, count: number }>;
+    reaffirmationStatuses: Array<{ value: string, label: string, count: number }>;
   }> {
     await simulateDelay(100);
     initializeMockData();
-    
+
     // For now, return static options with counts
     // In production, this would calculate based on actual data
     return {

@@ -13,8 +13,6 @@ const EntityDataContainer = styled.div`
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
 `;
 
 const LoadingContainer = styled.div`
@@ -102,7 +100,6 @@ interface EntityDataSectionProps {
   expandedVersions: Set<string>;
   selectedVersions: Set<string>;
   selectedCombinations: Set<string>;
-  containerHeight: number;
   onEntityToggle: (entityId: string) => Promise<void>;
   onVersionToggle: (versionId: string) => Promise<void>;
   onEntitySelect: (entityId: string, selectAll: boolean) => void;
@@ -123,7 +120,6 @@ const EntityDataSection: React.FC<EntityDataSectionProps> = ({
   expandedVersions,
   selectedVersions,
   selectedCombinations,
-  containerHeight,
   onEntityToggle,
   onVersionToggle,
   onEntitySelect,
@@ -176,7 +172,6 @@ const EntityDataSection: React.FC<EntityDataSectionProps> = ({
           onEntityReaffirm={onEntityReaffirm}
           onVersionReaffirm={onVersionReaffirm}
           onCombinationReaffirm={onCombinationReaffirm}
-          height={containerHeight - 300} // Subtract header and filter heights
         />
       )}
 

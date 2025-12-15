@@ -38,7 +38,7 @@ const CombinationDetails = styled.div`
 `;
 
 const CombinationTitle = styled.div`
-  font-weight: 500;
+  font-weight: 400;
   color: #222;
   font-size: 0.8rem;
 `;

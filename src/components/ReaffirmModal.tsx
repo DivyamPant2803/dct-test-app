@@ -255,34 +255,125 @@ const ReaffirmModal: React.FC<ReaffirmModalProps> = ({ isOpen, onClose, requirem
         
         <form onSubmit={handleSubmit}>
           <ModalBody>
+            {/* Section 1: Basic Information */}
             <RequirementInfo>
-              <InfoRow>
-                <InfoLabel>Title:</InfoLabel>
-                <InfoValue>{currentRequirement.title}</InfoValue>
-              </InfoRow>
               <InfoRow>
                 <InfoLabel>Jurisdiction:</InfoLabel>
                 <InfoValue>{currentRequirement.jurisdiction}</InfoValue>
               </InfoRow>
+              {currentRequirement.status && (
+                <InfoRow>
+                  <InfoLabel>Status:</InfoLabel>
+                  <InfoValue>{currentRequirement.status}</InfoValue>
+                </InfoRow>
+              )}
               <InfoRow>
                 <InfoLabel>Entity:</InfoLabel>
                 <InfoValue>{currentRequirement.entity}</InfoValue>
               </InfoRow>
               <InfoRow>
-                <InfoLabel>Subject Type:</InfoLabel>
+                <InfoLabel>Data Subject Type:</InfoLabel>
                 <InfoValue>{currentRequirement.subjectType}</InfoValue>
               </InfoRow>
-              <InfoRow>
-                <InfoLabel>Original Date:</InfoLabel>
-                <InfoValue>{formatDate(currentRequirement.originalIngestionDate)}</InfoValue>
-              </InfoRow>
-              <InfoRow>
-                <InfoLabel>Last Reaffirmed:</InfoLabel>
-                <InfoValue>
-                  {currentRequirement.lastReaffirmedAt ? formatDate(currentRequirement.lastReaffirmedAt) : 'Never'}
-                </InfoValue>
-              </InfoRow>
             </RequirementInfo>
+
+            {/* Section 2: Contact Persons */}
+            {currentRequirement.contactPersons && currentRequirement.contactPersons.length > 0 && (
+              <FormGroup>
+                <Label>Contact Persons</Label>
+                <RequirementInfo>
+                  {currentRequirement.contactPersons.map((person, index) => (
+                    <InfoRow key={index}>
+                      <InfoValue>{person}</InfoValue>
+                    </InfoRow>
+                  ))}
+                </RequirementInfo>
+              </FormGroup>
+            )}
+
+            {/* Section 3: Recipient Types */}
+            {currentRequirement.recipientTypes && currentRequirement.recipientTypes.length > 0 && (
+              <FormGroup>
+                <Label>Recipient Types</Label>
+                <RequirementInfo>
+                  <InfoRow>
+                    <InfoValue>{currentRequirement.recipientTypes.join(', ')}</InfoValue>
+                  </InfoRow>
+                </RequirementInfo>
+              </FormGroup>
+            )}
+
+            {/* Section 4: Data Subject Type Details */}
+            {currentRequirement.dataSubjectTypeDetails && currentRequirement.dataSubjectTypeDetails.length > 0 && (
+              <FormGroup>
+                <Label>Data Subject Type Details</Label>
+                {currentRequirement.dataSubjectTypeDetails.map((detail, index) => (
+                  <RequirementInfo key={index} style={{ marginBottom: index < currentRequirement.dataSubjectTypeDetails!.length - 1 ? '0.75rem' : '0' }}>
+                    <InfoRow>
+                      <InfoLabel>Type:</InfoLabel>
+                      <InfoValue>{detail.type}</InfoValue>
+                    </InfoRow>
+                    <InfoRow>
+                      <InfoLabel>Transfer Location:</InfoLabel>
+                      <InfoValue>{detail.transferLocation}</InfoValue>
+                    </InfoRow>
+                    <InfoRow>
+                      <InfoLabel>Category of Data:</InfoLabel>
+                      <InfoValue>{detail.categoryOfData}</InfoValue>
+                    </InfoRow>
+                    <InfoRow>
+                      <InfoLabel>Data Transfer Purpose:</InfoLabel>
+                      <InfoValue>{detail.dataTransferPurpose}</InfoValue>
+                    </InfoRow>
+                  </RequirementInfo>
+                ))}
+              </FormGroup>
+            )}
+
+            {/* Section 5: Output */}
+            {currentRequirement.output && (
+              <FormGroup>
+                <Label>Output</Label>
+                <RequirementInfo>
+                  <InfoRow>
+                    <InfoValue>{currentRequirement.output}</InfoValue>
+                  </InfoRow>
+                </RequirementInfo>
+              </FormGroup>
+            )}
+
+            {/* Section 6: Remediation */}
+            {currentRequirement.remediation && (
+              <FormGroup>
+                <Label>Remediation</Label>
+                <RequirementInfo>
+                  <InfoRow>
+                    <InfoValue>{currentRequirement.remediation}</InfoValue>
+                  </InfoRow>
+                </RequirementInfo>
+              </FormGroup>
+            )}
+
+            {/* Additional Information */}
+            <FormGroup>
+              <Label>Requirement Details</Label>
+              <RequirementInfo>
+                <InfoRow>
+                  <InfoLabel>Title:</InfoLabel>
+                  <InfoValue>{currentRequirement.title}</InfoValue>
+                </InfoRow>
+                <InfoRow>
+                  <InfoLabel>Original Date:</InfoLabel>
+                  <InfoValue>{formatDate(currentRequirement.originalIngestionDate)}</InfoValue>
+                </InfoRow>
+                <InfoRow>
+                  <InfoLabel>Last Reaffirmed:</InfoLabel>
+                  <InfoValue>
+                    {currentRequirement.lastReaffirmedAt ? formatDate(currentRequirement.lastReaffirmedAt) : 'Never'}
+                  </InfoValue>
+                </InfoRow>
+              </RequirementInfo>
+            </FormGroup>
 
             <FormGroup>
               <Label>Current Requirement Text</Label>

@@ -16,6 +16,7 @@ import SupportChatbotPanel from './components/SupportChatbotPanel'
 import { PersonaProvider, usePersona } from './contexts/PersonaContext'
 import PersonaRouter from './components/PersonaRouter'
 import { getUnreadCount } from './services/notificationService'
+import { ToastProvider } from './components/common'
 
 const queryClient = new QueryClient()
 
@@ -230,7 +231,9 @@ const App = () => {
       <GlobalStyle />
       <BrowserRouter>
         <PersonaProvider>
-          <AppContent />
+          <ToastProvider>
+            <AppContent />
+          </ToastProvider>
         </PersonaProvider>
       </BrowserRouter>
     </QueryClientProvider>

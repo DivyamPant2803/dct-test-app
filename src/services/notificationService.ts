@@ -164,3 +164,4 @@ export const getNotificationsAsJSON = (persona: string): NotificationData[] => {
   return getNotifications(persona);
 };
 
+

@@ -9,6 +9,7 @@ import AdminCRDashboard from './AdminCRDashboard';
 import PublishSummary from './PublishSummary';
 import StyledSelect from './common/StyledSelect';
 import Sidebar, { SidebarGroup } from './common/Sidebar';
+import { AdminQueueSummary, useToast } from './common';
 
 const DashboardContainer = styled.div`
   width: 100%;
@@ -510,13 +511,13 @@ const AdminDashboard: React.FC = () => {
       
       // Show success message with escalation details if applicable
       if (decision.decision === 'ESCALATE' && decision.escalatedTo) {
-        alert(`Evidence escalated to ${decision.escalatedTo} successfully!`);
+        showToast(`Evidence escalated to ${decision.escalatedTo} successfully!`, 'success');
       } else {
-        alert(`Evidence ${decision.decision.toLowerCase()}d successfully!`);
+        showToast(`Evidence ${decision.decision.toLowerCase()}d successfully!`, 'success');
       }
     } catch (error) {
       console.error('Failed to submit review decision:', error);
-      alert('Failed to submit review decision. Please try again.');
+      showToast('Failed to submit review decision. Please try again.', 'error');
     }
   };
 
@@ -533,6 +534,7 @@ const AdminDashboard: React.FC = () => {
   };
 
   const [allEvidence, setAllEvidence] = useState<Evidence[]>([]);
+  const { showToast } = useToast();
 
   const filteredEvidence = allEvidence.filter(evidence => {
     if (filters.status && evidence.status !== filters.status) return false;
@@ -542,33 +544,9 @@ const AdminDashboard: React.FC = () => {
 
   // All evidence is now loaded in the main useEffect above
 
-  const stats = {
-    pending: allEvidence.filter(e => e.status === 'PENDING').length,
-    underReview: allEvidence.filter(e => e.status === 'UNDER_REVIEW').length,
-    approved: allEvidence.filter(e => e.status === 'APPROVED').length,
-    rejected: allEvidence.filter(e => e.status === 'REJECTED').length
-  };
-
   const renderEvidenceQueue = () => (
     <>
-      <StatsGrid>
-        <StatCard>
-          <StatValue>{stats.pending}</StatValue>
-          <StatLabel>Pending Review</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatValue>{stats.underReview}</StatValue>
-          <StatLabel>Under Review</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatValue>{stats.approved}</StatValue>
-          <StatLabel>Approved</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatValue>{stats.rejected}</StatValue>
-          <StatLabel>Rejected</StatLabel>
-        </StatCard>
-      </StatsGrid>
+      <AdminQueueSummary evidence={allEvidence} />
         
         <Filters>
           <FilterGroup>

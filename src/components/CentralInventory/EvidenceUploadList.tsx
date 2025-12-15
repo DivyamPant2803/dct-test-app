@@ -109,25 +109,33 @@ const RequirementsText = styled.div`
 
 const ActionsContainer = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
   
   @media (min-width: 1200px) {
     grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
   }
   
   @media (min-width: 1600px) {
     grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
   }
 `;
 
 const ActionItem = styled.div`
-  padding: 0.75rem;
+  padding: 1rem;
   background: #fafafa;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid #e0e0e0;
   display: flex;
   flex-direction: column;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    border-color: #ccc;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
 `;
 
 const ActionText = styled.div`
@@ -138,24 +146,25 @@ const ActionText = styled.div`
 `;
 
 const ActionUploadSection = styled.div`
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
   border-top: 1px solid #e0e0e0;
 `;
 
 const UploadArea = styled.div<{ $isDragOver: boolean; $hasFile: boolean }>`
   border: 2px dashed ${props => props.$isDragOver ? '#000' : props.$hasFile ? '#28a745' : '#ccc'};
-  border-radius: 6px;
-  padding: 1rem;
+  border-radius: 8px;
+  padding: 1.25rem;
   text-align: center;
   cursor: pointer;
   background: ${props => props.$isDragOver ? '#f8f8f8' : props.$hasFile ? '#f0f9f0' : 'white'};
   transition: all 0.2s ease;
-  margin-bottom: 0.75rem;
+  margin-bottom: 1rem;
   
   &:hover {
     border-color: #000;
     background: #f8f8f8;
+    transform: translateY(-1px);
   }
 `;
 
@@ -185,18 +194,20 @@ const FileSize = styled.div`
 
 const DescriptionInput = styled.textarea`
   width: 100%;
-  padding: 0.5rem;
+  padding: 0.75rem;
   border: 1px solid #ccc;
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 0.85rem;
   font-family: inherit;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
   resize: vertical;
-  min-height: 60px;
+  min-height: 70px;
+  transition: all 0.2s ease;
   
   &:focus {
     outline: none;
     border-color: #000;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
   }
 `;
 
