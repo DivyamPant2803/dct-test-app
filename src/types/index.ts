@@ -41,8 +41,45 @@ export const DATA_SUBJECT_TYPES = {
 
 export const RECIPIENT_TYPES = ['Entity', 'Provider', 'Third Party', 'External'] as const;
 
+// MER (Minimum Enterprise Requirement) Types
+export type MERType = 'MER-13' | 'MER-14';
+
+export interface MERTemplateField {
+  id: string;
+  label: string;
+  value: string;
+  editable: boolean;
+  required: boolean;
+  type: 'text' | 'textarea' | 'select' | 'date' | 'file';
+  options?: string[]; // for select fields
+  placeholder?: string;
+  helpText?: string;
+}
+
+export interface MERTemplate {
+  id: string;
+  merType: MERType;
+  version: string;
+  fields: MERTemplateField[];
+  createdAt: string;
+  createdBy: string;
+  description?: string;
+}
+
+// Reviewer Types for Role-Based Access Control
+export type ReviewerType = 'Admin' | 'Legal' | 'Business' | 'Deputy-Legal' | 'Deputy-Business';
+
 // Evidence Upload and Review Types
-export type RequirementStatus = "PENDING" | "APPROVED" | "REJECTED" | "UNDER_REVIEW" | "ESCALATED";
+export type RequirementStatus =
+  | "DRAFT"
+  | "SUBMITTED"
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED"
+  | "UNDER_REVIEW"
+  | "ESCALATED"
+  | "CLARIFICATION_REQUIRED"
+  | "EVIDENCE_REQUESTED";
 
 export interface RequirementRow {
   id: string;
@@ -86,6 +123,11 @@ export interface Evidence {
     taggedAuthorities: string[];
   }>;
   taggedAuthorities?: string[];
+  // Deputy assignment fields
+  assignedDeputy?: string;
+  assignedDeputyType?: ReviewerType;
+  deputyAssignedAt?: string;
+  deputyAssignedBy?: string;
 }
 
 export interface Transfer {
@@ -104,6 +146,26 @@ export interface Transfer {
   escalatedAt?: string;
   isHighPriority?: boolean;
   escalationReason?: string;
+  // MER template fields
+  merType?: MERType;
+  merTemplateId?: string;
+  merTemplateData?: Record<string, string>; // field ID → value mapping
+  // Clarification request fields
+  clarificationRequest?: {
+    requestedBy: string;
+    requestedAt: string;
+    message: string;
+    responseBy?: string;
+    responseAt?: string;
+    responseMessage?: string;
+  };
+  // Evidence request fields
+  evidenceRequest?: {
+    requestedBy: string;
+    requestedAt: string;
+    message: string;
+    uploadedAt?: string;
+  };
 }
 
 export interface AuditEntry {
@@ -292,6 +354,7 @@ export interface BulkReaffirmationRequest {
   combinationIds: string[];
   action: 'REAFFIRMED_AS_IS' | 'REAFFIRMED_WITH_CHANGES';
   comment: string;
+  remediation?: string;
   newRequirements?: Array<{
     id: string;
     title: string;

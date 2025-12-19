@@ -359,8 +359,69 @@ const LoadingSpinner = styled.div`
   }
 `;
 
+const EvidenceFilesList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${spacing.sm};
+`;
+
+const EvidenceFileItem = styled.div<{ $isSelected: boolean }>`
+  padding: ${spacing.md};
+  background: ${props => props.$isSelected ? colors.status.underReview + '15' : colors.neutral.gray50};
+  border: 1px solid ${props => props.$isSelected ? colors.status.underReview : colors.neutral.gray200};
+  border-radius: ${borderRadius.base};
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${spacing.sm};
+  transition: all ${transitions.base};
+  
+  &:hover {
+    border-color: ${colors.status.underReview};
+    background: ${colors.status.underReview}10;
+  }
+`;
+
+const FileItemInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const FileItemName = styled.div`
+  font-size: ${typography.fontSize.sm};
+  font-weight: 500;
+  color: ${colors.text.primary};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const FileItemMeta = styled.div`
+  font-size: 0.75rem;
+  color: ${colors.text.secondary};
+  margin-top: 2px;
+`;
+
+const PreviewButton = styled.button`
+  padding: ${spacing.xs} ${spacing.sm};
+  background: ${colors.neutral.black};
+  color: white;
+  border: none;
+  border-radius: ${borderRadius.sm};
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all ${transitions.base};
+  white-space: nowrap;
+  
+  &:hover {
+    background: ${colors.neutral.gray800};
+  }
+`;
+
 interface ReviewDrawerProps {
   evidence: Evidence;
+  allEvidence?: Evidence[]; // All evidence files for this transfer
   onClose: () => void;
   onDecision: (decision: ReviewDecision) => void;
   hideEscalateButton?: boolean;
@@ -368,15 +429,22 @@ interface ReviewDrawerProps {
 
 const ReviewDrawer: React.FC<ReviewDrawerProps> = ({
   evidence,
+  allEvidence,
   onClose,
   onDecision,
   hideEscalateButton = false
 }) => {
+  const [selectedEvidence, setSelectedEvidence] = useState<Evidence>(evidence);
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [escalationReason, setEscalationReason] = useState('');
   const [selectedAuthorities, setSelectedAuthorities] = useState<string[]>([]);
   const [canEscalate, setCanEscalate] = useState(false);
+
+  // Update selected evidence when evidence prop changes
+  useEffect(() => {
+    setSelectedEvidence(evidence);
+  }, [evidence]);
 
   useEffect(() => {
     const hasMinimumLength = comment.trim().length >= 10;
@@ -396,7 +464,7 @@ const ReviewDrawer: React.FC<ReviewDrawerProps> = ({
     setIsSubmitting(true);
     try {
       await onDecision({
-        evidenceId: evidence.id,
+        evidenceId: selectedEvidence.id,
         decision,
         note: comment.trim() || undefined,
         ...(decision === 'ESCALATE' && {
@@ -445,7 +513,7 @@ const ReviewDrawer: React.FC<ReviewDrawerProps> = ({
         <Header>
           <TitleGroup>
             <Title>Review Evidence</Title>
-            <StatusChip status={evidence.status} />
+            <StatusChip status={selectedEvidence.status} />
           </TitleGroup>
           <CloseButton onClick={onClose}>
             <FiX size={24} />
@@ -455,14 +523,18 @@ const ReviewDrawer: React.FC<ReviewDrawerProps> = ({
         <Content>
           <PreviewColumn>
             <PreviewHeader>
-              <span>{evidence.filename}</span>
+              <span>{selectedEvidence.filename}</span>
               <div style={{ display: 'flex', gap: spacing.sm }}>
-                {/* Additional preview controls could go here */}
+                {allEvidence && allEvidence.length > 1 && (
+                  <span style={{ fontSize: '0.85rem', color: colors.text.secondary }}>
+                    {allEvidence.findIndex(e => e.id === selectedEvidence.id) + 1} of {allEvidence.length}
+                  </span>
+                )}
               </div>
             </PreviewHeader>
             <PreviewContent>
-              {evidence.base64Data ? (
-                evidence.fileType === 'PDF' ? (
+              {selectedEvidence.base64Data ? (
+                selectedEvidence.fileType === 'PDF' ? (
                   <iframe
                     src={evidence.base64Data}
                     width="100%"
@@ -498,6 +570,34 @@ const ReviewDrawer: React.FC<ReviewDrawerProps> = ({
 
           <Sidebar>
             <SidebarScrollArea>
+              {/* Evidence Files List - Show if multiple files */}
+              {allEvidence && allEvidence.length > 1 && (
+                <div>
+                  <SectionTitle><FiFileText size={14} /> All Evidence Files ({allEvidence.length})</SectionTitle>
+                  <EvidenceFilesList>
+                    {allEvidence.map((ev) => (
+                      <EvidenceFileItem 
+                        key={ev.id}
+                        $isSelected={ev.id === selectedEvidence.id}
+                      >
+                        <FileItemInfo>
+                          <FileItemName title={ev.filename}>{ev.filename}</FileItemName>
+                          <FileItemMeta>
+                            {ev.fileType} • {formatFileSize(ev.size)}
+                          </FileItemMeta>
+                        </FileItemInfo>
+                        <PreviewButton 
+                          onClick={() => setSelectedEvidence(ev)}
+                          disabled={ev.id === selectedEvidence.id}
+                        >
+                          {ev.id === selectedEvidence.id ? 'Viewing' : 'Preview'}
+                        </PreviewButton>
+                      </EvidenceFileItem>
+                    ))}
+                  </EvidenceFilesList>
+                </div>
+              )}
+
               <div>
                 <SectionTitle><FiInfo size={14} /> Evidence Details</SectionTitle>
                 <MetadataGrid>

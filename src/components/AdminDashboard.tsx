@@ -1233,6 +1233,39 @@ const AdminDashboard: React.FC = () => {
       {showReviewDrawer && selectedEvidence && (
         <ReviewDrawer
           evidence={selectedEvidence}
+          allEvidence={(() => {
+            // Extract transfer ID from requirementId
+            // Format: req-transfer-{CONTROL_ID}-{TIMESTAMP}-...
+            // Example: req-transfer-MER-001-1766121260042-mer-1766121867287
+            // We want to extract: MER-001-1766121260042
+            const extractTransferId = (reqId: string) => {
+              if (reqId.startsWith('req-transfer-')) {
+                // Remove 'req-transfer-' prefix
+                const withoutPrefix = reqId.substring('req-transfer-'.length);
+                // Split by '-' and take first 3 parts (e.g., MER-001-1766121260042)
+                const parts = withoutPrefix.split('-');
+                if (parts.length >= 3) {
+                  return `${parts[0]}-${parts[1]}-${parts[2]}`;
+                }
+              }
+              // Fallback: return the whole requirementId
+              return reqId;
+            };
+            
+            const selectedTransferId = extractTransferId(selectedEvidence.requirementId);
+            console.log('Selected Evidence RequirementId:', selectedEvidence.requirementId);
+            console.log('Extracted Transfer ID:', selectedTransferId);
+            
+            const filtered = allEvidence.filter(ev => {
+              const evTransferId = extractTransferId(ev.requirementId);
+              const matches = selectedTransferId === evTransferId;
+              console.log(`Evidence ${ev.filename}: requirementId=${ev.requirementId}, extractedId=${evTransferId}, matches=${matches}`);
+              return matches;
+            });
+            
+            console.log(`Filtered ${filtered.length} evidence files out of ${allEvidence.length} total`);
+            return filtered;
+          })()}
           onClose={() => setShowReviewDrawer(false)}
           onDecision={handleReviewDecision}
         />

@@ -255,7 +255,8 @@ const EnhancedBulkReaffirmation: React.FC<EnhancedBulkReaffirmationProps> = () =
       await originalHandleBulkReaffirm({
         combinationIds: uniqueCombinationIds,
         action: data.action,
-        comment: data.comment
+        comment: data.comment,
+        remediation: data.remediation
       });
       
       setBulkReaffirmModalOpen(false);

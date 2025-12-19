@@ -85,14 +85,45 @@ export const generateMockCombinations = (
 
   const regulationType = getRegulationType(versionJurisdiction);
 
+  // Create a deterministic base combination so we always have a group
+  // of rows with the same combination attributes and output. This makes
+  // it easy to test bulk reaffirmation behaviour (where all selected
+  // combinations must share the same combination key and output).
+  const baseDataSubjectType = DATA_SUBJECT_TYPES[0]; // 'Employee'
+  const baseTransferLocation = versionJurisdiction;
+  const baseCategoryOfData = CATEGORIES_OF_DATA[0]; // 'Personal'
+  const baseRecipientType = RECIPIENT_TYPES[0]; // 'Entity'
+  const basePurpose = REVIEW_DATA_TRANSFER_PURPOSES[0]; // 'Client Relationship Management'
+  const baseOutput = 'OKC';
+  const baseRemediation = 'Conduct regular compliance audits';
+  const baseGroupSize = Math.min(5, count); // up to 5 identical combinations per jurisdiction
+
   for (let i = 0; i < count; i++) {
-    const status: ReaffirmationStatus = Math.random() < 0.6 ? 'CURRENT' : Math.random() < 0.7 ? 'DUE_SOON' : 'OVERDUE';
-    const dataSubjectType = DATA_SUBJECT_TYPES[Math.floor(Math.random() * DATA_SUBJECT_TYPES.length)];
-    // Use the version's jurisdiction as the transfer location
-    const transferLocation = versionJurisdiction;
-    const categoryOfData = CATEGORIES_OF_DATA[Math.floor(Math.random() * CATEGORIES_OF_DATA.length)];
-    const recipientType = RECIPIENT_TYPES[Math.floor(Math.random() * RECIPIENT_TYPES.length)];
-    const purpose = REVIEW_DATA_TRANSFER_PURPOSES[Math.floor(Math.random() * REVIEW_DATA_TRANSFER_PURPOSES.length)];
+    const status: ReaffirmationStatus =
+      Math.random() < 0.6 ? 'CURRENT' : Math.random() < 0.7 ? 'DUE_SOON' : 'OVERDUE';
+
+    const isBaseGroup = i < baseGroupSize;
+
+    const dataSubjectType = isBaseGroup
+      ? baseDataSubjectType
+      : DATA_SUBJECT_TYPES[Math.floor(Math.random() * DATA_SUBJECT_TYPES.length)];
+
+    // Use the version's jurisdiction as the transfer location for base group
+    const transferLocation = isBaseGroup
+      ? baseTransferLocation
+      : TRANSFER_LOCATIONS[Math.floor(Math.random() * TRANSFER_LOCATIONS.length)];
+
+    const categoryOfData = isBaseGroup
+      ? baseCategoryOfData
+      : CATEGORIES_OF_DATA[Math.floor(Math.random() * CATEGORIES_OF_DATA.length)];
+
+    const recipientType = isBaseGroup
+      ? baseRecipientType
+      : RECIPIENT_TYPES[Math.floor(Math.random() * RECIPIENT_TYPES.length)];
+
+    const purpose = isBaseGroup
+      ? basePurpose
+      : REVIEW_DATA_TRANSFER_PURPOSES[Math.floor(Math.random() * REVIEW_DATA_TRANSFER_PURPOSES.length)];
 
     // Generate 1-3 contact persons
     const numContacts = Math.floor(Math.random() * 3) + 1;
@@ -109,8 +140,13 @@ export const generateMockCombinations = (
     // Create a descriptive title based on the combination attributes
     const combinationTitle = `${regulationType} - ${dataSubjectType} - ${recipientType} - ${purpose}`;
 
+    const requirementOutput = isBaseGroup ? baseOutput : OUTPUTS[Math.floor(Math.random() * OUTPUTS.length)];
+    const remediation = isBaseGroup ? baseRemediation : REMEDIATIONS[Math.floor(Math.random() * REMEDIATIONS.length)];
+
     combinations.push({
-      id: `combo-${entityName.replace(/\s+/g, '-').toLowerCase()}-${versionJurisdiction.replace(/\s+/g, '-').toLowerCase()}-${i}`,
+      id: `combo-${entityName.replace(/\s+/g, '-').toLowerCase()}-${versionJurisdiction
+        .replace(/\s+/g, '-')
+        .toLowerCase()}-${i}`,
       entity: entityName,
       dataSubjectType,
       transferLocation,
@@ -143,20 +179,21 @@ export const generateMockCombinations = (
             dataTransferPurpose: purpose
           }
         ],
-        output: OUTPUTS[Math.floor(Math.random() * OUTPUTS.length)],
-        remediation: REMEDIATIONS[Math.floor(Math.random() * REMEDIATIONS.length)]
+        output: requirementOutput,
+        remediation
       },
       reaffirmationStatus: status,
       nextReaffirmationDue: new Date(Date.now() + Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
-      lastReaffirmedAt: status !== 'CURRENT' ? undefined : new Date(Date.now() - Math.random() * 180 * 24 * 60 * 60 * 1000).toISOString(),
+      lastReaffirmedAt:
+        status !== 'CURRENT' ? undefined : new Date(Date.now() - Math.random() * 180 * 24 * 60 * 60 * 1000).toISOString(),
       lastReaffirmedBy: status !== 'CURRENT' ? undefined : 'legal-user',
       // Additional fields for combination
       jurisdiction: versionJurisdiction, // Same jurisdiction for all combinations
       status: status === 'CURRENT' ? 'Active' : status === 'DUE_SOON' ? 'Review Required' : 'Overdue',
       contactPersons: [...new Set(contactPersons)],
       categoryOfData,
-      output: OUTPUTS[Math.floor(Math.random() * OUTPUTS.length)],
-      remediation: REMEDIATIONS[Math.floor(Math.random() * REMEDIATIONS.length)]
+      output: requirementOutput,
+      remediation
     });
   }
 

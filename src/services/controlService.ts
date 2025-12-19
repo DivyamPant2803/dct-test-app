@@ -1,3 +1,5 @@
+import { MERType } from '../types/index';
+
 export type ControlType = 'MER' | 'EUC' | 'Third Party Controls';
 
 export interface ControlMetadata {
@@ -6,6 +8,7 @@ export interface ControlMetadata {
   applicationId: string;
   applicationName: string;
   applicationManager: string;
+  merType?: MERType; // Optional: only for MER controls
 }
 
 export const MOCK_CONTROLS: ControlMetadata[] = [
@@ -14,14 +17,16 @@ export const MOCK_CONTROLS: ControlMetadata[] = [
     controlType: 'MER',
     applicationId: 'APP-MER-001',
     applicationName: 'Master Entity Registry System',
-    applicationManager: 'John Smith'
+    applicationManager: 'John Smith',
+    merType: 'MER-13'
   },
   {
     controlId: 'MER-002',
     controlType: 'MER',
     applicationId: 'APP-MER-002',
     applicationName: 'Entity Management Platform',
-    applicationManager: 'Sarah Johnson'
+    applicationManager: 'Sarah Johnson',
+    merType: 'MER-14'
   },
   {
     controlId: 'EUC-001',
@@ -63,6 +68,10 @@ export const getControlById = (controlId: string): ControlMetadata | undefined =
 
 export const getAllControls = (): ControlMetadata[] => {
   return MOCK_CONTROLS;
+};
+
+export const getControlsByMERType = (merType: MERType): ControlMetadata[] => {
+  return MOCK_CONTROLS.filter(control => control.merType === merType);
 };
 
 

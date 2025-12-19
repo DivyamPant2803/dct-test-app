@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import styled from 'styled-components';
 import { FiCheck, FiX, FiRefreshCw } from 'react-icons/fi';
 import { EntitySummary } from '../../types/requirements';
-import { BulkReaffirmationRequest } from '../../types/index';
+import { BulkReaffirmationRequest, RequirementCombination } from '../../types/index';
 import VirtualizedEntityList from './VirtualizedEntityList';
 
 const EntityDataContainer = styled.div`
@@ -131,11 +131,85 @@ const EntityDataSection: React.FC<EntityDataSectionProps> = ({
   onClearSelection,
   onBulkReaffirm
 }) => {
+  // Helper to build a combination key for equality checks
+  const getCombinationKey = (combination: RequirementCombination) => {
+    return [
+      combination.entity,
+      combination.jurisdiction || '',
+      combination.dataSubjectType,
+      combination.transferLocation,
+      combination.recipientType,
+      combination.reviewDataTransferPurpose,
+      combination.categoryOfData || ''
+    ].join('|');
+  };
+
+  // Resolve selected combination IDs to full combination objects
+  const selectedCombinationDetails = useMemo(() => {
+    if (selectedCombinations.size === 0) return [] as RequirementCombination[];
+
+    const selectedIds = new Set(selectedCombinations);
+    const results: RequirementCombination[] = [];
+
+    for (const entity of entities) {
+      // Direct combinations on the entity
+      if (entity.combinations) {
+        for (const combo of entity.combinations) {
+          if (selectedIds.has(combo.id)) {
+            results.push(combo);
+          }
+        }
+      }
+
+      // Combinations under versions
+      if (entity.versions) {
+        for (const version of entity.versions) {
+          if (version.combinations) {
+            for (const combo of version.combinations) {
+              if (selectedIds.has(combo.id)) {
+                results.push(combo);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return results;
+  }, [entities, selectedCombinations]);
+
+  // Compute validation flags for bulk reaffirmation
+  const { hasDifferentCombinationKeys, hasDifferentOutputs } = useMemo(() => {
+    if (selectedCombinationDetails.length === 0) {
+      return { hasDifferentCombinationKeys: false, hasDifferentOutputs: false };
+    }
+
+    const combinationKeys = new Set<string>();
+    const outputs = new Set<string>();
+
+    for (const combo of selectedCombinationDetails) {
+      combinationKeys.add(getCombinationKey(combo));
+      if (combo.output) {
+        outputs.add(combo.output);
+      }
+    }
+
+    return {
+      hasDifferentCombinationKeys: combinationKeys.size > 1,
+      hasDifferentOutputs: outputs.size > 1
+    };
+  }, [selectedCombinationDetails]);
+
+  const canBulkReaffirm = 
+    selectedCombinations.size > 0 && 
+    !hasDifferentCombinationKeys && 
+    !hasDifferentOutputs;
+
   const handleBulkReaffirmClick = async () => {
-    if (selectedCombinations.size === 0) return;
+    if (!canBulkReaffirm || selectedCombinations.size === 0) return;
 
     const request: BulkReaffirmationRequest = {
-      combinationIds: Array.from(selectedCombinations),
+      combinationIds: selectedCombinationDetails.map(c => c.id),
       action: 'REAFFIRMED_AS_IS',
       comment: 'Bulk reaffirmation'
     };
@@ -185,7 +259,20 @@ const EntityDataSection: React.FC<EntityDataSectionProps> = ({
               <FiX />
               Clear Selection
             </ActionButton>
-            <ActionButton $variant="primary" onClick={handleBulkReaffirmClick}>
+            <ActionButton 
+              $variant="primary" 
+              onClick={handleBulkReaffirmClick}
+              disabled={!canBulkReaffirm}
+              title={
+                !canBulkReaffirm
+                  ? hasDifferentCombinationKeys
+                    ? 'Bulk reaffirmation is only allowed for requirements with the same combination (entity, jurisdiction, data subject, transfer location, recipient, purpose, data category).'
+                    : hasDifferentOutputs
+                      ? 'Bulk reaffirmation is only allowed for requirements with the same output.'
+                      : undefined
+                  : undefined
+              }
+            >
               <FiCheck />
               Bulk Reaffirm ({selectedCombinations.size})
             </ActionButton>

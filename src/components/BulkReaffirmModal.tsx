@@ -265,6 +265,7 @@ interface BulkReaffirmModalProps {
     requirementIds: string[];
     comment: string;
     action: 'REAFFIRMED_AS_IS' | 'REAFFIRMED_WITH_CHANGES';
+    remediation?: string;
   }) => Promise<void>;
 }
 
@@ -275,20 +276,46 @@ const BulkReaffirmModal: React.FC<BulkReaffirmModalProps> = ({
   onSubmit 
 }) => {
   const [comment, setComment] = useState('');
+  const [remediation, setRemediation] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // Check if all requirements have the same output
+  const getUniqueOutputs = () => {
+    const outputs = requirements
+      .filter(r => r.output)
+      .map(r => r.output)
+      .filter((output): output is string => output !== undefined);
+    return [...new Set(outputs)];
+  };
+
+  const uniqueOutputs = getUniqueOutputs();
+  const hasDifferentOutputs = uniqueOutputs.length > 1;
+
+  // Get common remediation value (if all are the same)
+  const getCommonRemediation = () => {
+    const remediations = requirements
+      .filter(r => r.remediation)
+      .map(r => r.remediation)
+      .filter((rem): rem is string => rem !== undefined);
+    const uniqueRemediations = [...new Set(remediations)];
+    return uniqueRemediations.length === 1 ? uniqueRemediations[0] : '';
+  };
 
   useEffect(() => {
     if (isOpen) {
       setComment('');
+      setRemediation(getCommonRemediation());
       setError('');
       setIsSubmitting(false);
     }
-  }, [isOpen]);
+  }, [isOpen, requirements]);
 
   const handleInputChange = (field: string, value: string) => {
     if (field === 'comment') {
       setComment(value);
+    } else if (field === 'remediation') {
+      setRemediation(value);
     }
     if (error) {
       setError('');
@@ -298,6 +325,12 @@ const BulkReaffirmModal: React.FC<BulkReaffirmModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate that all requirements have the same output
+    if (hasDifferentOutputs) {
+      setError('Cannot proceed with bulk reaffirmation: Selected requirements have different outputs. Please select only requirements with the same output.');
+      return;
+    }
+
     if (!comment.trim()) {
       setError('Please provide a comment for the bulk reaffirmation');
       return;
@@ -310,7 +343,8 @@ const BulkReaffirmModal: React.FC<BulkReaffirmModalProps> = ({
       await onSubmit({
         requirementIds: requirements.map(req => req.id),
         comment: comment.trim(),
-        action: 'REAFFIRMED_AS_IS' // Default action for bulk reaffirmation
+        action: 'REAFFIRMED_AS_IS', // Default action for bulk reaffirmation
+        remediation: remediation.trim() || undefined
       });
       
       onClose();
@@ -446,13 +480,21 @@ const BulkReaffirmModal: React.FC<BulkReaffirmModalProps> = ({
             {requirements.some(r => r.output) && (
               <FormGroup>
                 <Label>Output (Common for all)</Label>
-                <BatchInfo>
+                <BatchInfo style={{ 
+                  background: hasDifferentOutputs ? '#fff3cd' : '#f8f9fa',
+                  border: hasDifferentOutputs ? '1px solid #ffc107' : 'none'
+                }}>
                   <InfoRow>
-                    <InfoValue>
-                      {[...new Set(requirements.filter(r => r.output).map(r => r.output))].join(', ')}
+                    <InfoValue style={{ color: hasDifferentOutputs ? '#856404' : '#333' }}>
+                      {uniqueOutputs.join(', ')}
                     </InfoValue>
                   </InfoRow>
                 </BatchInfo>
+                {hasDifferentOutputs && (
+                  <ErrorMessage style={{ marginTop: '0.5rem' }}>
+                    ⚠️ Selected requirements have different outputs. Bulk reaffirmation is only allowed for requirements with the same output.
+                  </ErrorMessage>
+                )}
               </FormGroup>
             )}
 
@@ -460,13 +502,15 @@ const BulkReaffirmModal: React.FC<BulkReaffirmModalProps> = ({
             {requirements.some(r => r.remediation) && (
               <FormGroup>
                 <Label>Remediation (Common for all)</Label>
-                <BatchInfo>
-                  <InfoRow>
-                    <InfoValue>
-                      {[...new Set(requirements.filter(r => r.remediation).map(r => r.remediation))].join(' | ')}
-                    </InfoValue>
-                  </InfoRow>
-                </BatchInfo>
+                <div style={{ fontSize: '0.85rem', color: '#666', marginBottom: '0.5rem' }}>
+                  Edit the remediation text that will be applied to all selected requirements.
+                </div>
+                <TextArea
+                  value={remediation}
+                  onChange={(e) => handleInputChange('remediation', e.target.value)}
+                  placeholder="Enter remediation steps..."
+                  style={{ minHeight: '120px' }}
+                />
               </FormGroup>
             )}
 
@@ -507,7 +551,7 @@ const BulkReaffirmModal: React.FC<BulkReaffirmModalProps> = ({
             <Button type="button" $variant="secondary" onClick={handleClose} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button type="submit" $variant="primary" disabled={isSubmitting}>
+            <Button type="submit" $variant="primary" disabled={isSubmitting || hasDifferentOutputs}>
               {isSubmitting ? 'Processing...' : `Reaffirm ${requirements.length} Requirements`}
             </Button>
           </ModalFooter>

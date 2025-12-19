@@ -1,16 +1,22 @@
 import React, { useState, useMemo } from 'react';
 import styled from 'styled-components';
-import { FiLayers, FiFileText, FiClipboard, FiUpload } from 'react-icons/fi';
+import { FiLayers, FiFileText, FiClipboard, FiUpload, FiSearch, FiList } from 'react-icons/fi';
 import { ControlMetadata } from '../services/controlService';
 import { FormData } from '../App';
-import { Evidence, Transfer } from '../types/index';
+import { Evidence, Transfer, MERType, MERTemplate } from '../types/index';
 import ControlSelector from '../components/CentralInventory/ControlSelector';
 import TransferDetails from '../components/CentralInventory/TransferDetails';
 import InventoryQuestionnaire from '../components/CentralInventory/InventoryQuestionnaire';
 import EvidenceUploadList from '../components/CentralInventory/EvidenceUploadList';
+import MERTypeSelector from '../components/CentralInventory/MERTypeSelector';
+import ApplicationIdentificationStep from '../components/CentralInventory/ApplicationIdentificationStep';
+import MERTemplateReview from '../components/CentralInventory/MERTemplateReview';
+import SimpleMERUpload from '../components/CentralInventory/SimpleMERUpload';
 import { createNotifications } from '../services/notificationService';
 import { WorkflowStepper, WorkflowStep, useToast } from '../components/common';
 import { colors, borderRadius, shadows, spacing } from '../styles/designTokens';
+import { getMERTemplate, prefillTemplateWithAppData, extractTemplateData } from '../services/merTemplateService';
+import { ApplicationData } from '../services/applicationDataService';
 
 const Container = styled.div`
   width: 100%;
@@ -101,6 +107,9 @@ const SuccessMessage = styled.div`
 
 const CentralInventory: React.FC = () => {
   const [selectedControl, setSelectedControl] = useState<ControlMetadata | null>(null);
+  const [selectedMERType, setSelectedMERType] = useState<MERType | null>(null);
+  const [applicationData, setApplicationData] = useState<ApplicationData | null>(null);
+  const [merTemplate, setMerTemplate] = useState<MERTemplate | null>(null);
   const [questionnaireData, setQuestionnaireData] = useState<Partial<FormData> | null>(null);
   const [uploadedEvidence, setUploadedEvidence] = useState<Map<string, Evidence>>(new Map());
   const [currentTransferId, setCurrentTransferId] = useState<string | null>(null);
@@ -109,9 +118,64 @@ const CentralInventory: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { showToast } = useToast();
 
+  // Check if selected control is a MER type
+  const isMERControl = selectedControl?.controlType === 'MER';
+
   const handleControlSelect = (control: ControlMetadata) => {
     setSelectedControl(control);
-    setCurrentStep(1); // Move to Transfer Details step
+    // If MER control, go to MER type selection, otherwise go to Transfer Details
+    setCurrentStep(control.controlType === 'MER' ? 1 : 2);
+  };
+
+  const handleMERTypeSelect = (merType: MERType) => {
+    setSelectedMERType(merType);
+  };
+
+  const handleMERTypeContinue = () => {
+    if (selectedMERType) {
+      setCurrentStep(2); // Move to Application Identification
+    }
+  };
+
+  const handleApplicationDataComplete = (appData: ApplicationData) => {
+    setApplicationData(appData);
+    
+    // Load and prefill MER template
+    if (selectedMERType) {
+      const template = getMERTemplate(selectedMERType);
+      const prefilledTemplate = prefillTemplateWithAppData(template, appData);
+      setMerTemplate(prefilledTemplate);
+      setCurrentStep(3); // Move to MER Template Review
+    }
+  };
+
+  const handleMERTemplateComplete = (filledTemplate: MERTemplate) => {
+    setMerTemplate(filledTemplate);
+    
+    // Create transfer with MER data
+    if (selectedControl) {
+      const transferId = `transfer-${selectedControl.controlId}-${Date.now()}`;
+      const templateData = extractTemplateData(filledTemplate);
+      
+      const transfer: Transfer = {
+        id: transferId,
+        name: `MER ${filledTemplate.merType} - ${templateData.appName || selectedControl.applicationName}`,
+        createdBy: 'current-user',
+        createdAt: new Date().toISOString(),
+        status: 'ACTIVE',
+        jurisdiction: applicationData?.locations?.[0] || 'Unknown',
+        entity: templateData.appName || selectedControl.applicationName,
+        subjectType: 'N/A', // MER doesn't use subject types
+        requirements: [],
+        merType: filledTemplate.merType,
+        merTemplateId: filledTemplate.id,
+        merTemplateData: templateData
+      };
+      
+      localStorage.setItem(`transfer_${transferId}`, JSON.stringify(transfer));
+      setCurrentTransferId(transferId);
+      setCurrentStep(4); // Move to Evidence Upload (skipping questionnaire for MER)
+    }
   };
 
   const handleQuestionnaireComplete = (data: Partial<FormData>) => {
@@ -167,14 +231,21 @@ const CentralInventory: React.FC = () => {
   // This will be calculated based on the actual table rows in EvidenceUploadList
   // For now, we'll check if there's any uploaded evidence
   const hasUploadedEvidence = uploadedEvidence.size > 0;
-  const canSubmit = selectedControl && questionnaireData && hasUploadedEvidence && !isSubmitted;
+  
+  // MER workflow: requires merTemplate and evidence
+  // Non-MER workflow: requires questionnaireData and evidence
+  const canSubmit = selectedControl && hasUploadedEvidence && !isSubmitted && 
+    (isMERControl ? !!merTemplate : !!questionnaireData);
 
   const handleSubmit = async () => {
-    if (!canSubmit || !selectedControl || !questionnaireData || !currentTransferId) return;
+    if (!canSubmit || !selectedControl || !currentTransferId) return;
+    
+    // For non-MER workflows, questionnaireData is required
+    if (!isMERControl && !questionnaireData) return;
 
     setIsSubmitting(true);
     try {
-      // Transfer already created when questionnaire was completed
+      // Transfer already created when questionnaire/template was completed
       // Update it to mark requirements as under review
       const storedTransfer = localStorage.getItem(`transfer_${currentTransferId}`);
       if (storedTransfer) {
@@ -193,16 +264,17 @@ const CentralInventory: React.FC = () => {
       }
 
       // Create notifications using the notification service
+      const requestType = isMERControl ? `MER ${selectedMERType}` : 'Data Transfer';
       createNotifications([
         {
-          message: `Your Data Transfer request #${currentTransferId} has been submitted.`,
+          message: `Your ${requestType} request #${currentTransferId} has been submitted.`,
           recipient: 'End User',
           type: 'submit_request',
           requestId: currentTransferId,
           sender: 'system',
         },
         {
-          message: `Data Transfer request #${currentTransferId} submitted by End User for ${selectedControl.applicationName} (${selectedControl.controlId}).`,
+          message: `${requestType} request #${currentTransferId} submitted by End User for ${selectedControl.applicationName} (${selectedControl.controlId}).`,
           recipient: 'Admin',
           type: 'submit_request',
           requestId: currentTransferId,
@@ -212,52 +284,98 @@ const CentralInventory: React.FC = () => {
 
       setIsSubmitted(true);
       showToast(
-        `Transfer request #${currentTransferId} submitted successfully!`,
+        `${requestType} request #${currentTransferId} submitted successfully!`,
         'success'
       );
     } catch (error) {
       console.error('Failed to submit transfer:', error);
-      showToast('Failed to submit transfer. Please try again.', 'error');
+      showToast('Failed to submit request. Please try again.', 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Define workflow steps
-  const workflowSteps: WorkflowStep[] = useMemo(() => [
-    {
-      id: 'control',
-      label: 'Select Control',
-      icon: <FiLayers />,
-      completed: !!selectedControl,
-      current: currentStep === 0,
-      onClick: () => setCurrentStep(0),
-    },
-    {
-      id: 'details',
-      label: 'Transfer Details',
-      icon: <FiFileText />,
-      completed: !!selectedControl && currentStep > 1,
-      current: currentStep === 1,
-      onClick: () => selectedControl && setCurrentStep(1),
-    },
-    {
-      id: 'questionnaire',
-      label: 'Questionnaire',
-      icon: <FiClipboard />,
-      completed: !!questionnaireData,
-      current: currentStep === 2 || (currentStep > 2 && !questionnaireData),
-      onClick: () => selectedControl && setCurrentStep(2),
-    },
-    {
-      id: 'evidence',
-      label: 'Evidence Upload',
-      icon: <FiUpload />,
-      completed: uploadedEvidence.size > 0 && currentStep > 3,
-      current: currentStep === 3,
-      onClick: () => questionnaireData && setCurrentStep(3),
-    },
-  ], [selectedControl, questionnaireData, uploadedEvidence.size, currentStep]);
+  // Define workflow steps - dynamically based on control type
+  const workflowSteps: WorkflowStep[] = useMemo(() => {
+    const steps: WorkflowStep[] = [
+      {
+        id: 'control',
+        label: 'Select Control',
+        icon: <FiLayers />,
+        completed: !!selectedControl,
+        current: currentStep === 0,
+        onClick: () => setCurrentStep(0),
+      },
+    ];
+
+    if (isMERControl) {
+      // MER workflow: Select Control → MER Type → App ID → Template → Evidence
+      steps.push(
+        {
+          id: 'mer-type',
+          label: 'MER Type',
+          icon: <FiList />,
+          completed: !!selectedMERType,
+          current: currentStep === 1,
+          onClick: () => selectedControl && setCurrentStep(1),
+        },
+        {
+          id: 'app-id',
+          label: 'Application ID',
+          icon: <FiSearch />,
+          completed: !!applicationData,
+          current: currentStep === 2,
+          onClick: () => selectedMERType && setCurrentStep(2),
+        },
+        {
+          id: 'mer-template',
+          label: 'MER Template',
+          icon: <FiFileText />,
+          completed: !!merTemplate && !!currentTransferId,
+          current: currentStep === 3,
+          onClick: () => applicationData && setCurrentStep(3),
+        },
+        {
+          id: 'evidence',
+          label: 'Evidence Upload',
+          icon: <FiUpload />,
+          completed: uploadedEvidence.size > 0 && currentStep > 4,
+          current: currentStep === 4,
+          onClick: () => merTemplate && setCurrentStep(4),
+        }
+      );
+    } else {
+      // Non-MER workflow: Select Control → Transfer Details → Questionnaire → Evidence
+      steps.push(
+        {
+          id: 'details',
+          label: 'Transfer Details',
+          icon: <FiFileText />,
+          completed: !!selectedControl && currentStep > 1,
+          current: currentStep === 1 || currentStep === 2,
+          onClick: () => selectedControl && setCurrentStep(2),
+        },
+        {
+          id: 'questionnaire',
+          label: 'Questionnaire',
+          icon: <FiClipboard />,
+          completed: !!questionnaireData,
+          current: currentStep === 3,
+          onClick: () => selectedControl && setCurrentStep(3),
+        },
+        {
+          id: 'evidence',
+          label: 'Evidence Upload',
+          icon: <FiUpload />,
+          completed: uploadedEvidence.size > 0 && currentStep > 3,
+          current: currentStep === 4,
+          onClick: () => questionnaireData && setCurrentStep(4),
+        }
+      );
+    }
+
+    return steps;
+  }, [selectedControl, isMERControl, selectedMERType, applicationData, merTemplate, questionnaireData, uploadedEvidence.size, currentStep, currentTransferId]);
 
   return (
     <Container>
@@ -284,57 +402,134 @@ const CentralInventory: React.FC = () => {
         </StepContent>
       </StepSection>
 
-      {/* Step 2: Transfer Details */}
-      {selectedControl && (
-        <StepSection $isActive={currentStep === 1}>
-          <StepTitle>
-            <FiFileText />
-            Transfer Details
-          </StepTitle>
-          <StepContent>
-            <TransferDetails control={selectedControl} />
-          </StepContent>
-        </StepSection>
+      {/* MER Workflow Steps */}
+      {isMERControl && selectedControl && (
+        <>
+          {/* Step 1: MER Type Selection */}
+          <StepSection $isActive={currentStep === 1}>
+            <StepTitle>
+              <FiList />
+              Select MER Type
+              {selectedMERType && <span style={{ color: colors.status.approved, marginLeft: spacing.sm }}>✓</span>}
+            </StepTitle>
+            <StepContent>
+              <MERTypeSelector
+                selectedMERType={selectedMERType}
+                onSelect={handleMERTypeSelect}
+                onContinue={handleMERTypeContinue}
+              />
+            </StepContent>
+          </StepSection>
+
+          {/* Step 2: Application Identification */}
+          {selectedMERType && (
+            <StepSection $isActive={currentStep === 2}>
+              <StepTitle>
+                <FiSearch />
+                Application Identification
+                {applicationData && <span style={{ color: colors.status.approved, marginLeft: spacing.sm }}>✓</span>}
+              </StepTitle>
+              <StepContent>
+                <ApplicationIdentificationStep
+                  onComplete={handleApplicationDataComplete}
+                />
+              </StepContent>
+            </StepSection>
+          )}
+
+          {/* Step 3: MER Template Review */}
+          {applicationData && merTemplate && (
+            <StepSection $isActive={currentStep === 3}>
+              <StepTitle>
+                <FiFileText />
+                MER Template - {selectedMERType}
+                {currentTransferId && <span style={{ color: colors.status.approved, marginLeft: spacing.sm }}>✓</span>}
+              </StepTitle>
+              <StepContent>
+                <MERTemplateReview
+                  template={merTemplate}
+                  onContinue={handleMERTemplateComplete}
+                />
+              </StepContent>
+            </StepSection>
+          )}
+
+          {/* Step 4: Evidence Upload (MER) */}
+          {currentTransferId && (
+            <StepSection $isActive={currentStep === 4}>
+              <StepTitle>
+                <FiUpload />
+                Evidence Uploads
+                {uploadedEvidence.size > 0 && (
+                  <span style={{ color: colors.status.approved, marginLeft: spacing.sm }}>
+                    ✓ {uploadedEvidence.size} file{uploadedEvidence.size > 1 ? 's' : ''} uploaded
+                  </span>
+                )}
+              </StepTitle>
+              <StepContent>
+                <SimpleMERUpload
+                  transferId={currentTransferId}
+                  onEvidenceUploaded={handleEvidenceUploaded}
+                  uploadedEvidence={uploadedEvidence}
+                />
+              </StepContent>
+            </StepSection>
+          )}
+        </>
       )}
 
-      {/* Step 3: Questionnaire */}
-      {selectedControl && (
-        <StepSection $isActive={currentStep === 2}>
-          <StepTitle>
-            <FiClipboard />
-            Questionnaire
-            {questionnaireData && <span style={{ color: colors.status.approved, marginLeft: spacing.sm }}>✓</span>}
-          </StepTitle>
-          <StepContent>
-            <InventoryQuestionnaire
-              onComplete={handleQuestionnaireComplete}
-              questionnaireData={questionnaireData}
-            />
-          </StepContent>
-        </StepSection>
-      )}
+      {/* Non-MER Workflow Steps */}
+      {!isMERControl && selectedControl && (
+        <>
+          {/* Step 1-2: Transfer Details (shown but skipped) */}
+          <StepSection $isActive={currentStep === 1 || currentStep === 2}>
+            <StepTitle>
+              <FiFileText />
+              Transfer Details
+            </StepTitle>
+            <StepContent>
+              <TransferDetails control={selectedControl} />
+            </StepContent>
+          </StepSection>
 
-      {/* Step 4: Evidence Upload */}
-      {questionnaireData && (
-        <StepSection $isActive={currentStep === 3}>
-          <StepTitle>
-            <FiUpload />
-            Evidence Uploads
-            {uploadedEvidence.size > 0 && (
-              <span style={{ color: colors.status.approved, marginLeft: spacing.sm }}>
-                ✓ {uploadedEvidence.size} file{uploadedEvidence.size > 1 ? 's' : ''} uploaded
-              </span>
-            )}
-          </StepTitle>
-          <StepContent>
-            <EvidenceUploadList
-              questionnaireData={questionnaireData}
-              transferId={currentTransferId}
-              onEvidenceUploaded={handleEvidenceUploaded}
-              uploadedEvidence={uploadedEvidence}
-            />
-          </StepContent>
-        </StepSection>
+          {/* Step 3: Questionnaire */}
+          <StepSection $isActive={currentStep === 3}>
+            <StepTitle>
+              <FiClipboard />
+              Questionnaire
+              {questionnaireData && <span style={{ color: colors.status.approved, marginLeft: spacing.sm }}>✓</span>}
+            </StepTitle>
+            <StepContent>
+              <InventoryQuestionnaire
+                onComplete={handleQuestionnaireComplete}
+                questionnaireData={questionnaireData}
+              />
+            </StepContent>
+          </StepSection>
+
+          {/* Step 4: Evidence Upload (Non-MER) */}
+          {questionnaireData && (
+            <StepSection $isActive={currentStep === 4}>
+              <StepTitle>
+                <FiUpload />
+                Evidence Uploads
+                {uploadedEvidence.size > 0 && (
+                  <span style={{ color: colors.status.approved, marginLeft: spacing.sm }}>
+                    ✓ {uploadedEvidence.size} file{uploadedEvidence.size > 1 ? 's' : ''} uploaded
+                  </span>
+                )}
+              </StepTitle>
+              <StepContent>
+                <EvidenceUploadList
+                  questionnaireData={questionnaireData}
+                  transferId={currentTransferId}
+                  onEvidenceUploaded={handleEvidenceUploaded}
+                  uploadedEvidence={uploadedEvidence}
+                />
+              </StepContent>
+            </StepSection>
+          )}
+        </>
       )}
 
       {canSubmit && (
@@ -342,7 +537,13 @@ const CentralInventory: React.FC = () => {
           $disabled={isSubmitting || isSubmitted}
           onClick={handleSubmit}
         >
-          {isSubmitting ? 'Submitting...' : isSubmitted ? 'Submitted ✓' : 'Submit Transfer Request'}
+          {isSubmitting 
+            ? 'Submitting...' 
+            : isSubmitted 
+              ? 'Submitted ✓' 
+              : isMERControl 
+                ? `Submit MER ${selectedMERType}` 
+                : 'Submit Transfer Request'}
         </SubmitButton>
       )}
 

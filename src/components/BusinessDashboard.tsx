@@ -409,6 +409,23 @@ const BusinessDashboard: React.FC = () => {
       {showReviewDrawer && selectedEvidence && (
         <ReviewDrawer
           evidence={selectedEvidence}
+          allEvidence={escalatedEvidence.filter(ev => {
+            // Extract transfer ID from requirementId
+            const extractTransferId = (reqId: string) => {
+              if (reqId.startsWith('req-transfer-')) {
+                const withoutPrefix = reqId.substring('req-transfer-'.length);
+                const parts = withoutPrefix.split('-');
+                if (parts.length >= 3) {
+                  return `${parts[0]}-${parts[1]}-${parts[2]}`;
+                }
+              }
+              return reqId;
+            };
+            
+            const selectedTransferId = extractTransferId(selectedEvidence.requirementId);
+            const evTransferId = extractTransferId(ev.requirementId);
+            return selectedTransferId === evTransferId;
+          })}
           onClose={() => setShowReviewDrawer(false)}
           onDecision={handleReviewDecision}
           hideEscalateButton={true}

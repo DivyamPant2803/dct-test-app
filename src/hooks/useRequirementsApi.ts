@@ -1253,7 +1253,9 @@ export const useRequirementsApi = () => {
           reaffirmationHistory: [...requirement.reaffirmationHistory, newReaffirmationEntry],
           nextReaffirmationDue: calculateNextReaffirmationDue(requirement.originalIngestionDate, now),
           updatedAt: now,
-          lastModifiedBy: 'current-user'
+          lastModifiedBy: 'current-user',
+          // Update remediation if provided
+          ...(request.remediation !== undefined && { remediation: request.remediation })
         };
 
         // Store updated requirement
