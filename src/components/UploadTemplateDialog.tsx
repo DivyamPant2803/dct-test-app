@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import { FiUpload, FiX, FiFile, FiCheck, FiAlertCircle, FiChevronRight, FiChevronLeft, FiPlus, FiTrash2, FiEdit2, FiZap } from 'react-icons/fi';
+import { FiUpload, FiX, FiFile, FiCheck, FiAlertCircle, FiChevronRight, FiChevronLeft, FiPlus, FiTrash2, FiZap } from 'react-icons/fi';
 import { colors, borderRadius, shadows, spacing } from '../styles/designTokens';
-import { UploadedTemplate, TemplateStatus, TemplateSection, TemplateField, TableConfig, TableColumn } from '../types/index';
+import { UploadedTemplate, TemplateStatus, TemplateSection, TemplateField } from '../types/index';
 import {
   validateFileType,
   validateFileSize,

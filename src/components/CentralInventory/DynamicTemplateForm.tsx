@@ -669,8 +669,6 @@ const DynamicTemplateForm: React.FC<DynamicTemplateFormProps> = ({
 
     const field = template.sections?.flatMap(s => s.fields).find(f => f.id === fieldId);
     const multiple = field?.fileConfig?.multiple ?? false;
-
-    const newFiles: FileAttachment[] = [];
     
     Array.from(files).forEach(file => {
       const reader = new FileReader();
@@ -900,8 +898,6 @@ const DynamicTemplateForm: React.FC<DynamicTemplateFormProps> = ({
     // File upload
     if (field.type === 'file' || field.type === 'file-multiple') {
       const files = fileData[field.id] || [];
-      const acceptTypes = field.fileConfig?.accept?.join(',') || '.pdf,.doc,.docx';
-      const multiple = field.fileConfig?.multiple || field.type === 'file-multiple';
 
       return (
         <FormGroup key={field.id} $width={field.width || 'full'}>

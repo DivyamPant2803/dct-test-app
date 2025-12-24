@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Evidence, Transfer, ReviewDecision, UploadedTemplate } from '../types/index';
 import { useEvidenceApi } from '../hooks/useEvidenceApi';
-import { getAllTemplates, deleteTemplate, updateTemplate, formatFileSize } from '../services/uploadedTemplateService';
+import { getAllTemplates, deleteTemplate, updateTemplate } from '../services/uploadedTemplateService';
 import UploadTemplateDialog from './UploadTemplateDialog';
 import { FiUpload, FiEdit, FiTrash2, FiFile } from 'react-icons/fi';
 import ReviewDrawer from './ReviewDrawer';

@@ -229,7 +229,7 @@ export class PDFTextParser implements TemplateParser {
  * Placeholder for future AI-powered parsing
  */
 export class AITemplateParser implements TemplateParser {
-    async parse(file: File): Promise<TemplateSection[]> {
+    async parse(_file: File): Promise<TemplateSection[]> {
         // TODO: Implement AI-based parsing
         // 1. Extract PDF text or convert to image
         // 2. Send to Gemini/GPT with prompt
