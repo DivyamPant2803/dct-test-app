@@ -21,6 +21,8 @@
     "file-saver": "^2.0.5",
     "html-react-parser": "^5.2.5",
     "lodash": "^4.17.21",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^5.4.449",
     "playwright-mcp-automation": "file:playwright-mcp-automation-1.0.3.tgz",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { Evidence, Transfer, ReviewDecision } from '../types/index';
+import { Evidence, Transfer, ReviewDecision, UploadedTemplate } from '../types/index';
 import { useEvidenceApi } from '../hooks/useEvidenceApi';
+import { getAllTemplates, deleteTemplate, updateTemplate, formatFileSize } from '../services/uploadedTemplateService';
+import UploadTemplateDialog from './UploadTemplateDialog';
+import { FiUpload, FiEdit, FiTrash2, FiFile } from 'react-icons/fi';
 import ReviewDrawer from './ReviewDrawer';
 import StatusChip from './StatusChip';
 import AdminAIInsights from './AdminAIInsights';
@@ -380,7 +383,7 @@ const StatLabel = styled.div`
   letter-spacing: 0.3px;
 `;
 
-type SidebarItemType = 'evidence-queue' | 'my-reviews' | 'all-transfers' | 'ai-insights' | 'document-library' | 'change-requests' | 'publish-summary';
+type SidebarItemType = 'evidence-queue' | 'my-reviews' | 'all-transfers' | 'ai-insights' | 'document-library' | 'change-requests' | 'publish-summary' | 'template-upload';
 
 const AdminDashboard: React.FC = () => {
   const [activeItem, setActiveItem] = useState<SidebarItemType>('evidence-queue');
@@ -395,6 +398,7 @@ const AdminDashboard: React.FC = () => {
         { id: 'all-transfers', label: 'All Transfers' },
         { id: 'ai-insights', label: 'AI Insights' },
         { id: 'document-library', label: 'Document Library' },
+        { id: 'template-upload', label: 'Template Upload' },
         { id: 'publish-summary', label: 'Publish Summary' }
       ]
     },
@@ -431,6 +435,10 @@ const AdminDashboard: React.FC = () => {
   const [expandedTransfers, setExpandedTransfers] = useState<Set<string>>(new Set());
   const [transferPage, setTransferPage] = useState(1);
   const [transfersPerPage] = useState(20);
+  
+  // Template upload state
+  const [templates, setTemplates] = useState<UploadedTemplate[]>([]);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
   const { getTransfers, submitReviewDecision, getAllEvidence } = useEvidenceApi();
 
@@ -483,6 +491,10 @@ const AdminDashboard: React.FC = () => {
         } else if (activeItem === 'all-transfers') {
           const transferData = await getTransfers();
           setTransfers(transferData);
+        } else if (activeItem === 'template-upload') {
+          // Load templates
+          const allTemplates = getAllTemplates();
+          setTemplates(allTemplates);
         }
       } catch (error) {
         console.error('Failed to load data:', error);
@@ -1206,6 +1218,12 @@ const AdminDashboard: React.FC = () => {
         );
       case 'publish-summary':
         return <PublishSummary />;
+      case 'template-upload':
+        return (
+          <Section>
+            {renderTemplateUpload()}
+          </Section>
+        );
       default:
         return (
           <Section>
@@ -1213,6 +1231,133 @@ const AdminDashboard: React.FC = () => {
           </Section>
         );
     }
+  };
+  
+  const renderTemplateUpload = () => {
+    const handleTemplateDelete = (templateId: string) => {
+      if (window.confirm('Are you sure you want to delete this template?')) {
+        deleteTemplate(templateId);
+        const allTemplates = getAllTemplates();
+        setTemplates(allTemplates);
+      }
+    };
+
+    const handleTemplateStatusChange = (templateId: string, newStatus: 'ACTIVE' | 'DRAFT' | 'ARCHIVED') => {
+      updateTemplate(templateId, { status: newStatus });
+      const allTemplates = getAllTemplates();
+      setTemplates(allTemplates);
+    };
+
+    const handleUploadSuccess = () => {
+      const allTemplates = getAllTemplates();
+      setTemplates(allTemplates);
+    };
+    
+    return (
+      <>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0 }}>Template Management</h2>
+          <Button variant="primary" onClick={() => setUploadDialogOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <FiUpload />
+            Upload Template
+          </Button>
+        </div>
+
+        {templates.length === 0 ? (
+          <div style={{ 
+            padding: '3rem', 
+            textAlign: 'center', 
+            background: 'white', 
+            borderRadius: '8px', 
+            border: '1px solid #e0e0e0' 
+          }}>
+            <FiFile size={48} style={{ color: '#ccc', marginBottom: '1rem' }} />
+            <div style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>No templates uploaded yet</div>
+            <div style={{ fontSize: '0.9rem', color: '#999' }}>Click "Upload Template" to add your first template</div>
+          </div>
+        ) : (
+          <Table>
+            <thead>
+              <tr>
+                <Th>Template Name</Th>
+                <Th>Type</Th>
+                <Th>Uploaded</Th>
+                <Th>Size</Th>
+                <Th>Status</Th>
+                <Th>Actions</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {templates.map(template => (
+                <Tr key={template.id}>
+                  <Td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <FiFile />
+                      <div>
+                        <div style={{ fontWeight: '600' }}>{template.name}</div>
+                        {template.description && (
+                          <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '0.25rem' }}>
+                            {template.description}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Td>
+                  <Td>{template.documentType}</Td>
+                  <Td>{new Date(template.uploadedAt).toLocaleDateString()}</Td>
+                  <Td>{formatFileSize(template.fileSize)}</Td>
+                  <Td>
+                    <CompactStatus $status={template.status}>{template.status}</CompactStatus>
+                  </Td>
+                  <Td>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {template.status !== 'ACTIVE' && (
+                        <button
+                          onClick={() => handleTemplateStatusChange(template.id, 'ACTIVE')}
+                          style={{
+                            padding: '0.3rem 0.6rem',
+                            border: 'none',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            cursor: 'pointer',
+                            background: '#4CAF50',
+                            color: 'white'
+                          }}
+                          title="Set as Active"
+                        >
+                          <FiEdit size={14} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleTemplateDelete(template.id)}
+                        style={{
+                          padding: '0.3rem 0.6rem',
+                          border: 'none',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem',
+                          cursor: 'pointer',
+                          background: '#F44336',
+                          color: 'white'
+                        }}
+                        title="Delete"
+                      >
+                        <FiTrash2 size={14} />
+                      </button>
+                    </div>
+                  </Td>
+                </Tr>
+              ))}
+            </tbody>
+          </Table>
+        )}
+
+        <UploadTemplateDialog
+          isOpen={uploadDialogOpen}
+          onClose={() => setUploadDialogOpen(false)}
+          onSuccess={handleUploadSuccess}
+        />
+      </>
+    );
   };
 
   return (
@@ -1234,10 +1379,37 @@ const AdminDashboard: React.FC = () => {
         <ReviewDrawer
           evidence={selectedEvidence}
           allEvidence={(() => {
-            // Extract transfer ID from requirementId
-            // Format: req-transfer-{CONTROL_ID}-{TIMESTAMP}-...
-            // Example: req-transfer-MER-001-1766121260042-mer-1766121867287
-            // We want to extract: MER-001-1766121260042
+            // Check if this is a MER transfer evidence (has merTransferId)
+            if (selectedEvidence.merTransferId) {
+              // For MER submissions, find all evidence related to this transfer
+              // This includes both the virtual evidence entry AND actual uploaded files
+              const transferId = selectedEvidence.merTransferId;
+              
+              console.log('MER Transfer ID:', transferId);
+              console.log('Searching for all evidence files for this MER transfer...');
+              
+              const filtered = allEvidence.filter(ev => {
+                // Match by merTransferId OR by requirementId starting with the transfer ID
+                const matchesByMerTransferId = ev.merTransferId === transferId;
+                const matchesByRequirementId = ev.requirementId.startsWith(`req-${transferId}-`);
+                const matches = matchesByMerTransferId || matchesByRequirementId;
+                
+                if (matches) {
+                  console.log(`✓ Matched Evidence: ${ev.filename} (${ev.size} bytes)`, {
+                    merTransferId: ev.merTransferId,
+                    requirementId: ev.requirementId,
+                    matchedBy: matchesByMerTransferId ? 'merTransferId' : 'requirementId'
+                  });
+                }
+                
+                return matches;
+              });
+              
+              console.log(`Found ${filtered.length} evidence file(s) for MER transfer ${transferId}`);
+              return filtered;
+            }
+            
+            // For non-MER evidence, extract transfer ID from requirementId
             const extractTransferId = (reqId: string) => {
               if (reqId.startsWith('req-transfer-')) {
                 // Remove 'req-transfer-' prefix
@@ -1245,26 +1417,28 @@ const AdminDashboard: React.FC = () => {
                 // Split by '-' and take first 3 parts (e.g., MER-001-1766121260042)
                 const parts = withoutPrefix.split('-');
                 if (parts.length >= 3) {
-                  return `${parts[0]}-${parts[1]}-${parts[2]}`;
+                  return `transfer-${parts[0]}-${parts[1]}-${parts[2]}`;
                 }
               }
-              // Fallback: return the whole requirementId
-              return reqId;
+              return null;
             };
             
             const selectedTransferId = extractTransferId(selectedEvidence.requirementId);
-            console.log('Selected Evidence RequirementId:', selectedEvidence.requirementId);
-            console.log('Extracted Transfer ID:', selectedTransferId);
+            if (selectedTransferId) {
+              console.log('Non-MER Transfer ID:', selectedTransferId);
+              
+              const filtered = allEvidence.filter(ev => {
+                const evTransferId = extractTransferId(ev.requirementId);
+                return evTransferId === selectedTransferId;
+              });
+              
+              console.log(`Found ${filtered.length} evidence file(s) for transfer ${selectedTransferId}`);
+              return filtered;
+            }
             
-            const filtered = allEvidence.filter(ev => {
-              const evTransferId = extractTransferId(ev.requirementId);
-              const matches = selectedTransferId === evTransferId;
-              console.log(`Evidence ${ev.filename}: requirementId=${ev.requirementId}, extractedId=${evTransferId}, matches=${matches}`);
-              return matches;
-            });
-            
-            console.log(`Filtered ${filtered.length} evidence files out of ${allEvidence.length} total`);
-            return filtered;
+            // Fallback: return only the selected evidence
+            console.log('Fallback: returning only selected evidence');
+            return [selectedEvidence];
           })()}
           onClose={() => setShowReviewDrawer(false)}
           onDecision={handleReviewDecision}

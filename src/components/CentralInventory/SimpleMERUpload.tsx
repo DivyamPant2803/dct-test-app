@@ -349,9 +349,10 @@ const SimpleMERUpload: React.FC<SimpleMERUploadProps> = ({
   return (
     <Container>
       <div>
-        <Title>Upload Supporting Evidence</Title>
+        <Title>Upload Supporting Evidence (Optional)</Title>
         <Description>
-          Upload any supporting documents required for this MER submission (e.g., architecture diagrams, compliance certificates, data flow diagrams).
+          Upload any additional supporting documents for this MER submission (e.g., architecture diagrams, compliance certificates, data flow diagrams). 
+          If you've already uploaded evidence in the template form, you can skip this step.
         </Description>
       </div>
 

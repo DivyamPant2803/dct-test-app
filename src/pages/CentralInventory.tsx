@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { FiLayers, FiFileText, FiClipboard, FiUpload, FiSearch, FiList } from 'react-icons/fi';
 import { ControlMetadata } from '../services/controlService';
 import { FormData } from '../App';
-import { Evidence, Transfer, MERType, MERTemplate } from '../types/index';
+import { Evidence, Transfer, MERType, MERTemplate, UploadedTemplate } from '../types/index';
 import ControlSelector from '../components/CentralInventory/ControlSelector';
 import TransferDetails from '../components/CentralInventory/TransferDetails';
 import InventoryQuestionnaire from '../components/CentralInventory/InventoryQuestionnaire';
@@ -11,11 +11,15 @@ import EvidenceUploadList from '../components/CentralInventory/EvidenceUploadLis
 import MERTypeSelector from '../components/CentralInventory/MERTypeSelector';
 import ApplicationIdentificationStep from '../components/CentralInventory/ApplicationIdentificationStep';
 import MERTemplateReview from '../components/CentralInventory/MERTemplateReview';
+import PDFTemplateViewer from '../components/CentralInventory/PDFTemplateViewer';
+import DynamicTemplateForm from '../components/CentralInventory/DynamicTemplateForm';
 import SimpleMERUpload from '../components/CentralInventory/SimpleMERUpload';
 import { createNotifications } from '../services/notificationService';
 import { WorkflowStepper, WorkflowStep, useToast } from '../components/common';
 import { colors, borderRadius, shadows, spacing } from '../styles/designTokens';
 import { getMERTemplate, prefillTemplateWithAppData, extractTemplateData } from '../services/merTemplateService';
+import { getActiveTemplates, trackTemplateUsage } from '../services/uploadedTemplateService';
+import { getMER13Template } from '../config/mer13Template';
 import { ApplicationData } from '../services/applicationDataService';
 
 const Container = styled.div`
@@ -110,6 +114,7 @@ const CentralInventory: React.FC = () => {
   const [selectedMERType, setSelectedMERType] = useState<MERType | null>(null);
   const [applicationData, setApplicationData] = useState<ApplicationData | null>(null);
   const [merTemplate, setMerTemplate] = useState<MERTemplate | null>(null);
+  const [uploadedTemplate, setUploadedTemplate] = useState<UploadedTemplate | null>(null);
   const [questionnaireData, setQuestionnaireData] = useState<Partial<FormData> | null>(null);
   const [uploadedEvidence, setUploadedEvidence] = useState<Map<string, Evidence>>(new Map());
   const [currentTransferId, setCurrentTransferId] = useState<string | null>(null);
@@ -140,12 +145,76 @@ const CentralInventory: React.FC = () => {
   const handleApplicationDataComplete = (appData: ApplicationData) => {
     setApplicationData(appData);
     
-    // Load and prefill MER template
+    // Check for uploaded templates first
+    const uploadedTemplates = getActiveTemplates();
+    
+    // Load and prefill template
     if (selectedMERType) {
-      const template = getMERTemplate(selectedMERType);
-      const prefilledTemplate = prefillTemplateWithAppData(template, appData);
-      setMerTemplate(prefilledTemplate);
-      setCurrentStep(3); // Move to MER Template Review
+      if (uploadedTemplates.length > 0) {
+        // Use uploaded template (DYNAMIC_FORM or PDF_FORM)
+        const template = uploadedTemplates[0];
+        setUploadedTemplate(template);
+        trackTemplateUsage(template.id);
+        setCurrentStep(3); // Move to Template Viewer
+      } else if (selectedMERType === 'MER-13') {
+        // Use built-in MER-13 template configuration
+        const template = getMER13Template();
+        setUploadedTemplate(template);
+        setCurrentStep(3); // Move to Dynamic Template Form
+      } else {
+        // Fallback to old MER template system for MER-14
+        const template = getMERTemplate(selectedMERType);
+        const prefilledTemplate = prefillTemplateWithAppData(template, appData);
+        setMerTemplate(prefilledTemplate);
+        setCurrentStep(3); // Move to MER Template Review
+      }
+    }
+  };
+
+  const handlePDFTemplateComplete = (
+    filledData: Record<string, any>,
+    tableData: Record<string, any[]>,
+    fileData: Record<string, any[]>
+  ) => {
+    // Create transfer with PDF template data
+    if (selectedControl && uploadedTemplate) {
+      const transferId = `transfer-${selectedControl.controlId}-${Date.now()}`;
+      const requirementId = `req-${transferId}-mer-submission`;
+      
+      const transfer: Transfer = {
+        id: transferId,
+        name: `${uploadedTemplate.name} - ${filledData.swcName || filledData.applicationName || selectedControl.applicationName}`,
+        createdBy: 'current-user',
+        createdAt: new Date().toISOString(),
+        status: 'ACTIVE',
+        jurisdiction: applicationData?.locations?.[0] || 'Unknown',
+        entity: filledData.swcName || filledData.applicationName || selectedControl.applicationName,
+        subjectType: 'N/A',
+        requirements: [
+          {
+            id: requirementId,
+            name: `${selectedMERType || 'MER-13'} Submission Review`,
+            jurisdiction: applicationData?.locations?.[0] || 'Unknown',
+            entity: filledData.swcName || filledData.applicationName || selectedControl.applicationName,
+            subjectType: 'N/A',
+            status: 'PENDING',
+            updatedAt: new Date().toISOString(),
+            transferId: transferId,
+            description: `Review ${uploadedTemplate.name} submission`
+          }
+        ],
+        merType: selectedMERType || 'MER-13',
+        merTemplateId: uploadedTemplate.id,
+        merTemplateData: {
+          ...filledData,
+          tableData,
+          fileData
+        }
+      };
+      
+      localStorage.setItem(`transfer_${transferId}`, JSON.stringify(transfer));
+      setCurrentTransferId(transferId);
+      setCurrentStep(4); // Move to Evidence Upload
     }
   };
 
@@ -156,6 +225,7 @@ const CentralInventory: React.FC = () => {
     if (selectedControl) {
       const transferId = `transfer-${selectedControl.controlId}-${Date.now()}`;
       const templateData = extractTemplateData(filledTemplate);
+      const requirementId = `req-${transferId}-mer-submission`;
       
       const transfer: Transfer = {
         id: transferId,
@@ -166,7 +236,19 @@ const CentralInventory: React.FC = () => {
         jurisdiction: applicationData?.locations?.[0] || 'Unknown',
         entity: templateData.appName || selectedControl.applicationName,
         subjectType: 'N/A', // MER doesn't use subject types
-        requirements: [],
+        requirements: [
+          {
+            id: requirementId,
+            name: `${filledTemplate.merType} Submission Review`,
+            jurisdiction: applicationData?.locations?.[0] || 'Unknown',
+            entity: templateData.appName || selectedControl.applicationName,
+            subjectType: 'N/A',
+            status: 'PENDING',
+            updatedAt: new Date().toISOString(),
+            transferId: transferId,
+            description: `Review ${filledTemplate.merType} template submission`
+          }
+        ],
         merType: filledTemplate.merType,
         merTemplateId: filledTemplate.id,
         merTemplateData: templateData
@@ -232,10 +314,12 @@ const CentralInventory: React.FC = () => {
   // For now, we'll check if there's any uploaded evidence
   const hasUploadedEvidence = uploadedEvidence.size > 0;
   
-  // MER workflow: requires merTemplate and evidence
+  // MER workflow: requires merTemplate OR uploadedTemplate (evidence is optional)
   // Non-MER workflow: requires questionnaireData and evidence
-  const canSubmit = selectedControl && hasUploadedEvidence && !isSubmitted && 
-    (isMERControl ? !!merTemplate : !!questionnaireData);
+  const canSubmit = selectedControl && !isSubmitted && 
+    (isMERControl 
+      ? (!!merTemplate || !!uploadedTemplate) && !!currentTransferId
+      : !!questionnaireData && hasUploadedEvidence);
 
   const handleSubmit = async () => {
     if (!canSubmit || !selectedControl || !currentTransferId) return;
@@ -257,6 +341,28 @@ const CentralInventory: React.FC = () => {
             status: req.status === 'PENDING' ? 'UNDER_REVIEW' : req.status,
             updatedAt: new Date().toISOString()
           }));
+          
+          // For MER submissions, create a virtual evidence entry for the first requirement
+          // so it appears in the Admin's Evidence Queue
+          if (isMERControl && transfer.requirements[0]) {
+            const requirement = transfer.requirements[0];
+            const virtualEvidence: Evidence = {
+              id: `evidence-${requirement.id}`,
+              requirementId: requirement.id,
+              filename: `${transfer.merType || 'MER'} Template Submission`,
+              size: 0, // Virtual evidence has no file size
+              uploadedBy: 'current-user',
+              uploadedAt: new Date().toISOString(),
+              status: 'UNDER_REVIEW',
+              fileType: 'PDF',
+              description: `${transfer.name} - Review template data and attached evidence`,
+              // Store reference to the transfer so admin can access the template data
+              merTransferId: transfer.id
+            };
+            
+            // Store virtual evidence in localStorage
+            localStorage.setItem(`evidence_${virtualEvidence.id}`, JSON.stringify(virtualEvidence));
+          }
         }
         // Ensure transfer status is ACTIVE (which maps to UNDER_REVIEW in TransferCard)
         transfer.status = 'ACTIVE';
@@ -337,7 +443,7 @@ const CentralInventory: React.FC = () => {
         },
         {
           id: 'evidence',
-          label: 'Evidence Upload',
+          label: 'Evidence (Optional)',
           icon: <FiUpload />,
           completed: uploadedEvidence.size > 0 && currentStep > 4,
           current: currentStep === 4,
@@ -438,7 +544,7 @@ const CentralInventory: React.FC = () => {
           )}
 
           {/* Step 3: MER Template Review */}
-          {applicationData && merTemplate && (
+          {applicationData && merTemplate && !uploadedTemplate && (
             <StepSection $isActive={currentStep === 3}>
               <StepTitle>
                 <FiFileText />
@@ -454,12 +560,42 @@ const CentralInventory: React.FC = () => {
             </StepSection>
           )}
 
+          {/* Step 3: Template Viewer (routed based on template type) */}
+          {applicationData && uploadedTemplate && (
+            <StepSection $isActive={currentStep === 3}>
+              <StepTitle>
+                <FiFileText />
+                Template: {uploadedTemplate.name}
+                {currentTransferId && <span style={{ color: colors.status.approved, marginLeft: spacing.sm }}>✓</span>}
+              </StepTitle>
+              <StepContent>
+                {/* Dynamic Form Template */}
+                {uploadedTemplate.templateType === 'DYNAMIC_FORM' && (
+                  <DynamicTemplateForm
+                    template={uploadedTemplate}
+                    prefillData={applicationData}
+                    onContinue={handlePDFTemplateComplete}
+                  />
+                )}
+                
+                {/* PDF Form Template (Backward Compatibility) */}
+                {uploadedTemplate.templateType === 'PDF_FORM' && (
+                  <PDFTemplateViewer
+                    template={uploadedTemplate}
+                    prefillData={applicationData}
+                    onContinue={handlePDFTemplateComplete}
+                  />
+                )}
+              </StepContent>
+            </StepSection>
+          )}
+
           {/* Step 4: Evidence Upload (MER) */}
           {currentTransferId && (
             <StepSection $isActive={currentStep === 4}>
               <StepTitle>
                 <FiUpload />
-                Evidence Uploads
+                Evidence Uploads (Optional)
                 {uploadedEvidence.size > 0 && (
                   <span style={{ color: colors.status.approved, marginLeft: spacing.sm }}>
                     ✓ {uploadedEvidence.size} file{uploadedEvidence.size > 1 ? 's' : ''} uploaded

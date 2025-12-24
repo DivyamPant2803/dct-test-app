@@ -128,6 +128,8 @@ export interface Evidence {
   assignedDeputyType?: ReviewerType;
   deputyAssignedAt?: string;
   deputyAssignedBy?: string;
+  // MER transfer reference (for virtual evidence entries)
+  merTransferId?: string;
 }
 
 export interface Transfer {
@@ -149,7 +151,7 @@ export interface Transfer {
   // MER template fields
   merType?: MERType;
   merTemplateId?: string;
-  merTemplateData?: Record<string, string>; // field ID → value mapping
+  merTemplateData?: Record<string, any>; // field ID → value mapping (supports strings, objects, arrays)
   // Clarification request fields
   clarificationRequest?: {
     requestedBy: string;
@@ -414,4 +416,176 @@ export interface TemplateSelection {
     conditions: boolean;
     remediations: boolean;
   }>;
-} 
+}
+
+// Document Upload Types
+export type DocumentType = 'PDF' | 'DOCX' | 'DOC';
+export type TemplateStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+export type TemplateType = 'PDF_FORM' | 'DYNAMIC_FORM'; // Type discriminator
+export type ControlType = 'MER-13' | 'MER-14' | 'EUC' | 'CUSTOM'; // Template control classification
+
+// Enhanced Field Types - includes new radio, radio-group, file types
+export type FieldType =
+  | 'text'           // Single line text input
+  | 'textarea'       // Multi-line text input
+  | 'number'         // Numeric input
+  | 'date'           // Date picker
+  | 'select'         // Dropdown single select
+  | 'checkbox'       // Single checkbox (boolean)
+  | 'radio'          // Yes/No or single binary choice
+  | 'radio-group'    // Multiple choice (A/B/C style)
+  | 'table'          // Dynamic table with columns
+  | 'file'           // Single file upload
+  | 'file-multiple'; // Multiple file uploads
+
+// PDF Form Field Type (for backward compatibility)
+export interface PDFFormField {
+  name: string;
+  type: 'text' | 'checkbox' | 'radio' | 'select' | 'textarea';
+  value: string;
+  required?: boolean;
+  options?: string[];
+}
+
+// Dynamic Form Template Types
+export interface TableColumn {
+  id: string;
+  label: string;
+  type: 'text' | 'number' | 'date' | 'select';
+  width?: string;
+  options?: string[];
+  required?: boolean;
+  prefillSource?: string; // Optional prefill for table columns
+}
+
+export interface TableConfig {
+  columns: TableColumn[];
+  minRows: number;
+  maxRows?: number;
+  allowAddRows: boolean;
+  allowDeleteRows: boolean;
+}
+
+// Conditional Logic - show/hide fields based on other field values
+export interface FieldCondition {
+  dependsOn: string;              // Field ID this depends on
+  showWhen: string | string[];    // Show when dependsOn equals this value(s)
+  requiredWhen?: string | string[]; // Make required when this condition met
+}
+
+// File Upload Configuration
+export interface FileUploadConfig {
+  accept: string[];      // Allowed file extensions: ['.pdf', '.doc', '.docx']
+  maxSizeMB: number;     // Maximum file size in MB
+  multiple: boolean;     // Allow multiple files
+}
+
+// File Attachment - represents an uploaded file
+export interface FileAttachment {
+  id: string;
+  fieldId: string;
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+  uploadedAt: string;
+  base64Data?: string;   // For localStorage storage
+  url?: string;          // For backend storage
+}
+
+export interface TemplateField {
+  id: string;
+  label: string;
+  type: FieldType;
+  placeholder?: string;
+  required: boolean;
+  defaultValue?: string;
+  options?: string[];           // For select, radio-group fields
+  tableConfig?: TableConfig;    // For table fields
+  order: number;
+  helpText?: string;
+  width?: 'full' | 'half' | 'third'; // Layout width
+
+  // Prefill Configuration - ALL fields support prefill + editing
+  prefillSource?: string;       // e.g., 'swcId', 'swcName', 'owner', 'dataClassification'
+  prefillEditable?: boolean;    // Default true - user can always edit prefilled values
+
+  // Conditional Logic
+  condition?: FieldCondition;   // Show/hide based on other field values
+
+  // File Upload Configuration
+  fileConfig?: FileUploadConfig; // For 'file' and 'file-multiple' types
+}
+
+export interface TemplateSection {
+  id: string;
+  title: string;
+  description?: string;
+  fields: TemplateField[];
+  order: number;
+  collapsible?: boolean;        // Allow section to be collapsed
+  defaultCollapsed?: boolean;   // Start collapsed
+}
+
+// Unified UploadedTemplate with type discriminator
+export interface UploadedTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  status: TemplateStatus;
+  templateType: TemplateType; // Discriminator: 'PDF_FORM' or 'DYNAMIC_FORM'
+
+  // Template Classification
+  controlType?: ControlType;    // MER-13, MER-14, EUC, etc.
+  version?: string;             // Semantic version: '1.0.0'
+  previousVersionId?: string;   // Link to previous version for history
+
+  // File metadata
+  originalFileName: string;
+  fileSize: number;
+  documentType: DocumentType;
+  pdfBase64: string; // Base64 encoded PDF (for preview or PDF-based templates)
+
+  // PDF-based template data (when templateType === 'PDF_FORM')
+  hasFormFields?: boolean;
+  formFields?: PDFFormField[];
+
+  // Dynamic form template data (when templateType === 'DYNAMIC_FORM')
+  sections?: TemplateSection[];
+
+  // Field mapping for API prefilling (works for both types)
+  // Maps field IDs to ApplicationData property names
+  // Example: { 'swc_id': 'swcId', 'swc_name': 'swcName', 'manager': 'swcManager' }
+  fieldMappings?: Record<string, string>;
+
+  // Data Source Configuration (optional - for advanced prefill control)
+  dataSources?: DataSourceConfig[];
+
+  // Tracking
+  uploadedBy: string;
+  uploadedAt: string;
+  lastUsedAt?: string;
+  usageCount: number;
+}
+
+// Data Source Configuration for prefill orchestration
+export interface DataSourceConfig {
+  sourceId: string;           // 'cmdb' | 'iam' | 'data-catalog' | 'compliance-registry'
+  priority: number;           // Higher = more authoritative (used for conflict resolution)
+  required: boolean;          // Fail if this source is unreachable?
+  timeout: number;            // API timeout in ms
+  fieldsProvided: string[];   // Which fields this source can populate
+}
+
+// Prefilled Form Data - result of prefill engine
+export interface PrefilledFormData {
+  fieldValues: Record<string, any>;           // fieldId -> prefilled value
+  tableData: Record<string, any[]>;           // fieldId -> array of row objects
+  fileAttachments: Record<string, FileAttachment[]>; // fieldId -> uploaded files
+  sourceMetadata: Record<string, {            // fieldId -> metadata
+    source: string;
+    fetchedAt: string;
+    confidence: 'high' | 'medium' | 'low';
+  }>;
+  missingFields: string[];                    // Fields that couldn't be prefilled
+  errors: { field: string; error: string }[]; // Errors during prefill
+}

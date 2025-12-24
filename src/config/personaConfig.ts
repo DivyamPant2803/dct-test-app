@@ -118,7 +118,7 @@ export const PERSONA_DASHBOARD_CONFIGS: Record<string, PersonaDashboardConfig> =
     ],
     sections: [
       { id: 'stats', component: 'BusinessStats' },
-      
+
     ],
     filters: [
       { id: 'process-type', type: 'select', label: 'Process Type', options: ['All', 'Approval', 'Compliance', 'Risk'] },
