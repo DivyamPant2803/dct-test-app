@@ -137,7 +137,7 @@ export interface Transfer {
   name: string;
   createdBy: string;
   createdAt: string;
-  status: 'ACTIVE' | 'COMPLETED' | 'PENDING';
+  status: 'ACTIVE' | 'COMPLETED' | 'PENDING' | 'ESCALATED';
   jurisdiction: string;
   entity: string;
   subjectType: string;
@@ -168,6 +168,8 @@ export interface Transfer {
     message: string;
     uploadedAt?: string;
   };
+  // MER review data (for end-user visibility)
+  reviewData?: MERReviewData;
 }
 
 export interface AuditEntry {
@@ -189,6 +191,39 @@ export interface ReviewDecision {
   taggedAuthorities?: string[];
   escalatedTo?: string;
 }
+
+// MER Review Decision Types
+export interface AttachmentReviewDecision {
+  attachmentId: string; // Can be FileAttachment ID or Evidence ID
+  attachmentType: 'template' | 'evidence'; // template = fileData, evidence = SimpleMERUpload
+  decision: 'APPROVE' | 'REJECT';
+  note?: string;
+}
+
+export interface MERReviewDecision {
+  transferId: string;
+  overallDecision: 'APPROVE' | 'REJECT' | 'REQUEST_CHANGES';
+  adminComments: string;
+  attachmentDecisions: AttachmentReviewDecision[];
+  reviewedBy: string;
+  reviewedAt: string;
+}
+
+export interface MERReviewData {
+  overallDecision: 'APPROVED' | 'REJECTED' | 'PENDING' | 'UNDER_REVIEW';
+  adminComments?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  attachmentDecisions: {
+    attachmentId: string;
+    attachmentName: string;
+    decision: 'APPROVED' | 'REJECTED' | 'PENDING';
+    comments?: string;
+    reviewedBy?: string;
+    reviewedAt?: string;
+  }[];
+}
+
 
 export interface User {
   id: string;

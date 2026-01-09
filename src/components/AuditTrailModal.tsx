@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { RequirementRow, AuditEntry } from '../types/index';
+import { RequirementRow, AuditEntry, Transfer } from '../types/index';
 import { useEvidenceApi } from '../hooks/useEvidenceApi';
 import StatusChip from './StatusChip';
 
@@ -65,7 +65,7 @@ const Content = styled.div`
   flex: 1;
 `;
 
-const RequirementInfo = styled.div`
+const InfoBox = styled.div`
   background: #f8f9fa;
   padding: 1rem;
   border-radius: 6px;
@@ -73,13 +73,13 @@ const RequirementInfo = styled.div`
   margin-bottom: 1.5rem;
 `;
 
-const RequirementTitle = styled.h4`
+const InfoTitle = styled.h4`
   margin: 0 0 0.5rem 0;
   color: #222;
   font-size: 1rem;
 `;
 
-const RequirementDetails = styled.div`
+const InfoDetails = styled.div`
   font-size: 0.9rem;
   color: #666;
   line-height: 1.4;
@@ -207,24 +207,31 @@ const EmptyMessage = styled.div`
 `;
 
 interface AuditTrailModalProps {
-  requirement: RequirementRow;
+  requirement?: RequirementRow;
+  transfer?: Transfer;
   onClose: () => void;
 }
 
 const AuditTrailModal: React.FC<AuditTrailModalProps> = ({
   requirement,
+  transfer,
   onClose
 }) => {
   const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const { getAuditTrail } = useEvidenceApi();
+  const { getAuditTrail, getTransferAuditTrail } = useEvidenceApi();
 
   useEffect(() => {
     const loadAuditTrail = async () => {
       setLoading(true);
       try {
-        const entries = await getAuditTrail(requirement.id);
+        let entries: AuditEntry[] = [];
+        if (transfer) {
+          entries = await getTransferAuditTrail(transfer.id);
+        } else if (requirement) {
+          entries = await getAuditTrail(requirement.id);
+        }
         setAuditEntries(entries);
       } catch (error) {
         console.error('Failed to load audit trail:', error);
@@ -233,8 +240,10 @@ const AuditTrailModal: React.FC<AuditTrailModalProps> = ({
       }
     };
 
-    loadAuditTrail();
-  }, [requirement.id, getAuditTrail]);
+    if (requirement || transfer) {
+      loadAuditTrail();
+    }
+  }, [requirement, transfer, getAuditTrail, getTransferAuditTrail]);
 
   const getActionLabel = (action: string): string => {
     switch (action) {
@@ -247,7 +256,7 @@ const AuditTrailModal: React.FC<AuditTrailModalProps> = ({
       case 'REJECTED':
         return 'Rejected';
       case 'ESCALATED':
-        return 'Escalated to Legal';
+        return 'Escalated';
       default:
         return action;
     }
@@ -257,24 +266,30 @@ const AuditTrailModal: React.FC<AuditTrailModalProps> = ({
     return new Date(timestamp).toLocaleString();
   };
 
+  const entityName = transfer ? transfer.name : requirement?.name;
+  const jurisdiction = transfer ? transfer.jurisdiction : requirement?.jurisdiction;
+  const entity = transfer ? transfer.entity : requirement?.entity;
+  const subjectType = transfer ? transfer.subjectType : requirement?.subjectType;
+  const status = transfer ? (transfer.status as any) : requirement?.status;
+
   return (
     <Overlay onClick={onClose}>
       <Modal onClick={(e) => e.stopPropagation()}>
         <Header>
-          <Title>Audit Trail</Title>
+          <Title>{transfer ? 'Transfer Audit Trail' : 'Requirement Audit Trail'}</Title>
           <CloseButton onClick={onClose}>&times;</CloseButton>
         </Header>
         
         <Content>
-          <RequirementInfo>
-            <RequirementTitle>{requirement.name}</RequirementTitle>
-            <RequirementDetails>
-              <div><strong>Jurisdiction:</strong> {requirement.jurisdiction}</div>
-              <div><strong>Entity:</strong> {requirement.entity}</div>
-              <div><strong>Subject Type:</strong> {requirement.subjectType}</div>
-              <div><strong>Current Status:</strong> <StatusChip status={requirement.status} /></div>
-            </RequirementDetails>
-          </RequirementInfo>
+          <InfoBox>
+            <InfoTitle>{entityName}</InfoTitle>
+            <InfoDetails>
+              <div><strong>Jurisdiction:</strong> {jurisdiction}</div>
+              <div><strong>Entity:</strong> {entity}</div>
+              {subjectType && <div><strong>Subject Type:</strong> {subjectType}</div>}
+              <div><strong>Current Status:</strong> <StatusChip status={status} /></div>
+            </InfoDetails>
+          </InfoBox>
 
           {loading ? (
             <LoadingMessage>Loading audit trail...</LoadingMessage>
@@ -310,7 +325,7 @@ const AuditTrailModal: React.FC<AuditTrailModalProps> = ({
             </Timeline>
           ) : (
             <EmptyMessage>
-              No audit entries found for this requirement.
+              No audit entries found.
             </EmptyMessage>
           )}
         </Content>

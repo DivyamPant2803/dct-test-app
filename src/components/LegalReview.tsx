@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { Evidence, ReviewDecision } from '../types/index';
 import { useEvidenceApi } from '../hooks/useEvidenceApi';
 import ReviewDrawer from './ReviewDrawer';
+import MERReviewPanel from './MERReview/MERReviewPanel';
 import StatusChip from './StatusChip';
 import LegalContentDashboard from './LegalContentDashboard';
 import LegalTemplates from './LegalTemplates';
@@ -182,6 +183,8 @@ const LegalReview: React.FC = () => {
   const [escalatedEvidence, setEscalatedEvidence] = useState<Evidence[]>([]);
   const [selectedEvidence, setSelectedEvidence] = useState<Evidence | null>(null);
   const [showReviewDrawer, setShowReviewDrawer] = useState(false);
+  const [showMERReviewPanel, setShowMERReviewPanel] = useState(false);
+  const [selectedMERTransferId, setSelectedMERTransferId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
 
@@ -224,8 +227,18 @@ const LegalReview: React.FC = () => {
   }, [refreshEscalatedEvidence]);
 
   const handleReviewClick = (evidence: Evidence) => {
-    setSelectedEvidence(evidence);
-    setShowReviewDrawer(true);
+    // Check if this is a MER submission
+    const isMERSubmission = evidence.merTransferId || evidence.description?.includes('MER');
+    
+    if (isMERSubmission && evidence.merTransferId) {
+      // Open MER Review Panel for Legal team
+      setSelectedMERTransferId(evidence.merTransferId);
+      setShowMERReviewPanel(true);
+    } else {
+      // Open regular review drawer
+      setSelectedEvidence(evidence);
+      setShowReviewDrawer(true);
+    }
   };
 
   const handleReviewDecision = async (decision: ReviewDecision) => {
@@ -429,6 +442,23 @@ const LegalReview: React.FC = () => {
       {selectedEvidence && !showReviewDrawer && (
         <EscalationTimeline evidence={selectedEvidence} />
       )}
+
+      {/* MER Review Panel for Legal Team */}
+      {showMERReviewPanel && selectedMERTransferId && (
+        <MERReviewPanel
+          transferId={selectedMERTransferId}
+          reviewerType="Legal"
+          onClose={() => {
+            setShowMERReviewPanel(false);
+            setSelectedMERTransferId(null);
+          }}
+          onReviewComplete={async () => {
+            await refreshEscalatedEvidence();
+            showToast('MER review submitted successfully', 'success');
+          }}
+        />
+      )}
+
     </Container>
   );
 };

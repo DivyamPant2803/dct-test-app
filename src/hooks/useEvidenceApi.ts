@@ -88,10 +88,10 @@ export const useEvidenceApi = () => {
     legalRequirement?: string
   ): Promise<Evidence> => {
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     // Convert file to base64 for storage
     const base64Data = await fileToBase64(file);
-    
+
     const newEvidence: Evidence = {
       id: `evidence-${Date.now()}`,
       requirementId,
@@ -108,19 +108,19 @@ export const useEvidenceApi = () => {
     // Check if requirementId already contains a transferId (from Central Inventory)
     // Pattern: req-transfer-xxx-... means evidence is already linked to a transfer
     const hasExistingTransferId = requirementId.includes('req-transfer-');
-    
+
     // If uploading from Central Inventory, update the existing transfer's requirements
     if (hasExistingTransferId && entityName && country && legalRequirement) {
       // Find the transfer by checking if requirementId starts with req-{transferId}
       const storedTransfers = getStoredTransfers();
-      const existingTransfer = storedTransfers.find(t => 
+      const existingTransfer = storedTransfers.find(t =>
         requirementId.startsWith(`req-${t.id}-`)
       );
-      
+
       if (existingTransfer) {
         // Check if requirement already exists
         const existingRequirement = existingTransfer.requirements.find((r: RequirementRow) => r.id === requirementId);
-        
+
         if (!existingRequirement) {
           // Add new requirement to the transfer
           const newRequirement: RequirementRow = {
@@ -134,26 +134,26 @@ export const useEvidenceApi = () => {
             transferId: existingTransfer.id,
             description: description
           };
-          
+
           existingTransfer.requirements.push(newRequirement);
-          
+
           // Update transfer in localStorage
           localStorage.setItem(`transfer_${existingTransfer.id}`, JSON.stringify(existingTransfer));
-          
+
           // Update transfers state
           setTransfers(prev => prev.map(t => t.id === existingTransfer.id ? existingTransfer : t));
         }
       }
     }
-    
+
     // Only create/update transfer record if uploading from Guidance page
     // (not from Central Inventory, which already has a transfer)
     if (entityName && country && legalRequirement && !hasExistingTransferId) {
       const transferId = `transfer-${entityName.replace(/\s+/g, '-').toLowerCase()}-${country.replace(/\s+/g, '-').toLowerCase()}`;
-      
+
       // Check if transfer already exists
       let existingTransfer = transfers.find(t => t.id === transferId);
-      
+
       if (!existingTransfer) {
         // Create new transfer
         const newTransfer: Transfer = {
@@ -177,7 +177,7 @@ export const useEvidenceApi = () => {
             description: legalRequirement
           }]
         };
-        
+
         // Store transfer in localStorage
         localStorage.setItem(`transfer_${transferId}`, JSON.stringify(newTransfer));
         setTransfers(prev => [...prev, newTransfer]);
@@ -196,7 +196,7 @@ export const useEvidenceApi = () => {
             transferId: transferId,
             description: legalRequirement
           });
-          
+
           // Update transfer in localStorage
           localStorage.setItem(`transfer_${transferId}`, JSON.stringify(existingTransfer));
         }
@@ -205,12 +205,12 @@ export const useEvidenceApi = () => {
 
     // Store evidence in localStorage
     localStorage.setItem(`evidence_${newEvidence.id}`, JSON.stringify(newEvidence));
-    
+
     // Add evidence to state
     setEvidence(prev => [...prev, newEvidence]);
-    
+
     console.log('Uploading evidence:', newEvidence);
-    
+
     return newEvidence;
   }, [transfers]);
 
@@ -229,16 +229,16 @@ export const useEvidenceApi = () => {
 
   const submitReviewDecision = useCallback(async (decision: ReviewDecision): Promise<void> => {
     await new Promise(resolve => setTimeout(resolve, 500));
-    
+
     // Find the evidence to update
     const evidenceIndex = evidence.findIndex(e => e.id === decision.evidenceId);
     if (evidenceIndex === -1) {
       throw new Error('Evidence not found');
     }
-    
+
     const currentEvidence = evidence[evidenceIndex];
     const previousStatus = currentEvidence.status;
-    
+
     // Determine new status based on decision
     let newStatus: RequirementStatus;
     switch (decision.decision) {
@@ -254,7 +254,7 @@ export const useEvidenceApi = () => {
       default:
         throw new Error('Invalid decision type');
     }
-    
+
     // Update evidence with new status and review details
     const updatedEvidence: Evidence = {
       ...currentEvidence,
@@ -263,13 +263,13 @@ export const useEvidenceApi = () => {
       reviewerId: 'current-admin', // In a real app, this would be the actual admin ID
       reviewedAt: new Date().toISOString()
     };
-    
+
     // Update localStorage
     localStorage.setItem(`evidence_${updatedEvidence.id}`, JSON.stringify(updatedEvidence));
-    
+
     // Update state
     setEvidence(prev => prev.map(e => e.id === updatedEvidence.id ? updatedEvidence : e));
-    
+
     // Create audit trail entry
     const auditEntry: AuditEntry = {
       id: `audit-${Date.now()}`,
@@ -281,19 +281,19 @@ export const useEvidenceApi = () => {
       previousStatus,
       newStatus
     };
-    
+
     // Store audit entry in localStorage
     localStorage.setItem(`audit_${auditEntry.id}`, JSON.stringify(auditEntry));
-    
+
     // Update corresponding requirement status
     const requirementId = currentEvidence.requirementId;
-    
+
     // Extract transferId from requirementId
     // Format: req-${transferId}-${row.id}-action-${actionIndex}-${Date.now()}
     // We need to find which transfer this requirement belongs to
     let transferId: string | null = null;
     const storedTransfers = getStoredTransfers();
-    
+
     // Try to find the transfer by matching the requirementId prefix
     // The requirementId starts with req-${transferId}-
     for (const transfer of storedTransfers) {
@@ -303,7 +303,7 @@ export const useEvidenceApi = () => {
         break;
       }
     }
-    
+
     // If not found by prefix, try the old format: req-entity-country
     if (!transferId) {
       // Fallback: try to extract by replacing req- with transfer-
@@ -313,7 +313,7 @@ export const useEvidenceApi = () => {
         transferId = potentialTransferId;
       }
     }
-    
+
     // Find and update the transfer's requirement
     if (transferId) {
       const transferKey = `transfer_${transferId}`;
@@ -324,7 +324,7 @@ export const useEvidenceApi = () => {
         if (requirementIndex !== -1) {
           transfer.requirements[requirementIndex].status = newStatus;
           transfer.requirements[requirementIndex].updatedAt = new Date().toISOString();
-          
+
           // Update transfer status based on requirements status
           // If all requirements are approved, set transfer status to COMPLETED
           // If any requirement is rejected, keep status as ACTIVE (or could be REJECTED)
@@ -333,25 +333,25 @@ export const useEvidenceApi = () => {
           const hasRejected = transfer.requirements.some((req: RequirementRow) => req.status === 'REJECTED');
           const hasEscalated = transfer.requirements.some((req: RequirementRow) => req.status === 'ESCALATED');
           const hasUnderReview = transfer.requirements.some((req: RequirementRow) => req.status === 'UNDER_REVIEW');
-          
+
           if (hasEscalated) {
             transfer.escalatedTo = decision.escalatedTo || 'Legal';
             transfer.escalatedAt = new Date().toISOString();
             transfer.isHighPriority = true;
           }
-          
+
           // Update transfer status based on requirements
           if (allApproved && transfer.requirements.length > 0) {
             transfer.status = 'COMPLETED';
           } else if (hasUnderReview || hasRejected || hasEscalated) {
             transfer.status = 'ACTIVE';
           }
-          
+
           localStorage.setItem(transferKey, JSON.stringify(transfer));
-          
+
           // Update transfers state
           setTransfers(prev => prev.map(t => t.id === transfer.id ? transfer : t));
-          
+
           console.log('Updated requirement status:', {
             requirementId,
             transferId,
@@ -372,11 +372,11 @@ export const useEvidenceApi = () => {
     } else {
       console.log('Could not extract transferId from requirementId:', requirementId);
     }
-    
+
     // Create notifications based on decision
     const notifications = [];
     const requestId = transferId || currentEvidence.requirementId;
-    
+
     if (decision.decision === 'APPROVE') {
       notifications.push({
         message: `Your Data Transfer request #${requestId} has been approved.`,
@@ -410,17 +410,17 @@ export const useEvidenceApi = () => {
         sender: 'system',
       });
     }
-    
+
     if (notifications.length > 0) {
       createNotifications(notifications);
     }
-    
+
     console.log('Review decision submitted:', decision);
   }, [evidence]);
 
   const getAuditTrail = useCallback(async (requirementId: string): Promise<AuditEntry[]> => {
     await new Promise(resolve => setTimeout(resolve, 200));
-    
+
     // Get audit entries from localStorage
     const storedAuditEntries: AuditEntry[] = [];
     for (let i = 0; i < localStorage.length; i++) {
@@ -439,22 +439,22 @@ export const useEvidenceApi = () => {
         }
       }
     }
-    
+
     // Sort by date (newest first)
-    return storedAuditEntries.sort((a, b) => 
+    return storedAuditEntries.sort((a, b) =>
       new Date(b.performedAt).getTime() - new Date(a.performedAt).getTime()
     );
   }, []);
 
   const deleteEvidence = useCallback(async (evidenceId: string): Promise<void> => {
     await new Promise(resolve => setTimeout(resolve, 200));
-    
+
     // Remove from localStorage
     localStorage.removeItem(`evidence_${evidenceId}`);
-    
+
     // Update state
     setEvidence(prev => prev.filter(e => e.id !== evidenceId));
-    
+
     console.log('Evidence deleted:', evidenceId);
   }, []);
 
@@ -473,17 +473,17 @@ export const useEvidenceApi = () => {
     escalationReason?: string
   ): Promise<void> => {
     await new Promise(resolve => setTimeout(resolve, 500));
-    
+
     // Get the transfer from localStorage
     const transferKey = `transfer_${transferId}`;
     const storedTransfer = localStorage.getItem(transferKey);
-    
+
     if (!storedTransfer) {
       throw new Error('Transfer not found');
     }
-    
+
     const transfer: Transfer = JSON.parse(storedTransfer);
-    
+
     // Update transfer with escalation details
     const updatedTransfer: Transfer = {
       ...transfer,
@@ -494,27 +494,27 @@ export const useEvidenceApi = () => {
       escalationReason: escalationReason || 'SLA breach or approaching breach',
       status: 'PENDING' // Set status to PENDING when escalated
     };
-    
+
     // Update all requirements in the transfer to ESCALATED status
     updatedTransfer.requirements = transfer.requirements.map(req => ({
       ...req,
       status: 'ESCALATED' as RequirementStatus,
       updatedAt: new Date().toISOString()
     }));
-    
+
     // Update transfer in localStorage
     localStorage.setItem(transferKey, JSON.stringify(updatedTransfer));
-    
+
     // Update state
     setTransfers(prev => prev.map(t => t.id === transferId ? updatedTransfer : t));
-    
+
     // Also update related evidence to ESCALATED status
     const storedEvidence = getStoredEvidence();
-    const relatedEvidence = storedEvidence.filter(e => 
-      e.requirementId.includes(transferId) || 
+    const relatedEvidence = storedEvidence.filter(e =>
+      e.requirementId.includes(transferId) ||
       transfer.requirements.some(req => e.requirementId.includes(req.id))
     );
-    
+
     relatedEvidence.forEach(evidence => {
       const updatedEvidence: Evidence = {
         ...evidence,
@@ -526,7 +526,7 @@ export const useEvidenceApi = () => {
       };
       localStorage.setItem(`evidence_${evidence.id}`, JSON.stringify(updatedEvidence));
     });
-    
+
     // Update evidence state
     setEvidence(prev => prev.map(e => {
       const related = relatedEvidence.find(rel => rel.id === e.id);
@@ -542,7 +542,7 @@ export const useEvidenceApi = () => {
       }
       return e;
     }));
-    
+
     // Create audit trail entry
     const auditEntry: AuditEntry = {
       id: `audit-${Date.now()}`,
@@ -554,9 +554,9 @@ export const useEvidenceApi = () => {
       previousStatus: transfer.requirements[0]?.status || 'PENDING',
       newStatus: 'ESCALATED'
     };
-    
+
     localStorage.setItem(`audit_${auditEntry.id}`, JSON.stringify(auditEntry));
-    
+
     // Create notification for Admin
     createNotifications([{
       message: `Transfer request #${transferId} has been escalated by End User. Priority: High`,
@@ -565,8 +565,48 @@ export const useEvidenceApi = () => {
       requestId: transferId,
       sender: 'End User',
     }]);
-    
+
     console.log('Transfer escalated:', updatedTransfer);
+  }, []);
+
+  const getTransferAuditTrail = useCallback(async (transferId: string): Promise<AuditEntry[]> => {
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    // Get all requirements for this transfer
+    const storedTransfers = getStoredTransfers();
+    const transfer = storedTransfers.find(t => t.id === transferId);
+
+    const requirementIds = new Set<string>();
+    if (transfer) {
+      // Add main transfer ID (for escalation events)
+      requirementIds.add(transferId);
+      // Add all requirement IDs
+      transfer.requirements.forEach(req => requirementIds.add(req.id));
+    }
+
+    // Get audit entries from localStorage that match any of the IDs
+    const storedAuditEntries: AuditEntry[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('audit_')) {
+        try {
+          const stored = localStorage.getItem(key);
+          if (stored) {
+            const auditEntry = JSON.parse(stored);
+            if (requirementIds.has(auditEntry.requirementId)) {
+              storedAuditEntries.push(auditEntry);
+            }
+          }
+        } catch (error) {
+          console.error('Error parsing stored audit entry:', error);
+        }
+      }
+    }
+
+    // Sort by date (newest first)
+    return storedAuditEntries.sort((a, b) =>
+      new Date(b.performedAt).getTime() - new Date(a.performedAt).getTime()
+    );
   }, []);
 
   return {
@@ -577,6 +617,7 @@ export const useEvidenceApi = () => {
     getAllEvidence,
     submitReviewDecision,
     getAuditTrail,
+    getTransferAuditTrail,
     deleteEvidence,
     previewEvidence,
     escalateTransfer

@@ -13,6 +13,7 @@ import PublishSummary from './PublishSummary';
 import StyledSelect from './common/StyledSelect';
 import Sidebar, { SidebarGroup } from './common/Sidebar';
 import { AdminQueueSummary, useToast } from './common';
+import MERReviewPanel from './MERReview/MERReviewPanel';
 
 const DashboardContainer = styled.div`
   width: 100%;
@@ -414,6 +415,8 @@ const AdminDashboard: React.FC = () => {
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [selectedEvidence, setSelectedEvidence] = useState<Evidence | null>(null);
   const [showReviewDrawer, setShowReviewDrawer] = useState(false);
+  const [showMERReviewPanel, setShowMERReviewPanel] = useState(false);
+  const [selectedMERTransferId, setSelectedMERTransferId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({
     status: '',
@@ -507,8 +510,14 @@ const AdminDashboard: React.FC = () => {
   }, [activeItem, getAllEvidence, getTransfers]);
 
   const handleReviewClick = (evidence: Evidence) => {
-    setSelectedEvidence(evidence);
-    setShowReviewDrawer(true);
+    // Check if this is a MER submission
+    if (evidence.merTransferId) {
+      setSelectedMERTransferId(evidence.merTransferId);
+      setShowMERReviewPanel(true);
+    } else {
+      setSelectedEvidence(evidence);
+      setShowReviewDrawer(true);
+    }
   };
 
   const handleReviewDecision = async (decision: ReviewDecision) => {
@@ -1442,6 +1451,20 @@ const AdminDashboard: React.FC = () => {
           })()}
           onClose={() => setShowReviewDrawer(false)}
           onDecision={handleReviewDecision}
+        />
+      )}
+
+      {/* MER Review Panel */}
+      {showMERReviewPanel && selectedMERTransferId && (
+        <MERReviewPanel
+          transferId={selectedMERTransferId}
+          reviewerType="Admin"
+          onClose={() => setShowMERReviewPanel(false)}
+          onReviewComplete={async () => {
+            const allEvidenceData = await getAllEvidence();
+            setAllEvidence(allEvidenceData);
+            showToast('MER review submitted successfully!', 'success');
+          }}
         />
       )}
     </DashboardContainer>

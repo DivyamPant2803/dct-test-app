@@ -342,13 +342,14 @@ const CentralInventory: React.FC = () => {
             updatedAt: new Date().toISOString()
           }));
           
-          // For MER submissions, create a virtual evidence entry for the first requirement
+          
+          // For MER submissions, create a SINGLE virtual evidence entry
           // so it appears in the Admin's Evidence Queue
-          if (isMERControl && transfer.requirements[0]) {
-            const requirement = transfer.requirements[0];
+          if (isMERControl) {
+            // Use the transfer ID itself as the virtual evidence ID to ensure uniqueness
             const virtualEvidence: Evidence = {
-              id: `evidence-${requirement.id}`,
-              requirementId: requirement.id,
+              id: `evidence-mer-${transfer.id}`,
+              requirementId: transfer.id, // Use transfer ID as requirement ID
               filename: `${transfer.merType || 'MER'} Template Submission`,
               size: 0, // Virtual evidence has no file size
               uploadedBy: 'current-user',
@@ -360,7 +361,7 @@ const CentralInventory: React.FC = () => {
               merTransferId: transfer.id
             };
             
-            // Store virtual evidence in localStorage
+            // Store virtual evidence in localStorage (only once per transfer)
             localStorage.setItem(`evidence_${virtualEvidence.id}`, JSON.stringify(virtualEvidence));
           }
         }

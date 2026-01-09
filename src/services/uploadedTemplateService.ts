@@ -6,6 +6,7 @@ import {
     hasPDFFormFields,
     generateFieldMappings,
 } from '../utils/pdfUtils';
+import { MER_13_TEMPLATE } from '../config/mer13Template';
 
 /**
  * Uploaded Template Service
@@ -17,16 +18,20 @@ const STORAGE_KEY = 'uploaded_templates';
 const ACTIVE_TEMPLATE_KEY = 'active_template_id';
 
 /**
- * Get all uploaded templates from localStorage
+ * Get all uploaded templates from localStorage + built-in templates
  */
 export const getAllTemplates = (): UploadedTemplate[] => {
     try {
         const stored = localStorage.getItem(STORAGE_KEY);
-        if (!stored) return [];
-        return JSON.parse(stored);
+        const uploadedTemplates = stored ? JSON.parse(stored) : [];
+
+        // Combine built-in templates with uploaded ones
+        // Built-in templates come first so they're always available
+        return [MER_13_TEMPLATE, ...uploadedTemplates];
     } catch (error) {
         console.error('Failed to load templates:', error);
-        return [];
+        // Still return built-in template even if localStorage fails
+        return [MER_13_TEMPLATE];
     }
 };
 
