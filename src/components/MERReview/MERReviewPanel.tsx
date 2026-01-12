@@ -3,11 +3,11 @@ import styled from 'styled-components';
 import { colors, borderRadius, shadows, spacing } from '../../styles/designTokens';
 import { AttachmentReviewDecision, Evidence, FileAttachment } from '../../types/index';
 import { getMERSubmissionData, submitMERReview, MERSubmissionReview, deputizeMERSubmission, escalateMERSubmission } from '../../services/merReviewService';
-import { useEvidenceApi } from '../../hooks/useEvidenceApi';
 import TemplateDataDisplay from './TemplateDataDisplay';
 import AttachmentReviewSection from './AttachmentReviewSection';
 import DeputizeModal from './DeputizeModal';
 import EscalateModal from './EscalateModal';
+import FilePreviewModal from './FilePreviewModal';
 import { FiX, FiCheck, FiAlertCircle, FiUsers, FiExternalLink, FiAlertTriangle } from 'react-icons/fi';
 
 const Overlay = styled.div`
@@ -28,8 +28,8 @@ const Panel = styled.div`
   background: ${colors.background.default};
   border-radius: ${borderRadius.lg};
   box-shadow: ${shadows.lg};
-  width: 95%;
-  max-width: 1400px;
+  width: 98%;
+  max-width: 1800px;
   height: 90vh;
   display: flex;
   flex-direction: column;
@@ -177,38 +177,45 @@ const TooltipTag = styled.span`
   color: ${colors.text.primary};
 `;
 
-const TabBar = styled.div`
+const SplitViewContainer = styled.div`
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 0;
+  flex: 1;
+  overflow: hidden;
+  border-top: 1px solid ${colors.neutral.gray200};
+`;
+
+const LeftPanel = styled.div`
   display: flex;
-  gap: ${spacing.xs};
-  padding: 0 ${spacing.xl};
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid ${colors.neutral.gray200};
+`;
+
+const RightPanel = styled.div`
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: ${colors.background.paper};
-  border-bottom: 2px solid ${colors.neutral.gray200};
 `;
 
-const Tab = styled.button<{ $active: boolean }>`
+const PanelHeader = styled.div`
   padding: ${spacing.md} ${spacing.lg};
-  border: none;
-  background: ${props => props.$active ? colors.background.default : 'transparent'};
-  color: ${props => props.$active ? colors.text.primary : colors.text.secondary};
-  font-weight: ${props => props.$active ? '600' : '500'};
+  background: ${colors.background.paper};
+  border-bottom: 1px solid ${colors.neutral.gray200};
+  font-weight: 600;
   font-size: 0.95rem;
-  cursor: pointer;
-  border-bottom: 3px solid ${props => props.$active ? colors.neutral.black : 'transparent'};
-  transition: all 0.2s ease;
-  position: relative;
-  top: 2px;
-
-  &:hover {
-    background: ${colors.neutral.gray50};
-    color: ${colors.text.primary};
-  }
+  color: ${colors.text.primary};
+  display: flex;
+  align-items: center;
+  gap: ${spacing.sm};
 `;
 
-const TabBadge = styled.span`
+const PanelBadge = styled.span`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-left: ${spacing.sm};
   padding: 2px 8px;
   background: ${colors.status.underReview};
   color: white;
@@ -217,27 +224,50 @@ const TabBadge = styled.span`
   font-weight: 600;
 `;
 
-const Content = styled.div`
-  flex: 1;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-`;
-
-const TabContent = styled.div`
+const PanelContent = styled.div`
   flex: 1;
   overflow-y: auto;
-  background: ${colors.background.default};
+  padding: ${spacing.lg};
 `;
 
-const Footer = styled.div`
+const Footer = styled.div<{ $expanded: boolean }>`
   padding: ${spacing.lg} ${spacing.xl};
   border-top: 1px solid ${colors.neutral.gray200};
   background: ${colors.background.paper};
+  transition: all 0.3s ease;
+  max-height: ${props => props.$expanded ? '320px' : '100px'};
+  overflow: visible;
 `;
 
-const CommentSection = styled.div`
+const ExpandedFooterContent = styled.div`
   margin-bottom: ${spacing.md};
+  animation: fadeIn 0.3s ease;
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+`;
+
+const FooterHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${spacing.sm};
+  margin-bottom: ${spacing.md};
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: ${colors.text.primary};
+`;
+
+const FooterIcon = styled.div<{ $color: string }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: ${props => props.$color}15;
+  color: ${props => props.$color};
 `;
 
 const Label = styled.label`
@@ -264,6 +294,15 @@ const TextArea = styled.textarea`
     border-color: ${colors.status.underReview};
     box-shadow: 0 0 0 3px ${colors.status.underReview}15;
   }
+`;
+
+const ValidationError = styled.div`
+  color: ${colors.semantic.error};
+  font-size: 0.85rem;
+  margin-top: ${spacing.xs};
+  display: flex;
+  align-items: center;
+  gap: ${spacing.xs};
 `;
 
 const ActionButtons = styled.div`
@@ -341,14 +380,15 @@ const MERReviewPanel: React.FC<MERReviewPanelProps> = ({
 }) => {
   const [reviewData, setReviewData] = useState<MERSubmissionReview | null>(null);
   const [loading, setLoading] = useState(true);
-  const [adminComments, setAdminComments] = useState('');
   const [attachmentDecisions, setAttachmentDecisions] = useState<Map<string, AttachmentReviewDecision>>(new Map());
   const [submitting, setSubmitting] = useState(false);
   const [showDeputizeModal, setShowDeputizeModal] = useState(false);
   const [showEscalateModal, setShowEscalateModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'template' | 'attachments'>('template');
   const [showEscalationTooltip, setShowEscalationTooltip] = useState(false);
-  const { previewEvidence } = useEvidenceApi();
+  const [footerMode, setFooterMode] = useState<'actions' | 'approve' | 'reject'>('actions');
+  const [actionComment, setActionComment] = useState('');
+  const [validationError, setValidationError] = useState('');
+  const [previewAttachment, setPreviewAttachment] = useState<FileAttachment | Evidence | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -389,13 +429,31 @@ const MERReviewPanel: React.FC<MERReviewPanelProps> = ({
     });
   };
 
+  const handleActionClick = (action: 'approve' | 'reject') => {
+    setFooterMode(action);
+    setActionComment('');
+    setValidationError('');
+  };
+
+  const handleBackToActions = () => {
+    setFooterMode('actions');
+    setActionComment('');
+    setValidationError('');
+  };
+
   const handleSubmitReview = async (decision: 'APPROVE' | 'REJECT') => {
     if (!reviewData) return;
+
+    // Validate required comments for rejection
+    if (decision === 'REJECT' && !actionComment.trim()) {
+      setValidationError('Rejection reason is required');
+      return;
+    }
 
     setSubmitting(true);
     try {
       const decisions = Array.from(attachmentDecisions.values());
-      await submitMERReview(transferId, decision, adminComments, decisions, reviewerType);
+      await submitMERReview(transferId, decision, actionComment, decisions, reviewerType);
       
       onReviewComplete();
       onClose();
@@ -443,32 +501,10 @@ const MERReviewPanel: React.FC<MERReviewPanelProps> = ({
   };
 
   const handlePreview = (attachment: FileAttachment | Evidence) => {
-    // Check if it's an Evidence object
-    if ('base64Data' in attachment && attachment.base64Data) {
-      previewEvidence(attachment as Evidence);
-    } else if ('base64Data' in attachment && (attachment as FileAttachment).base64Data) {
-      // For FileAttachment, create a temporary preview
-      const fileAttachment = attachment as FileAttachment;
-      if (fileAttachment.base64Data) {
-        const blob = dataURLtoBlob(fileAttachment.base64Data);
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank');
-      }
-    }
+    setPreviewAttachment(attachment);
   };
 
-  const dataURLtoBlob = (dataURL: string): Blob => {
-    const arr = dataURL.split(',');
-    const match = arr[0].match(/:(.*?);/);
-    const mime = match ? match[1] : 'application/octet-stream';
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new Blob([u8arr], { type: mime });
-  };
+
 
   if (loading) {
     return (
@@ -540,26 +576,13 @@ const MERReviewPanel: React.FC<MERReviewPanelProps> = ({
             </ComplexityBanner>
           )}
 
-          <TabBar>
-            <Tab 
-              $active={activeTab === 'template'}
-              onClick={() => setActiveTab('template')}
-            >
-              Template Data
-              <TabBadge>{reviewData.sections.length}</TabBadge>
-            </Tab>
-            <Tab 
-              $active={activeTab === 'attachments'}
-              onClick={() => setActiveTab('attachments')}
-            >
-              Attachments
-              <TabBadge>{reviewData.templateAttachments.length + reviewData.supportingEvidence.length}</TabBadge>
-            </Tab>
-          </TabBar>
-
-          <Content>
-            {activeTab === 'template' ? (
-              <TabContent>
+          <SplitViewContainer>
+            <LeftPanel>
+              <PanelHeader>
+                Template Data
+                <PanelBadge>{reviewData.sections.length}</PanelBadge>
+              </PanelHeader>
+              <PanelContent>
                 {(() => {
                   console.log('[MERReviewPanel] Rendering TemplateDataDisplay with:', {
                     sectionsCount: reviewData.sections.length,
@@ -576,9 +599,15 @@ const MERReviewPanel: React.FC<MERReviewPanelProps> = ({
                   tableData={reviewData.filledData.tableData}
                   fileData={reviewData.filledData.fileData}
                 />
-              </TabContent>
-            ) : (
-              <TabContent>
+              </PanelContent>
+            </LeftPanel>
+
+            <RightPanel>
+              <PanelHeader>
+                Attachments
+                <PanelBadge>{reviewData.templateAttachments.length + reviewData.supportingEvidence.length}</PanelBadge>
+              </PanelHeader>
+              <PanelContent>
                 <AttachmentReviewSection
                   templateAttachments={reviewData.templateAttachments}
                   supportingEvidence={reviewData.supportingEvidence}
@@ -586,68 +615,128 @@ const MERReviewPanel: React.FC<MERReviewPanelProps> = ({
                   onDecisionChange={handleAttachmentDecision}
                   onPreview={handlePreview}
                 />
-              </TabContent>
+              </PanelContent>
+            </RightPanel>
+          </SplitViewContainer>
+
+          <Footer $expanded={footerMode !== 'actions'}>
+            {footerMode === 'actions' ? (
+              <ActionButtons>
+                {reviewerType === 'Admin' && (
+                  <Button
+                    $variant="deputize"
+                    onClick={() => setShowEscalateModal(true)}
+                    disabled={submitting}
+                  >
+                    <FiAlertTriangle />
+                    Escalate
+                  </Button>
+                )}
+                {reviewerType === 'Legal' && (
+                  <Button
+                    $variant="deputize"
+                    onClick={() => setShowDeputizeModal(true)}
+                    disabled={submitting}
+                  >
+                    <FiUsers />
+                    Deputize
+                  </Button>
+                )}
+                <Button $variant="secondary" onClick={onClose} disabled={submitting}>
+                  Cancel
+                </Button>
+                <Button
+                  $variant="reject"
+                  onClick={() => handleActionClick('reject')}
+                  disabled={submitting}
+                >
+                  <FiX />
+                  Reject
+                </Button>
+                <Button
+                  $variant="approve"
+                  onClick={() => handleActionClick('approve')}
+                  disabled={submitting}
+                >
+                  <FiCheck />
+                  Approve
+                </Button>
+              </ActionButtons>
+            ) : footerMode === 'approve' ? (
+              <ExpandedFooterContent>
+                <FooterHeader>
+                  <FooterIcon $color={colors.semantic.success}>
+                    <FiCheck size={18} />
+                  </FooterIcon>
+                  Approve MER Submission
+                </FooterHeader>
+                <Label>Approval Comments (Optional)</Label>
+                <TextArea
+                  placeholder="Add any notes about your approval..."
+                  value={actionComment}
+                  onChange={(e) => setActionComment(e.target.value)}
+                  rows={3}
+                />
+                <ActionButtons style={{ marginTop: spacing.md }}>
+                  <Button $variant="secondary" onClick={handleBackToActions} disabled={submitting}>
+                    ← Back
+                  </Button>
+                  <Button
+                    $variant="approve"
+                    onClick={() => handleSubmitReview('APPROVE')}
+                    disabled={submitting}
+                  >
+                    <FiCheck />
+                    Confirm Approval
+                  </Button>
+                </ActionButtons>
+              </ExpandedFooterContent>
+            ) : (
+              <ExpandedFooterContent>
+                <FooterHeader>
+                  <FooterIcon $color={colors.semantic.error}>
+                    <FiX size={18} />
+                  </FooterIcon>
+                  Reject MER Submission
+                </FooterHeader>
+                <Label>Rejection Reason (Required)*</Label>
+                <TextArea
+                  placeholder="Please explain why you're rejecting this submission..."
+                  value={actionComment}
+                  onChange={(e) => {
+                    setActionComment(e.target.value);
+                    setValidationError('');
+                  }}
+                  rows={3}
+                  style={validationError ? { borderColor: colors.semantic.error } : {}}
+                />
+                {validationError && (
+                  <ValidationError>
+                    <FiAlertCircle size={14} />
+                    {validationError}
+                  </ValidationError>
+                )}
+                <ActionButtons style={{ marginTop: spacing.md }}>
+                  <Button $variant="secondary" onClick={handleBackToActions} disabled={submitting}>
+                    ← Back
+                  </Button>
+                  <Button
+                    $variant="reject"
+                    onClick={() => handleSubmitReview('REJECT')}
+                    disabled={submitting}
+                  >
+                    <FiX />
+                    Confirm Rejection
+                  </Button>
+                </ActionButtons>
+              </ExpandedFooterContent>
             )}
-          </Content>
-
-          <Footer>
-            <CommentSection>
-              <Label>{reviewerType} Comments</Label>
-              <TextArea
-                placeholder="Add your review comments here..."
-                value={adminComments}
-                onChange={(e) => setAdminComments(e.target.value)}
-              />
-            </CommentSection>
-
-            <ActionButtons>
-              {reviewerType === 'Admin' && (
-                <Button
-                  $variant="deputize"
-                  onClick={() => setShowEscalateModal(true)}
-                  disabled={submitting}
-                >
-                  <FiAlertTriangle />
-                  Escalate
-                </Button>
-              )}
-              {reviewerType === 'Legal' && (
-                <Button
-                  $variant="deputize"
-                  onClick={() => setShowDeputizeModal(true)}
-                  disabled={submitting}
-                >
-                  <FiUsers />
-                  Deputize
-                </Button>
-              )}
-              <Button $variant="secondary" onClick={onClose} disabled={submitting}>
-                Cancel
-              </Button>
-              <Button
-                $variant="reject"
-                onClick={() => handleSubmitReview('REJECT')}
-                disabled={submitting}
-              >
-                <FiX />
-                Reject
-              </Button>
-              <Button
-                $variant="approve"
-                onClick={() => handleSubmitReview('APPROVE')}
-                disabled={submitting}
-              >
-                <FiCheck />
-                Approve
-              </Button>
-            </ActionButtons>
           </Footer>
         </Panel>
       </Overlay>
 
       {showDeputizeModal && (
         <DeputizeModal
-          transferId={transferId}
           onDeputize={handleDeputize}
           onClose={() => setShowDeputizeModal(false)}
         />
@@ -657,6 +746,13 @@ const MERReviewPanel: React.FC<MERReviewPanelProps> = ({
         <EscalateModal
           onEscalate={handleEscalate}
           onClose={() => setShowEscalateModal(false)}
+        />
+      )}
+
+      {previewAttachment && (
+        <FilePreviewModal
+          attachment={previewAttachment}
+          onClose={() => setPreviewAttachment(null)}
         />
       )}
     </>

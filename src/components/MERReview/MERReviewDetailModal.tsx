@@ -347,7 +347,7 @@ const MERReviewDetailModal: React.FC<MERReviewDetailModalProps> = ({
               {reviewData.overallDecision !== 'PENDING' && reviewData.reviewedAt && (
                 <>
                   <TimelineItem>
-                    <TimelineDot $completed={reviewData.overallDecision !== 'PENDING'} />
+                    <TimelineDot $completed={true} />
                     <TimelineContent>
                       <TimelineLabel>Under Review</TimelineLabel>
                       <TimelineDate>Reviewed by {reviewData.reviewedBy || 'Admin'}</TimelineDate>

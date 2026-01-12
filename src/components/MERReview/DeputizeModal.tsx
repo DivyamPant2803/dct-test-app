@@ -83,12 +83,11 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
 `;
 
 interface DeputizeModalProps {
-  transferId: string; onDeputize: (deputyId: string, deputyName: string) => void;
+  onDeputize: (deputyId: string, deputyName: string) => void;
   onClose: () => void;
 }
 
 const DeputizeModal: React.FC<DeputizeModalProps> = ({
-  transferId,
   onDeputize,
   onClose,
 }) => {
@@ -128,7 +127,6 @@ const deputies = [
               { value: '', label: 'Select a deputy...' },
               ...deputies,
             ]}
-            placeholder="Select a deputy..."
           />
         </FormGroup>
 

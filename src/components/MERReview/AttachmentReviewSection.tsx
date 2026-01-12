@@ -295,7 +295,6 @@ const AttachmentReviewSection: React.FC<AttachmentReviewSectionProps> = ({
     <Container>
       {templateAttachments.length > 0 && (
         <>
-          <CategoryTitle>Template Attachments ({templateAttachments.length})</CategoryTitle>
           <AttachmentList>
             {templateAttachments.map(attachment =>
               renderAttachment(

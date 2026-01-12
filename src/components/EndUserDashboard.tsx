@@ -248,23 +248,29 @@ const EndUserDashboard: React.FC = () => {
 
   // Get actual status
   const getActualStatus = (transfer: Transfer): 'PENDING' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' | 'ESCALATED' => {
-    // Correctly check for escalated status first
-    if (transfer.status === 'ESCALATED' || transfer.escalatedTo || transfer.escalatedAt) return 'ESCALATED';
-    
+    // Check requirements first - if they've been reviewed, that takes priority
     if (transfer.requirements && transfer.requirements.length > 0) {
       const allApproved = transfer.requirements.every(req => req.status === 'APPROVED');
       const hasRejected = transfer.requirements.some(req => req.status === 'REJECTED');
-      const hasEscalated = transfer.requirements.some(req => req.status === 'ESCALATED');
       const hasUnderReview = transfer.requirements.some(req => req.status === 'UNDER_REVIEW');
       
-      if (hasEscalated) return 'ESCALATED';
+      // Final statuses take priority over escalation
       if (hasRejected) return 'REJECTED';
       if (allApproved) return 'APPROVED';
+      
+      // Check for escalation only if not yet reviewed
+      const hasEscalated = transfer.requirements.some(req => req.status === 'ESCALATED');
+      if (hasEscalated || transfer.status === 'ESCALATED' || transfer.escalatedTo || transfer.escalatedAt) {
+        return 'ESCALATED';
+      }
+      
       if (hasUnderReview) return 'UNDER_REVIEW';
       return 'PENDING';
     }
     
+    // Fallback to transfer status
     if (transfer.status === 'COMPLETED') return 'APPROVED';
+    if (transfer.status === 'ESCALATED' || transfer.escalatedTo || transfer.escalatedAt) return 'ESCALATED';
     if (transfer.status === 'ACTIVE') return 'UNDER_REVIEW';
     return 'PENDING';
   };

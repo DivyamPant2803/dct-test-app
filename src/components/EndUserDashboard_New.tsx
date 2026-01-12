@@ -8,19 +8,16 @@ import {
   FiClock, 
   FiAlertTriangle,
   FiSearch,
-  FiFilter,
-  FiDownload,
   FiEye,
   FiUpload,
   FiRefreshCw,
-  FiChevronRight,
   FiFileText,
   FiCalendar,
   FiMapPin
 } from 'react-icons/fi';
 import { colors, borderRadius, shadows, spacing, transitions, typography } from '../styles/designTokens';
-import { UploadEvidenceModal } from './UploadEvidenceModal';
-import { AuditTrailModal } from './AuditTrailModal';
+import UploadEvidenceModal from './UploadEvidenceModal';
+import AuditTrailModal from './AuditTrailModal';
 
 // Styled Components
 const DashboardContainer = styled.div`
@@ -395,11 +392,11 @@ const SLAWarning = styled.div<{ $type: 'breached' | 'approaching' }>`
   align-items: center;
   gap: ${spacing.xs};
   padding: ${spacing.sm} ${spacing.base};
-  background: ${props => props.$type === 'breached' ? `${colors.status.rejected}10` : `${colors.status.warning}10`};
-  border-left: 3px solid ${props => props.$type === 'breached' ? colors.status.rejected : colors.status.warning};
+  background: ${props => props.$type === 'breached' ? `${colors.status.rejected}10` : `${colors.semantic.warning}10`};
+  border-left: 3px solid ${props => props.$type === 'breached' ? colors.status.rejected : colors.semantic.warning};
   border-radius: ${borderRadius.sm};
   font-size: ${typography.fontSize.sm};
-  color: ${props => props.$type === 'breached' ? colors.status.rejected : colors.status.warning};
+  color: ${props => props.$type === 'breached' ? colors.status.rejected : colors.semantic.warning};
   font-weight: ${typography.fontWeight.medium};
   margin-bottom: ${spacing.base};
 `;
@@ -419,9 +416,6 @@ const EndUserDashboard: React.FC = () => {
   const {
     getTransfers,
     getAllEvidence,
-    getTransferRequirements,
-    deleteEvidence,
-    previewEvidence,
     escalateTransfer,
   } = useEvidenceApi();
 

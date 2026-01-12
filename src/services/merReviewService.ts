@@ -268,8 +268,12 @@ export const submitMERReview = async (
         localStorage.setItem(`transfer_${transferId}`, JSON.stringify(transfer));
 
         // Update virtual evidence status if it exists
-        const virtualEvidenceKey = `evidence_evidence-${transfer.requirements[0]?.id}`;
+        // Use the same key format as escalation: evidence-mer-{transferId}
+        const virtualEvidenceKey = `evidence_evidence-mer-${transferId}`;
         const virtualEvidenceJson = localStorage.getItem(virtualEvidenceKey);
+        console.log(`[submitMERReview] Looking for evidence with key: ${virtualEvidenceKey}`);
+        console.log(`[submitMERReview] Found evidence:`, virtualEvidenceJson ? 'YES' : 'NO');
+
         if (virtualEvidenceJson) {
             const virtualEvidence: Evidence = JSON.parse(virtualEvidenceJson);
             virtualEvidence.status = overallDecision === 'APPROVE' ? 'APPROVED' : overallDecision === 'REJECT' ? 'REJECTED' : 'UNDER_REVIEW';
@@ -277,6 +281,9 @@ export const submitMERReview = async (
             virtualEvidence.reviewerId = reviewDecision.reviewedBy;
             virtualEvidence.reviewedAt = reviewDecision.reviewedAt;
             localStorage.setItem(virtualEvidenceKey, JSON.stringify(virtualEvidence));
+            console.log(`[submitMERReview] Updated evidence status to ${virtualEvidence.status}`);
+        } else {
+            console.warn(`[submitMERReview] Virtual evidence not found with key: ${virtualEvidenceKey}`);
         }
 
         // Update individual evidence files based on attachment decisions
