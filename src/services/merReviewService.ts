@@ -1,4 +1,4 @@
-import { Transfer, Evidence, UploadedTemplate, TemplateSection, FileAttachment, MERReviewDecision, AttachmentReviewDecision } from '../types/index';
+import { Transfer, Evidence, UploadedTemplate, TemplateSection, FileAttachment, MERReviewDecision, AttachmentReviewDecision, AuditEntry, RequirementStatus } from '../types/index';
 import { getAllTemplates } from './uploadedTemplateService';
 
 /**
@@ -17,6 +17,14 @@ export interface MERSubmissionReview {
         escalatedTo: string;
         escalatedAt: string;
     } | null;
+    escalationHistory?: Array<{
+        id: string;
+        escalatedTo: string;
+        escalatedBy: string;
+        escalatedAt: string;
+        reason: string;
+        comments: string;
+    }>;
 }
 
 /**
@@ -131,6 +139,7 @@ export const getMERSubmissionData = async (transferId: string): Promise<MERSubmi
             supportingEvidence,
             sections,
             escalationInfo, // Add escalation info
+            escalationHistory: virtualEvidenceJson ? JSON.parse(virtualEvidenceJson).escalationHistory : [],
         };
     } catch (error) {
         console.error('[getMERSubmissionData] Error loading MER submission data:', error);
@@ -209,7 +218,7 @@ export const submitMERReview = async (
     overallDecision: 'APPROVE' | 'REJECT' | 'REQUEST_CHANGES',
     adminComments: string,
     attachmentDecisions: AttachmentReviewDecision[],
-    reviewerType: 'Admin' | 'Legal'
+    reviewerType: 'Admin' | 'Legal' | 'Business'
 ): Promise<void> => {
     try {
         // Load the transfer
@@ -226,7 +235,7 @@ export const submitMERReview = async (
             overallDecision,
             adminComments,
             attachmentDecisions,
-            reviewedBy: reviewerType === 'Admin' ? 'current-admin' : 'current-legal',
+            reviewedBy: reviewerType === 'Admin' ? 'current-admin' : reviewerType === 'Legal' ? 'current-legal' : 'current-business',
             reviewedAt: new Date().toISOString(),
         };
 
@@ -312,6 +321,24 @@ export const submitMERReview = async (
                 }
             }
         });
+
+        // Create audit trail entry for the review decision
+        const auditAction: AuditEntry['action'] = overallDecision === 'APPROVE' ? 'APPROVED' : overallDecision === 'REJECT' ? 'REJECTED' : 'REVIEWED';
+        const newStatus: RequirementStatus = overallDecision === 'APPROVE' ? 'APPROVED' : overallDecision === 'REJECT' ? 'REJECTED' : 'UNDER_REVIEW';
+
+        const auditEntry: AuditEntry = {
+            id: `audit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            requirementId: transferId,
+            action: auditAction,
+            performedBy: reviewerType === 'Admin' ? 'current-admin' : reviewerType === 'Legal' ? 'current-legal' : 'current-business',
+            performedByRole: reviewerType === 'Admin' ? 'ADMIN' : reviewerType === 'Legal' ? 'LEGAL' : 'END_USER', // Business maps to END_USER typically
+            performedAt: new Date().toISOString(),
+            newStatus,
+            previousStatus: 'UNDER_REVIEW',
+            note: adminComments
+        };
+
+        localStorage.setItem(`audit_${auditEntry.id}`, JSON.stringify(auditEntry));
 
         console.log('MER review submitted successfully:', reviewDecision);
     } catch (error) {
@@ -400,9 +427,117 @@ export const escalateMERSubmission = async (
         // Save updated transfer
         localStorage.setItem(`transfer_${transferId}`, JSON.stringify(transfer));
 
+        // Create audit trail entry for escalation
+        const auditEntry: AuditEntry = {
+            id: `audit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            requirementId: transferId,
+            action: 'ESCALATED',
+            performedBy: escalatedBy,
+            performedByRole: 'ADMIN', // Assuming admin escalates
+            performedAt: new Date().toISOString(),
+            newStatus: 'ESCALATED',
+            previousStatus: 'UNDER_REVIEW',
+            escalatedTo: escalateTo,
+            escalationReason: reason,
+            note: `Escalated to ${escalateTo}: ${reason}`
+        };
+
+        localStorage.setItem(`audit_${auditEntry.id}`, JSON.stringify(auditEntry));
+
         console.log(`MER submission ${transferId} escalated to ${escalateTo}`);
     } catch (error) {
         console.error('Error escalating MER submission:', error);
+        throw error;
+    }
+};
+
+/**
+ * Submit response for an escalated MER submission (Legal/Business)
+ */
+export const submitEscalationResponse = async (
+    transferId: string,
+    comments: string,
+    responderType: 'Legal' | 'Business',
+    responderId: string
+): Promise<void> => {
+    try {
+        // Load transfer
+        const transferJson = localStorage.getItem(`transfer_${transferId}`);
+        if (!transferJson) {
+            throw new Error('Transfer not found');
+        }
+
+        const transfer: Transfer = JSON.parse(transferJson);
+
+        // Update transfer status back to UNDER_REVIEW so Admin can see it
+        transfer.status = 'PENDING'; // Or UNDER_REVIEW, but PENDING is often used for "Pending Admin Action"
+
+        // We can use a property to indicate it's returned from escalation if needed
+        // For now, setting it to UNDER_REVIEW is likely enough to show up in Admin's queue if filters allow
+        // valid statuses: 'ACTIVE' | 'COMPLETED' | 'PENDING' | 'ESCALATED'
+        // Let's use 'PENDING' for "Pending review"
+
+        // However, the original status before escalation might have been 'PENDING' or 'ACTIVE'.
+        // 'ESCALATED' was a distinct status.
+        // Let's set it to 'PENDING' to signify it requires attention.
+
+        // Update virtual evidence
+        const virtualEvidenceKey = `evidence_evidence-mer-${transfer.id}`;
+        const virtualEvidenceJson = localStorage.getItem(virtualEvidenceKey);
+
+        if (virtualEvidenceJson) {
+            const virtualEvidence: Evidence = JSON.parse(virtualEvidenceJson);
+
+            // Update status
+            virtualEvidence.status = 'UNDER_REVIEW';
+
+            // Add to escalation history or comments
+            // For simplicity, we'll append to the reviewerNote or use a dedicated logging mechanism
+            // Ideally, we push to escalationHistory if it exists
+            if (!virtualEvidence.escalationHistory) {
+                virtualEvidence.escalationHistory = [];
+            }
+
+            virtualEvidence.escalationHistory.push({
+                id: `esc-resp-${Date.now()}`,
+                escalatedTo: 'Admin', // Returned to Admin
+                escalatedBy: responderType,
+                escalatedAt: new Date().toISOString(),
+                reason: 'Escalation Response',
+                comments: comments,
+                taggedAuthorities: []
+            });
+
+            // Clear current escalation fields so it doesn't look like it's still waiting for them
+            // But we might want to keep history. 
+            // The requirement is "request will go back to the Administrator".
+            // So we clear 'escalatedTo' so it falls back to Admin's queue logic usually.
+            delete virtualEvidence.escalatedTo;
+
+            localStorage.setItem(virtualEvidenceKey, JSON.stringify(virtualEvidence));
+        }
+
+        // Save transfer
+        localStorage.setItem(`transfer_${transferId}`, JSON.stringify(transfer));
+
+        // Audit Trail
+        const auditEntry: AuditEntry = {
+            id: `audit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            requirementId: transferId,
+            action: 'CLARIFICATION_PROVIDED', // Or a custom action for Escalation Response
+            performedBy: responderId,
+            performedByRole: responderType === 'Legal' ? 'LEGAL' : 'END_USER', // Business is often End User role
+            performedAt: new Date().toISOString(),
+            newStatus: 'UNDER_REVIEW',
+            previousStatus: 'ESCALATED',
+            note: `Escalation response from ${responderType}: ${comments}`
+        };
+
+        localStorage.setItem(`audit_${auditEntry.id}`, JSON.stringify(auditEntry));
+
+        console.log(`Escalation response submitted for ${transferId} by ${responderType}`);
+    } catch (error) {
+        console.error('Error submitting escalation response:', error);
         throw error;
     }
 };

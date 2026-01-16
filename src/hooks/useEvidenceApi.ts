@@ -60,6 +60,41 @@ const getStoredTransfers = (): Transfer[] => {
   return transfers;
 };
 
+// Helper function to create audit trail entries
+const createAuditEntry = (
+  requirementId: string,
+  action: AuditEntry['action'],
+  performedBy: string,
+  performedByRole: AuditEntry['performedByRole'],
+  newStatus: RequirementStatus,
+  options?: {
+    previousStatus?: RequirementStatus;
+    note?: string;
+    escalatedTo?: string;
+    escalationReason?: string;
+    assignedTo?: string;
+    clarificationMessage?: string;
+    evidenceIds?: string[];
+  }
+): AuditEntry => {
+  const auditEntry: AuditEntry = {
+    id: `audit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    requirementId,
+    action,
+    performedBy,
+    performedByRole,
+    performedAt: new Date().toISOString(),
+    newStatus,
+    ...options
+  };
+
+  // Store audit entry in localStorage
+  localStorage.setItem(`audit_${auditEntry.id}`, JSON.stringify(auditEntry));
+
+  return auditEntry;
+};
+
+
 export const useEvidenceApi = () => {
   const [transfers, setTransfers] = useState<Transfer[]>(getStoredTransfers());
   const [evidence, setEvidence] = useState<Evidence[]>(getStoredEvidence());
@@ -181,6 +216,18 @@ export const useEvidenceApi = () => {
         // Store transfer in localStorage
         localStorage.setItem(`transfer_${transferId}`, JSON.stringify(newTransfer));
         setTransfers(prev => [...prev, newTransfer]);
+
+        // Create audit entry for transfer creation
+        createAuditEntry(
+          transferId,
+          'CREATED',
+          'current-user',
+          'END_USER',
+          'PENDING',
+          {
+            note: `Transfer request created: ${newTransfer.name}`
+          }
+        );
       } else {
         // Update existing transfer with new requirement if needed
         const existingRequirement = existingTransfer.requirements.find((r: RequirementRow) => r.id === requirementId);
@@ -209,7 +256,21 @@ export const useEvidenceApi = () => {
     // Add evidence to state
     setEvidence(prev => [...prev, newEvidence]);
 
+    // Create audit entry for evidence submission
+    createAuditEntry(
+      requirementId,
+      'SUBMITTED',
+      'current-user',
+      'END_USER',
+      'PENDING',
+      {
+        note: `Evidence submitted: ${file.name}`,
+        evidenceIds: [newEvidence.id]
+      }
+    );
+
     console.log('Uploading evidence:', newEvidence);
+
 
     return newEvidence;
   }, [transfers]);
@@ -270,20 +331,22 @@ export const useEvidenceApi = () => {
     // Update state
     setEvidence(prev => prev.map(e => e.id === updatedEvidence.id ? updatedEvidence : e));
 
-    // Create audit trail entry
-    const auditEntry: AuditEntry = {
-      id: `audit-${Date.now()}`,
-      requirementId: currentEvidence.requirementId,
-      action: decision.decision === 'ESCALATE' ? 'ESCALATED' : decision.decision === 'APPROVE' ? 'APPROVED' : 'REJECTED',
-      performedBy: 'current-admin',
-      performedAt: new Date().toISOString(),
-      note: decision.note,
-      previousStatus,
-      newStatus
-    };
+    // Create audit trail entry using helper
+    const action: AuditEntry['action'] = decision.decision === 'ESCALATE' ? 'ESCALATED' : decision.decision === 'APPROVE' ? 'APPROVED' : 'REJECTED';
+    createAuditEntry(
+      currentEvidence.requirementId,
+      action,
+      'current-admin',
+      'ADMIN',
+      newStatus,
+      {
+        previousStatus,
+        note: decision.note,
+        escalatedTo: decision.escalatedTo,
+        escalationReason: decision.escalationReason
+      }
+    );
 
-    // Store audit entry in localStorage
-    localStorage.setItem(`audit_${auditEntry.id}`, JSON.stringify(auditEntry));
 
     // Update corresponding requirement status
     const requirementId = currentEvidence.requirementId;
@@ -543,19 +606,20 @@ export const useEvidenceApi = () => {
       return e;
     }));
 
-    // Create audit trail entry
-    const auditEntry: AuditEntry = {
-      id: `audit-${Date.now()}`,
-      requirementId: transfer.requirements[0]?.id || transferId,
-      action: 'ESCALATED',
-      performedBy: 'End User',
-      performedAt: new Date().toISOString(),
-      note: escalationReason || 'Transfer escalated due to SLA breach or approaching breach',
-      previousStatus: transfer.requirements[0]?.status || 'PENDING',
-      newStatus: 'ESCALATED'
-    };
-
-    localStorage.setItem(`audit_${auditEntry.id}`, JSON.stringify(auditEntry));
+    // Create audit trail entry using helper
+    createAuditEntry(
+      transferId, // Use transferId as the main identifier
+      'ESCALATED',
+      'End User',
+      'END_USER',
+      'ESCALATED',
+      {
+        previousStatus: transfer.requirements[0]?.status || 'PENDING',
+        note: escalationReason || 'Transfer escalated due to SLA breach or approaching breach',
+        escalatedTo: 'Admin',
+        escalationReason: escalationReason || 'SLA breach or approaching breach'
+      }
+    );
 
     // Create notification for Admin
     createNotifications([{

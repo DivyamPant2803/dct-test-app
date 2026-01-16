@@ -114,16 +114,26 @@ const TimelineItem = styled.div<{ $action: string }>`
     border-radius: 50%;
     background: ${props => {
       switch (props.$action) {
+        case 'CREATED':
+          return '#4CAF50'; // Green for creation
         case 'SUBMITTED':
-          return '#FFA000';
+        case 'EVIDENCE_PROVIDED':
+          return '#FFA000'; // Orange for submissions
         case 'REVIEWED':
-          return '#2196F3';
+        case 'ASSIGNED':
+        case 'REASSIGNED':
+          return '#2196F3'; // Blue for review actions
         case 'APPROVED':
-          return '#4CAF50';
+          return '#4CAF50'; // Green for approval
         case 'REJECTED':
-          return '#F44336';
+          return '#F44336'; // Red for rejection
         case 'ESCALATED':
-          return '#9C27B0';
+          return '#9C27B0'; // Purple for escalation
+        case 'CLARIFICATION_REQUESTED':
+        case 'EVIDENCE_REQUESTED':
+          return '#FF9800'; // Amber for requests
+        case 'CLARIFICATION_PROVIDED':
+          return '#00BCD4'; // Cyan for responses
         default:
           return '#666';
       }
@@ -247,6 +257,8 @@ const AuditTrailModal: React.FC<AuditTrailModalProps> = ({
 
   const getActionLabel = (action: string): string => {
     switch (action) {
+      case 'CREATED':
+        return 'Request Created';
       case 'SUBMITTED':
         return 'Evidence Submitted';
       case 'REVIEWED':
@@ -257,6 +269,18 @@ const AuditTrailModal: React.FC<AuditTrailModalProps> = ({
         return 'Rejected';
       case 'ESCALATED':
         return 'Escalated';
+      case 'CLARIFICATION_REQUESTED':
+        return 'Clarification Requested';
+      case 'CLARIFICATION_PROVIDED':
+        return 'Clarification Provided';
+      case 'EVIDENCE_REQUESTED':
+        return 'Additional Evidence Requested';
+      case 'EVIDENCE_PROVIDED':
+        return 'Additional Evidence Provided';
+      case 'ASSIGNED':
+        return 'Assigned for Review';
+      case 'REASSIGNED':
+        return 'Reassigned';
       default:
         return action;
     }
@@ -264,6 +288,30 @@ const AuditTrailModal: React.FC<AuditTrailModalProps> = ({
 
   const formatTimestamp = (timestamp: string): string => {
     return new Date(timestamp).toLocaleString();
+  };
+  
+  const getRoleBadge = (role?: string) => {
+    if (!role) return null;
+    const roleColors: Record<string, string> = {
+      'END_USER': '#2196F3',
+      'ADMIN': '#9C27B0',
+      'LEGAL': '#F44336',
+      'SYSTEM': '#607D8B'
+    };
+    return (
+      <span style={{
+        display: 'inline-block',
+        padding: '0.2rem 0.5rem',
+        borderRadius: '3px',
+        fontSize: '0.7rem',
+        fontWeight: '500',
+        backgroundColor: roleColors[role] || '#666',
+        color: 'white',
+        marginLeft: '0.5rem'
+      }}>
+        {role.replace('_', ' ')}
+      </span>
+    );
   };
 
   const entityName = transfer ? transfer.name : requirement?.name;
@@ -305,6 +353,7 @@ const AuditTrailModal: React.FC<AuditTrailModalProps> = ({
                     
                     <PerformedBy>
                       <strong>Performed by:</strong> {entry.performedBy}
+                      {getRoleBadge(entry.performedByRole)}
                     </PerformedBy>
                     
                     {entry.previousStatus && entry.newStatus && (
@@ -316,7 +365,43 @@ const AuditTrailModal: React.FC<AuditTrailModalProps> = ({
                       </StatusChange>
                     )}
                     
-                    {entry.note && (
+                    {/* Show escalation details */}
+                    {entry.escalatedTo && (
+                      <div style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                        <strong>Escalated to:</strong> {entry.escalatedTo}
+                        {entry.escalationReason && (
+                          <div style={{ marginTop: '0.25rem', color: '#666' }}>
+                            <strong>Reason:</strong> {entry.escalationReason}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Show assignment details */}
+                    {entry.assignedTo && (
+                      <div style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                        <strong>Assigned to:</strong> {entry.assignedTo}
+                      </div>
+                    )}
+                    
+                    {/* Show clarification message */}
+                    {entry.clarificationMessage && (
+                      <div style={{ marginBottom: '0.5rem' }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>
+                          Clarification Message:
+                        </div>
+                        <Note>{entry.clarificationMessage}</Note>
+                      </div>
+                    )}
+                    
+                    {/* Show evidence IDs */}
+                    {entry.evidenceIds && entry.evidenceIds.length > 0 && (
+                      <div style={{ marginBottom: '0.5rem', fontSize: '0.85rem', color: '#666' }}>
+                        <strong>Evidence:</strong> {entry.evidenceIds.length} file(s) uploaded
+                      </div>
+                    )}
+                    
+                    {entry.note && !entry.clarificationMessage && (
                       <Note>{entry.note}</Note>
                     )}
                   </TimelineContent>

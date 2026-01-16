@@ -2,13 +2,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import styled from 'styled-components';
 import { colors, borderRadius, shadows, spacing } from '../../styles/designTokens';
 import { AttachmentReviewDecision, Evidence, FileAttachment } from '../../types/index';
-import { getMERSubmissionData, submitMERReview, MERSubmissionReview, deputizeMERSubmission, escalateMERSubmission } from '../../services/merReviewService';
+import { getMERSubmissionData, submitMERReview, MERSubmissionReview, deputizeMERSubmission, escalateMERSubmission, submitEscalationResponse } from '../../services/merReviewService';
 import TemplateDataDisplay from './TemplateDataDisplay';
 import AttachmentReviewSection from './AttachmentReviewSection';
 import DeputizeModal from './DeputizeModal';
 import EscalateModal from './EscalateModal';
 import FilePreviewModal from './FilePreviewModal';
-import { FiX, FiCheck, FiAlertCircle, FiUsers, FiExternalLink, FiAlertTriangle } from 'react-icons/fi';
+import { FiX, FiCheck, FiAlertCircle, FiUsers, FiExternalLink, FiAlertTriangle, FiMessageSquare } from 'react-icons/fi';
 
 const Overlay = styled.div`
   position: fixed;
@@ -367,7 +367,7 @@ const LoadingState = styled.div`
 
 interface MERReviewPanelProps {
   transferId: string;
-  reviewerType: 'Admin' | 'Legal';
+  reviewerType: 'Admin' | 'Legal' | 'Business';
   onClose: () => void;
   onReviewComplete: () => void;
 }
@@ -385,7 +385,8 @@ const MERReviewPanel: React.FC<MERReviewPanelProps> = ({
   const [showDeputizeModal, setShowDeputizeModal] = useState(false);
   const [showEscalateModal, setShowEscalateModal] = useState(false);
   const [showEscalationTooltip, setShowEscalationTooltip] = useState(false);
-  const [footerMode, setFooterMode] = useState<'actions' | 'approve' | 'reject'>('actions');
+  const [showHistoryTooltip, setShowHistoryTooltip] = useState(false);
+  const [footerMode, setFooterMode] = useState<'actions' | 'approve' | 'reject' | 'respond'>('actions');
   const [actionComment, setActionComment] = useState('');
   const [validationError, setValidationError] = useState('');
   const [previewAttachment, setPreviewAttachment] = useState<FileAttachment | Evidence | null>(null);
@@ -409,6 +410,13 @@ const MERReviewPanel: React.FC<MERReviewPanelProps> = ({
 
     return sectionCount > 10 || totalFields > 50 || totalAttachments > 15;
   }, [reviewData]);
+  
+  const isEscalationResponseMode = useMemo(() => {
+    if (!reviewData?.escalationInfo) return false;
+    // Check if the current reviewer is the one the item was escalated to
+    return (reviewerType === 'Legal' || reviewerType === 'Business') && 
+           reviewData.escalationInfo.escalatedTo === reviewerType;
+  }, [reviewData, reviewerType]);
 
   const handleAttachmentDecision = (attachmentId: string, decision: 'APPROVE' | 'REJECT' | null, note?: string) => {
     setAttachmentDecisions(prev => {
@@ -431,6 +439,12 @@ const MERReviewPanel: React.FC<MERReviewPanelProps> = ({
 
   const handleActionClick = (action: 'approve' | 'reject') => {
     setFooterMode(action);
+    setActionComment('');
+    setValidationError('');
+  };
+
+  const handleRespondClick = () => {
+    setFooterMode('respond');
     setActionComment('');
     setValidationError('');
   };
@@ -500,6 +514,32 @@ const MERReviewPanel: React.FC<MERReviewPanelProps> = ({
     }
   };
 
+  const handleSubmitResponse = async () => {
+    if (!actionComment.trim()) {
+      setValidationError('Response comments are required');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await submitEscalationResponse(
+        transferId, 
+        actionComment, 
+        reviewerType as 'Legal' | 'Business', 
+        reviewerType === 'Legal' ? 'current-legal' : 'current-business'
+      );
+      
+      onReviewComplete();
+      onClose();
+      alert('Response submitted successfully. Returned to Admin.');
+    } catch (error) {
+      console.error('Error submitting response:', error);
+      alert('Failed to submit response. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handlePreview = (attachment: FileAttachment | Evidence) => {
     setPreviewAttachment(attachment);
   };
@@ -555,6 +595,35 @@ const MERReviewPanel: React.FC<MERReviewPanelProps> = ({
                           <TooltipTag key={idx}>{tag}</TooltipTag>
                         ))}
                       </TooltipTags>
+                    </EscalationTooltip>
+                  </EscalationBadge>
+                )}
+                {reviewData.escalationHistory && reviewData.escalationHistory.length > 0 && (
+                  <EscalationBadge
+                    onMouseEnter={() => setShowHistoryTooltip(true)}
+                    onMouseLeave={() => setShowHistoryTooltip(false)}
+                  >
+                    <FiMessageSquare size={12} />
+                    Escalation History ({reviewData.escalationHistory.length})
+                    <EscalationTooltip $show={showHistoryTooltip}>
+                      <TooltipHeader>Escalation History</TooltipHeader>
+                      <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                        {reviewData.escalationHistory.map((item, idx) => (
+                          <div key={idx} style={{ marginBottom: spacing.sm, borderBottom: `1px solid ${colors.neutral.gray200}`, paddingBottom: spacing.sm }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                              <span style={{ fontWeight: 600, fontSize: '0.75rem' }}>
+                                {item.escalatedBy} → {item.escalatedTo}
+                              </span>
+                              <span style={{ fontSize: '0.7rem', color: colors.text.secondary }}>
+                                {new Date(item.escalatedAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '0.8rem', color: colors.text.primary, whiteSpace: 'pre-wrap' }}>
+                              {item.comments || item.reason}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </EscalationTooltip>
                   </EscalationBadge>
                 )}
@@ -622,6 +691,7 @@ const MERReviewPanel: React.FC<MERReviewPanelProps> = ({
           <Footer $expanded={footerMode !== 'actions'}>
             {footerMode === 'actions' ? (
               <ActionButtons>
+                {/* Admin Actions */}
                 {reviewerType === 'Admin' && (
                   <Button
                     $variant="deputize"
@@ -632,7 +702,9 @@ const MERReviewPanel: React.FC<MERReviewPanelProps> = ({
                     Escalate
                   </Button>
                 )}
-                {reviewerType === 'Legal' && (
+                
+                {/* Legal Deputize Action (only if not in strict escalation response mode) */}
+                {reviewerType === 'Legal' && !isEscalationResponseMode && (
                   <Button
                     $variant="deputize"
                     onClick={() => setShowDeputizeModal(true)}
@@ -642,25 +714,42 @@ const MERReviewPanel: React.FC<MERReviewPanelProps> = ({
                     Deputize
                   </Button>
                 )}
+
                 <Button $variant="secondary" onClick={onClose} disabled={submitting}>
                   Cancel
                 </Button>
-                <Button
-                  $variant="reject"
-                  onClick={() => handleActionClick('reject')}
-                  disabled={submitting}
-                >
-                  <FiX />
-                  Reject
-                </Button>
-                <Button
-                  $variant="approve"
-                  onClick={() => handleActionClick('approve')}
-                  disabled={submitting}
-                >
-                  <FiCheck />
-                  Approve
-                </Button>
+
+                {/* Escalation Response Button */}
+                {isEscalationResponseMode ? (
+                  <Button
+                    $variant="approve" // Using approve style for positive action
+                    onClick={handleRespondClick}
+                    disabled={submitting}
+                  >
+                    <FiCheck />
+                    Submit Response
+                  </Button>
+                ) : (
+                  /* Standard Approve/Reject Buttons */
+                  <>
+                    <Button
+                      $variant="reject"
+                      onClick={() => handleActionClick('reject')}
+                      disabled={submitting}
+                    >
+                      <FiX />
+                      Reject
+                    </Button>
+                    <Button
+                      $variant="approve"
+                      onClick={() => handleActionClick('approve')}
+                      disabled={submitting}
+                    >
+                      <FiCheck />
+                      Approve
+                    </Button>
+                  </>
+                )}
               </ActionButtons>
             ) : footerMode === 'approve' ? (
               <ExpandedFooterContent>
@@ -691,7 +780,7 @@ const MERReviewPanel: React.FC<MERReviewPanelProps> = ({
                   </Button>
                 </ActionButtons>
               </ExpandedFooterContent>
-            ) : (
+            ) : footerMode === 'reject' ? (
               <ExpandedFooterContent>
                 <FooterHeader>
                   <FooterIcon $color={colors.semantic.error}>
@@ -727,6 +816,46 @@ const MERReviewPanel: React.FC<MERReviewPanelProps> = ({
                   >
                     <FiX />
                     Confirm Rejection
+                  </Button>
+                </ActionButtons>
+              </ExpandedFooterContent>
+            ) : (
+              /* Respond Mode */
+              <ExpandedFooterContent>
+                <FooterHeader>
+                  <FooterIcon $color={colors.status.escalated}>
+                    <FiAlertCircle size={18} />
+                  </FooterIcon>
+                  Submit Escalation Response
+                </FooterHeader>
+                <Label>Response Comments (Required)*</Label>
+                <TextArea
+                  placeholder="Please provide your comments and findings..."
+                  value={actionComment}
+                  onChange={(e) => {
+                    setActionComment(e.target.value);
+                    setValidationError('');
+                  }}
+                  rows={3}
+                  style={validationError ? { borderColor: colors.semantic.error } : {}}
+                />
+                {validationError && (
+                  <ValidationError>
+                    <FiAlertCircle size={14} />
+                    {validationError}
+                  </ValidationError>
+                )}
+                <ActionButtons style={{ marginTop: spacing.md }}>
+                  <Button $variant="secondary" onClick={handleBackToActions} disabled={submitting}>
+                    ← Back
+                  </Button>
+                  <Button
+                    $variant="approve"
+                    onClick={handleSubmitResponse}
+                    disabled={submitting}
+                  >
+                    <FiCheck />
+                    Submit Response
                   </Button>
                 </ActionButtons>
               </ExpandedFooterContent>

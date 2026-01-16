@@ -174,13 +174,32 @@ export interface Transfer {
 
 export interface AuditEntry {
   id: string;
-  requirementId: string;
-  action: 'SUBMITTED' | 'REVIEWED' | 'APPROVED' | 'REJECTED' | 'ESCALATED';
+  requirementId: string; // Can be a requirement ID or transfer ID
+  action:
+  | 'CREATED'                    // Transfer request created
+  | 'SUBMITTED'                  // Evidence submitted
+  | 'REVIEWED'                   // Under review
+  | 'APPROVED'                   // Approved by reviewer
+  | 'REJECTED'                   // Rejected by reviewer
+  | 'ESCALATED'                  // Escalated to higher authority
+  | 'CLARIFICATION_REQUESTED'    // Clarification requested from user
+  | 'CLARIFICATION_PROVIDED'     // User provided clarification
+  | 'EVIDENCE_REQUESTED'         // Additional evidence requested
+  | 'EVIDENCE_PROVIDED'          // Additional evidence uploaded
+  | 'ASSIGNED'                   // Assigned to a reviewer
+  | 'REASSIGNED';                // Reassigned to different reviewer
   performedBy: string;
+  performedByRole?: 'END_USER' | 'ADMIN' | 'LEGAL' | 'SYSTEM';
   performedAt: string;
   note?: string;
   previousStatus?: RequirementStatus;
   newStatus: RequirementStatus;
+  // Additional context for specific actions
+  escalatedTo?: string;           // For ESCALATED action
+  escalationReason?: string;      // For ESCALATED action
+  assignedTo?: string;            // For ASSIGNED/REASSIGNED actions
+  clarificationMessage?: string;  // For CLARIFICATION_REQUESTED action
+  evidenceIds?: string[];         // For EVIDENCE_PROVIDED action
 }
 
 export interface ReviewDecision {

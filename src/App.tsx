@@ -17,6 +17,7 @@ import { PersonaProvider, usePersona } from './contexts/PersonaContext'
 import PersonaRouter from './components/PersonaRouter'
 import { getUnreadCount } from './services/notificationService'
 import { ToastProvider } from './components/common'
+import './utils/backfillAuditTrail' // Import to trigger backfill on app load
 
 const queryClient = new QueryClient()
 
