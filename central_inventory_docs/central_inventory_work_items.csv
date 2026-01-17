@@ -1,0 +1,41 @@
+ID,Work Item,Type,Priority,Effort (Days),Component,Description,Dependencies,Original Item,Phase
+A1,Azure Infrastructure Setup,Infrastructure,P0,3,Infrastructure,"Provision Azure resources: SQL DB, Blob Storage, Redis, Service Bus, Key Vault, App Insights",None,New,MVP
+A2,Backend Boilerplate & Project Structure,Backend,P0,2,Main .NET API,"Initialize .NET 8 Web API project, setup DI, logging, EF Core, Blob SDK",A1,#7,MVP
+A3,Authentication & Authorization,Backend,P0,2,Security,"Azure AD B2C integration, OAuth 2.0, JWT validation, RBAC middleware, role seeding",A2,#14 (partial),MVP
+B1,SQL Database Schema Implementation,Backend,P0,3,Database,"Create all SQL tables, EF migrations, seed data (roles, controls), create indexes",A2,"#10, #11, #15, #16, #20, #25",MVP
+B2,SQL JSON Tables Setup,Backend,P0,1,Database,"Create SQL tables with JSON columns (TransferMERData, ApplicationMetadata, UserActivityLogs)",A2,#20 (partial),MVP
+B3,Blob Storage Configuration,Backend,P0,1,Storage,"Create blob containers (evidence-files, template-files), lifecycle policies, SAS tokens, soft delete",A1,#9 (partial),MVP
+C1,User Management APIs,Backend,P0,2,User Service,"GET /users/me, GET /users, POST /users/{userId}/roles, Azure AD sync","B1, A3",#10 (partial),MVP
+D1,Controls Management,Backend,P0,1,Control Service,"GET /controls, POST /controls, seed MER-13/MER-14/ROCC/EUC controls",B1,"#15, #16",MVP
+D2,Template Management APIs,Backend,P0,3,Template Service,"GET /templates, POST /templates (multipart), PUT /templates/{id}, DELETE /templates/{id}","B1, B3",New,MVP
+E1,Transfer Management APIs,Backend,P0,4,Transfer Service,"POST /transfers, GET /transfers, GET /transfers/{id}, PUT /transfers/{id}, store MER data in SQL JSON","B1, B2, D1",#21 (partial),MVP
+E2,Requirements Management,Backend,P0,2,Transfer Service,"GET /transfers/{id}/requirements, PUT /requirements/{id}, auto-create requirements on submission",E1,New,MVP
+F1,Evidence Upload APIs,Backend,P0,3,Evidence Service,"POST /evidence (multipart), upload to Blob Storage, generate SAS tokens, virus scanning","B1, B3","#9, #11",MVP
+F2,Evidence Retrieval APIs,Backend,P0,2,Evidence Service,"GET /transfers/{id}/evidence, GET /evidence/queue, GET /evidence/{id}/download, preview",F1,#22,MVP
+G1,Evidence Review Workflow,Backend,P0,3,Workflow Service,"POST /evidence/{id}/review, support APPROVE/REJECT/ESCALATE, update statuses, create audit trail","F2, H1",#23,MVP
+G2,Transfer Review Workflow (MER),Backend,P0,3,Workflow Service,"POST /transfers/{id}/review, review entire MER submission, attachment decisions, overall decision","E1, H1",#24,MVP
+G3,Escalation Workflow,Backend,P0,2,Workflow Service,"POST /transfers/{id}/escalate, POST /evidence/{id}/escalate, support Legal/Business, tag authorities",G1,#24 (partial),MVP
+G4,Deputy Assignment,Backend,P1,2,Workflow Service,"POST /transfers/{id}/deputize, assign to Deputy-Legal/Deputy-Business, filter by assignedDeputy",G1,New,Production
+H1,Audit Trail Service,Backend,P0,2,Audit Service,"Automatic audit logging middleware, GET /transfers/{id}/audit-trail, GET /evidence/{id}/audit-trail, store IP/user agent",B1,New,MVP
+I1,Notification Service,Backend,P0,3,Notification Service,"GET /notifications, POST /notifications (internal), PUT /notifications/{id}/read, in-app notifications",B1,"#8, #25, #26",MVP
+I2,Email Notifications,Backend,P0,2,Notification Service,"Azure Communication Services, email templates (approval/rejection/escalation), background job with Service Bus","I1, A1",#8 (partial),MVP
+I3,MS Teams Integration,Backend,P1,3,Notification Service,"Microsoft Graph API integration, send Teams messages, Adaptive Cards for notifications",I1,#8 (partial),Production
+I4,Outlook Integration,Backend,P2,2,Notification Service,"Create Outlook calendar events for SLA deadlines, task integration",I1,#8 (partial),Enhancement
+J1,SLA Configuration APIs,Backend,P0,2,SLA Service,"GET /sla/configurations, PUT /sla/configurations/{id}, configure per control type",B1,#12 (partial),MVP
+J2,SLA Tracking Service,Backend,P0,3,SLA Service,"Background job to calculate SLA status, auto-create SLATracking, update status (ON_TRACK/APPROACHING/BREACHED), send notifications","J1, I1",#12,MVP
+J3,SLA Monitoring APIs,Backend,P1,1,SLA Service,"GET /sla/breaches, dashboard data for SLA metrics",J2,New,Production
+K1,SERA Integration,Backend,P0,3,Aggregation Service,"GET /external/applications (from SERA), GET /external/applications/{swcId}, POST /external/sync, cache in SQL ApplicationMetadata",B2,"#13, #17, #18",MVP
+K2,iSAC Integration,Backend,P0,2,Aggregation Service,"Same as K1 but for iSAC system",B2,#13,MVP
+K3,Cumulus Integration,Backend,P0,2,Aggregation Service,"Same as K1 but for Cumulus system",B2,#13,MVP
+K4,AppChk Integration,Backend,P1,2,Aggregation Service,"Application validation checks",B2,#13 (partial),Production
+K5,Background Sync Job,Backend,P1,2,Aggregation Service,"Scheduled job (daily) to sync all applications, Azure Functions Timer Trigger","K1, K2, K3",New,Production
+L1,Dashboard Analytics APIs,Backend,P1,2,Aggregation Service,"GET /analytics/dashboard, aggregate stats (pending/approved/rejected), performance metrics",B1,New,Production
+L2,Compliance Reporting,Backend,P2,3,Aggregation Service,"GET /analytics/compliance-report, generate PDF/Excel reports, export to Blob Storage",L1,New,Enhancement
+N1,Central Inventory Dashboard,Frontend,P0,5,React SPA,"Step-by-step wizard, template selection/prefill, evidence upload, form validation","E1, F1, K1",#5,MVP
+N2,End User Dashboard,Frontend,P0,4,React SPA,"My Transfers view, SLA tracking display, escalation button, audit trail modal","E1, H1",#2,MVP
+N3,Admin Dashboard,Frontend,P0,5,React SPA,"Evidence queue, MER review panel, template upload, review workflows","G1, G2, D2",#3,MVP
+N4,Legal Dashboard,Frontend,P0,4,React SPA,"Escalated items view, review panel with escalation info, deputy assignments","G3, G4",#4,MVP
+N5,Business Dashboard,Frontend,P1,3,React SPA,"Similar to Legal dashboard, business-escalated items",G3,#6,Production
+O1,CI/CD Pipeline,DevOps,P0,2,Azure DevOps,"Azure DevOps pipelines, build/test/deploy, environment configs, automated testing",A2,New,MVP
+O2,Monitoring & Alerting,DevOps,P0,2,Azure Monitor,"Application Insights dashboards, custom alerts (API errors, SLA breaches), Log Analytics queries",A1,New,MVP
+O3,Disaster Recovery,DevOps,P1,2,Azure Infrastructure,"Geo-replication setup, backup policies, recovery procedures documentation",A1,New,Production

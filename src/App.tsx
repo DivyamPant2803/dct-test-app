@@ -3,7 +3,7 @@ import styled from 'styled-components'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './App.css'
 import { createGlobalStyle } from 'styled-components'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import NavBar from './components/NavBar'
 import Home from './pages/Home'
 import Guidance from './pages/Guidance'
@@ -18,6 +18,7 @@ import PersonaRouter from './components/PersonaRouter'
 import { getUnreadCount } from './services/notificationService'
 import { ToastProvider } from './components/common'
 import './utils/backfillAuditTrail' // Import to trigger backfill on app load
+import { FEATURE_FLAGS } from './config/featureFlags'
 
 const queryClient = new QueryClient()
 
@@ -204,8 +205,13 @@ const AppContent = () => {
       />
       <Main>
         <Routes>
-          <Route path="/" element={<Home homeContentHtml={homeContentHtml} />} />
-          <Route path="/guidance" element={<Guidance />} />
+          <Route path="/" element={<Navigate to="/central-inventory" replace />} />
+          {FEATURE_FLAGS.SHOW_HOME_TAB && (
+            <Route path="/home" element={<Home homeContentHtml={homeContentHtml} />} />
+          )}
+          {FEATURE_FLAGS.SHOW_GUIDANCE_TAB && (
+            <Route path="/guidance" element={<Guidance />} />
+          )}
           <Route path="/central-inventory" element={<CentralInventory />} />
           <Route path="/admin" element={<Administration />} />
           <Route path="/my-transfers" element={<PersonaRouter route="/my-transfers" />} />

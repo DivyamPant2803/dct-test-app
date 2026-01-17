@@ -215,13 +215,21 @@ export const PERSONA_DASHBOARD_CONFIGS: Record<string, PersonaDashboardConfig> =
   }
 };
 
+import { FEATURE_FLAGS } from './featureFlags';
+
 // Get persona-specific navigation items
 export const getPersonaNavigation = (persona: string) => {
-  const baseItems = [
-    { name: 'Home', route: '/' },
-    { name: 'Guidance', route: '/guidance' },
-    { name: 'Central Inventory', route: '/central-inventory' }
-  ];
+  const baseItems = [];
+
+  if (FEATURE_FLAGS.SHOW_HOME_TAB) {
+    baseItems.push({ name: 'Home', route: '/home' });
+  }
+
+  if (FEATURE_FLAGS.SHOW_GUIDANCE_TAB) {
+    baseItems.push({ name: 'Guidance', route: '/guidance' });
+  }
+
+  baseItems.push({ name: 'Central Inventory', route: '/central-inventory' });
 
   switch (persona) {
     case 'user':

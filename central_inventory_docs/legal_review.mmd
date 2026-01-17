@@ -1,0 +1,42 @@
+sequenceDiagram
+    autonumber
+    actor Legal as Legal User
+    participant Client as React SPA
+    participant APIM as API Gateway
+    participant EvSvc as Evidence Service
+    participant Workflow as Workflow Service
+    participant TranSvc as Transfer Service
+    participant DB as SQL Database
+    participant NotifSvc as Notification Service
+
+    %% 1. View Escalations
+    Legal->>Client: Open Legal Dashboard
+    Client->>APIM: GET /api/v1/evidence/queue?status=ESCALATED
+    APIM->>EvSvc: GetEscalatedItems()
+    EvSvc->>DB: Query Escalated Evidence
+    DB-->>EvSvc: List of Items
+    EvSvc-->>Client: Escalation Queue
+
+    %% 2. Review & Approve
+    Legal->>Client: Review Details -> Approve
+    Client->>APIM: POST /api/v1/evidence/{id}/review
+    APIM->>Workflow: SubmitReview(decision=APPROVE)
+    
+    Workflow->>DB: Update Evidence Status (APPROVED)
+    Workflow->>DB: Clear Escalation Flags
+    Workflow->>DB: Insert Audit Log
+
+    %% 3. Check Completion
+    Workflow->>TranSvc: CheckTransferStatus(transferId)
+    TranSvc->>DB: Check All Requirements Status
+    
+    alt All Requirements Approved
+        TranSvc->>DB: Update Transfer Status (COMPLETED)
+        TranSvc->>NotifSvc: SendNotification(TransferCompleted)
+        NotifSvc->>DB: Notify End User
+    else Some Pending/Rejected
+        TranSvc->>DB: Update Transfer Status (ACTIVE)
+    end
+
+    Workflow-->>Client: Success
+    Client-->>Legal: Item Removed from Queue

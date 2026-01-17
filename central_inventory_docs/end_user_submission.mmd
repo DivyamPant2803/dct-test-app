@@ -1,0 +1,60 @@
+sequenceDiagram
+    autonumber
+    actor User as End User
+    participant Client as React SPA
+    participant APIM as API Gateway
+    participant TplSvc as Template Service
+    participant EvSvc as Evidence Service
+    participant TranSvc as Transfer Service
+    participant NotifSvc as Notification Service
+    participant DB as SQL Database
+    participant Blob as Azure Blob Storage
+
+    %% 1. Load Template
+    User->>Client: Select Control (MER-13)
+    Client->>APIM: GET /api/v1/templates?controlId=1
+    APIM->>TplSvc: GetActiveTemplate(controlId)
+    TplSvc->>DB: Query Template Metadata
+    DB-->>TplSvc: Template Details
+    TplSvc-->>Client: Template Structure (JSON)
+
+    %% 2. Fill Form
+    User->>Client: Fill Dynamic Form (App ID, etc.)
+    Client->>Client: Validate Form Data
+
+    %% 3. Upload Evidence (Optional)
+    opt Upload Supporting Evidence
+        User->>Client: Select File
+        Client->>APIM: POST /api/v1/evidence
+        APIM->>EvSvc: UploadEvidence(file)
+        EvSvc->>Blob: Upload File
+        Blob-->>EvSvc: Blob URL
+        EvSvc->>DB: Insert Evidence Record
+        EvSvc-->>Client: Evidence ID
+    end
+
+    %% 4. Submit Transfer
+    User->>Client: Click Submit
+    Client->>APIM: POST /api/v1/transfers
+    APIM->>TranSvc: CreateTransfer(payload)
+    
+    note right of TranSvc: Payload includes MER Data <br/> & Requirement List
+    
+    TranSvc->>DB: Begin Transaction
+    TranSvc->>DB: Insert Transfer Record
+    TranSvc->>DB: Insert TransferMERData (JSON)
+    TranSvc->>DB: Insert Requirement Rows
+    TranSvc->>DB: Create SLA Tracking Record
+    TranSvc->>DB: Commit Transaction
+
+    %% 5. Notifications
+    TranSvc->>NotifSvc: SendNotification(SubmitSuccess)
+    NotifSvc->>DB: Store In-App Notification
+    NotifSvc-->>Client: 201 Created
+
+    par Notify Admin
+        NotifSvc->>DB: Create Admin Notification
+        NotifSvc->>NotifSvc: Publish to Service Bus (Email)
+    end
+    
+    Client-->>User: Show Success Message

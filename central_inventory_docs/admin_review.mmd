@@ -1,0 +1,47 @@
+sequenceDiagram
+    autonumber
+    actor Admin
+    participant Client as React SPA
+    participant APIM as API Gateway
+    participant EvSvc as Evidence Service
+    participant Workflow as Workflow Service
+    participant DB as SQL Database
+    participant NotifSvc as Notification Service
+
+    %% 1. Fetch Queue
+    Admin->>Client: Open Dashboard
+    Client->>APIM: GET /api/v1/evidence/queue
+    APIM->>EvSvc: GetEvidenceQueue()
+    EvSvc->>DB: Query Pending Items
+    DB-->>EvSvc: List of Items
+    EvSvc-->>Client: Evidence List
+
+    %% 2. Review Item (Approve)
+    Admin->>Client: Review Item A -> Approve
+    Client->>APIM: POST /api/v1/evidence/{id}/review
+    APIM->>Workflow: SubmitReview(decision=APPROVE)
+    Workflow->>DB: Update Evidence Status (APPROVED)
+    Workflow->>DB: Insert Audit Log
+    Workflow->>DB: Check Transfer Completion?
+    Workflow-->>Client: Success
+
+    %% 3. Review Item (Escalate)
+    Admin->>Client: Review Item B -> Escalate to Legal
+    Client->>APIM: POST /api/v1/transfers/{id}/escalate
+    APIM->>Workflow: EscalateTransfer(to=Legal)
+    
+    Workflow->>DB: Update Transfer Status (ESCALATED)
+    Workflow->>DB: Update Escalation Metadata (Reason, Tags)
+    Workflow->>DB: Insert Audit Log
+
+    %% 4. Notify Parties
+    par Notify Legal
+        Workflow->>NotifSvc: SendNotification(Escalated)
+        NotifSvc->>DB: Create Legal Notification
+    and Notify End User
+        Workflow->>NotifSvc: SendNotification(StatusChange)
+        NotifSvc->>DB: Create User Notification
+    end
+
+    Workflow-->>Client: Success
+    Client-->>Admin: Updates Queue View
