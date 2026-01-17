@@ -1,177 +1,28 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import styled from 'styled-components';
 import { Evidence, ReviewDecision } from '../types/index';
 import { useEvidenceApi } from '../hooks/useEvidenceApi';
 import ReviewDrawer from './ReviewDrawer';
 import MERReviewPanel from './MERReview/MERReviewPanel';
 import StatusChip from './StatusChip';
-import Sidebar, { SidebarGroup } from './common/Sidebar';
+import { SidebarGroup } from './common/Sidebar';
+import { FiAlertTriangle, FiCheckCircle, FiClock, FiLayers } from 'react-icons/fi';
+import { colors } from '../styles/designTokens';
+import { DashboardStats } from './common/DashboardStats';
 
-const DashboardContainer = styled.div`
-  width: 100%;
-  height: 100%;
-  background: #f5f5f5;
-  display: flex;
-`;
-
-const SidebarWrapper = styled.div`
-  flex-shrink: 0;
-`;
-
-const MainContent = styled.div`
-  flex: 1;
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  overflow-y: auto;
-  min-height: 0;
-`;
-
-const Section = styled.div`
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  padding: 1.25rem;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-`;
-
-const SectionTitle = styled.h2`
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #222;
-  margin-bottom: 1rem;
-  border-bottom: 2px solid #f0f0f0;
-  padding-bottom: 0.5rem;
-  flex-shrink: 0;
-`;
-
-const Table = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  flex: 1;
-  min-height: 0;
-`;
-
-const Th = styled.th`
-  background: #f8f8f8;
-  padding: 1rem;
-  text-align: left;
-  font-weight: 500;
-  color: #333;
-  border-bottom: 2px solid #eee;
-  white-space: nowrap;
-`;
-
-const Td = styled.td`
-  padding: 1rem;
-  border-bottom: 1px solid #eee;
-  color: #666;
-  vertical-align: middle;
-`;
-
-const Tr = styled.tr`
-  &:hover {
-    background: #f9f9f9;
-  }
-`;
-
-const Button = styled.button<{ variant?: 'primary' | 'secondary' }>`
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  border: 1px solid ${props => props.variant === 'primary' ? '#2196F3' : '#ccc'};
-  background: ${props => props.variant === 'primary' ? '#2196F3' : 'white'};
-  color: ${props => props.variant === 'primary' ? 'white' : '#222'};
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 0.9rem;
-
-  &:hover {
-    background: ${props => props.variant === 'primary' ? '#1976D2' : '#f8f8f8'};
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-`;
-
-const NoDataMessage = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-  color: #666;
-  font-size: 0.9rem;
-`;
-
-const LoadingMessage = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-  color: #666;
-  font-size: 0.9rem;
-`;
-
-const StatsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-  flex-shrink: 0;
-`;
-
-const StatCard = styled.div`
-  background: white;
-  padding: 1.25rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  text-align: center;
-`;
-
-const StatValue = styled.div`
-  font-size: 1.75rem;
-  font-weight: 600;
-  color: #2196F3;
-  margin-bottom: 0.25rem;
-`;
-
-const StatLabel = styled.div`
-  font-size: 0.9rem;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-`;
-
-const PriorityBadge = styled.span<{ $priority: 'high' | 'medium' | 'low' }>`
-  display: inline-block;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  
-  background-color: ${props => {
-    switch (props.$priority) {
-      case 'high':
-        return '#F44336';
-      case 'medium':
-        return '#FFA000';
-      case 'low':
-        return '#4CAF50';
-      default:
-        return '#666';
-    }
-  }};
-  
-  color: white;
-`;
+// Modular Dashboard Imports
+import ModularDashboard from './common/ModularDashboard';
+import {
+  Section,
+  SectionTitle,
+  Table,
+  Th,
+  Td,
+  Tr,
+  ActionButton,
+  NoDataMessage,
+  LoadingMessage,
+  PriorityBadge
+} from './common/DashboardComponents';
 
 type SidebarItemType = 'escalated-evidence' | 'process-reviews' | 'business-analytics';
 
@@ -296,28 +147,39 @@ const BusinessDashboard: React.FC = () => {
 
   const renderEscalatedEvidence = () => (
     <>
-      <StatsGrid>
-        <StatCard>
-          <StatValue>{stats.total}</StatValue>
-          <StatLabel>Total Escalations</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatValue>{stats.highPriority}</StatValue>
-          <StatLabel>High Priority</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatValue>{stats.mediumPriority}</StatValue>
-          <StatLabel>Medium Priority</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatValue>{stats.lowPriority}</StatValue>
-          <StatLabel>Low Priority</StatLabel>
-        </StatCard>
-      </StatsGrid>
+      <DashboardStats items={[
+        {
+          label: 'Total Escalations',
+          value: stats.total,
+          icon: <FiLayers />,
+          color: colors.status.underReview,
+          subtext: 'All active escalations'
+        },
+        {
+          label: 'High Priority',
+          value: stats.highPriority,
+          icon: <FiAlertTriangle />,
+          color: colors.status.escalated,
+          subtext: 'Requires immediate attention',
+          highlight: stats.highPriority > 0
+        },
+        {
+          label: 'Medium Priority',
+          value: stats.mediumPriority,
+          icon: <FiClock />,
+          color: colors.status.pending,
+          subtext: 'Review within 24h'
+        },
+        {
+          label: 'Low Priority',
+          value: stats.lowPriority,
+          icon: <FiCheckCircle />,
+          color: colors.status.approved,
+          subtext: 'Routine checks'
+        }
+      ]} columns={4} />
 
       <Section>
-        <SectionTitle>Escalated Evidence for Business Review</SectionTitle>
-        
         {loading ? (
           <LoadingMessage>Loading escalated evidence...</LoadingMessage>
         ) : escalatedEvidence.length > 0 ? (
@@ -358,12 +220,12 @@ const BusinessDashboard: React.FC = () => {
                     <StatusChip status={evidence.status} />
                   </Td>
                   <Td>
-                    <Button
+                    <ActionButton
                       variant="primary"
                       onClick={() => handleReviewClick(evidence)}
                     >
                       Review
-                    </Button>
+                    </ActionButton>
                   </Td>
                 </Tr>
               ))}
@@ -404,19 +266,13 @@ const BusinessDashboard: React.FC = () => {
   };
 
   return (
-    <DashboardContainer>
-      <SidebarWrapper>
-        <Sidebar
-          groups={sidebarGroups}
-          activeItemId={activeItem}
-          onItemClick={handleSidebarItemClick}
-          onGroupToggle={handleSidebarGroupToggle}
-        />
-      </SidebarWrapper>
-      
-      <MainContent>
-        {renderContent()}
-      </MainContent>
+    <ModularDashboard
+      sidebarGroups={sidebarGroups}
+      activeItemId={activeItem}
+      onItemChange={handleSidebarItemClick}
+      onGroupToggle={handleSidebarGroupToggle}
+    >
+      {renderContent()}
 
       {showReviewDrawer && selectedEvidence && (
         <ReviewDrawer
@@ -459,7 +315,7 @@ const BusinessDashboard: React.FC = () => {
           }}
         />
       )}
-    </DashboardContainer>
+    </ModularDashboard>
   );
 };
 

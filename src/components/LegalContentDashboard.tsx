@@ -11,14 +11,25 @@ import BulkOperationProgress from './BulkOperationProgress';
 import StyledSelect from './common/StyledSelect';
 import { FiEdit3, FiClock, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 
-const DashboardContainer = styled.div`
-  width: 100%;
-  height: 100%;
-  background: #f5f5f5;
-  display: flex;
-  flex-direction: column;
-`;
+// Modular Dashboard Imports
+import ModularDashboard from './common/ModularDashboard';
+import {
+  Section,
+  FixedTable as Table,
+  Th,
+  Td,
+  Tr,
+  ActionButton,
+  StatusBadge,
+  Filters,
+  FilterGroup,
+  FilterLabel,
+  SelectWrapper,
+  LoadingMessage,
+  NoDataMessage
+} from './common/DashboardComponents';
 
+// Local Styled Components for Tabs
 const Tabs = styled.div`
   display: flex;
   gap: 0;
@@ -46,194 +57,12 @@ const Tab = styled.button<{ $active: boolean }>`
   }
 `;
 
-const Section = styled.div`
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  padding: 1rem;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden; /* Prevent content overflow */
-`;
-
-
-const Filters = styled.div`
-  display: flex;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-  flex-wrap: wrap;
-  flex-shrink: 0;
-`;
-
-const FilterGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-`;
-
-const FilterLabel = styled.label`
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: #666;
-`;
-
-const SelectWrapper = styled.div`
-  min-width: 150px;
-`;
-
 const TableContainer = styled.div`
   width: 100%;
   flex: 1;
   min-height: 0;
-  overflow-y: auto; /* Allow vertical scrolling if needed */
+  overflow-y: auto;
 `;
-
-const Table = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed; /* Fixed layout for better column control */
-`;
-
-const Th = styled.th<{ $width?: string }>`
-  background: #f8f8f8;
-  padding: 0.5rem 0.75rem;
-  text-align: left;
-  font-weight: 500;
-  color: #333;
-  border-bottom: 2px solid #eee;
-  white-space: nowrap;
-  width: ${props => props.$width || 'auto'};
-  overflow: hidden;
-  text-overflow: ellipsis;
-`;
-
-const Td = styled.td<{ $width?: string }>`
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #eee;
-  color: #666;
-  vertical-align: top;
-  width: ${props => props.$width || 'auto'};
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  word-wrap: break-word;
-`;
-
-const Tr = styled.tr`
-  &:hover {
-    background: #f9f9f9;
-  }
-`;
-
-const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
-  padding: 0.4rem 0.8rem;
-  border: none;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  
-  ${props => props.$variant === 'primary' ? `
-    background: #222;
-    color: white;
-    
-    &:hover {
-      background: #444;
-    }
-  ` : `
-    background: white;
-    color: #222;
-    border: 1px solid #ccc;
-    
-    &:hover {
-      background: #f5f5f5;
-    }
-  `}
-`;
-
-const StatusBadge = styled.span<{ $status: 'PENDING' | 'APPROVED' | 'REJECTED' }>`
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  
-  ${props => {
-    switch (props.$status) {
-      case 'PENDING':
-        return `
-          background: #fef3c7;
-          color: #92400e;
-        `;
-      case 'APPROVED':
-        return `
-          background: #d1fae5;
-          color: #065f46;
-        `;
-      case 'REJECTED':
-        return `
-          background: #fee2e2;
-          color: #991b1b;
-        `;
-    }
-  }}
-`;
-
-const ReaffirmationBadge = styled.span<{ $status: ReaffirmationStatus }>`
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  font-weight: 500;
-  display: inline-block;
-  white-space: nowrap;
-  
-  ${props => {
-    switch (props.$status) {
-      case 'CURRENT':
-        return `
-          background: #d1fae5;
-          color: #065f46;
-        `;
-      case 'DUE_SOON':
-        return `
-          background: #fef3c7;
-          color: #92400e;
-        `;
-      case 'OVERDUE':
-        return `
-          background: #fee2e2;
-          color: #991b1b;
-        `;
-    }
-  }}
-`;
-
-const NoDataMessage = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-  color: #666;
-  font-size: 0.9rem;
-`;
-
-const LoadingMessage = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-  color: #666;
-  font-size: 0.9rem;
-`;
-
 
 type TabType = 'explore' | 'enhanced-bulk' | 'my-requests';
 
@@ -285,7 +114,6 @@ const LegalContentDashboard: React.FC = () => {
       
       const data = await getRequirements(filterParams);
       console.log('Loaded requirements:', data);
-      console.log('Sample requirement:', data[0]);
       setRequirements(data);
     } catch (error) {
       console.error('Error loading requirements:', error);
@@ -347,8 +175,6 @@ const LegalContentDashboard: React.FC = () => {
     setSelectedRequirement(requirement);
     setShowProposeModal(true);
   };
-
-
 
   const handleSubmitChangeRequest = async (data: {
     requirementId: string;
@@ -500,7 +326,11 @@ const LegalContentDashboard: React.FC = () => {
   };
 
   return (
-    <DashboardContainer>
+    <ModularDashboard
+      sidebarGroups={[]}
+      activeItemId="legal-dashboard"
+      onItemChange={() => {}}
+    >
       <Tabs>
         <Tab 
           $active={activeTab === 'explore'} 
@@ -621,17 +451,17 @@ const LegalContentDashboard: React.FC = () => {
                           <Td $width="10%">{formatDateCompact(req.originalIngestionDate)}</Td>
                           <Td $width="10%">{req.lastReaffirmedAt ? formatDateCompact(req.lastReaffirmedAt) : 'Never'}</Td>
                           <Td $width="12%">
-                            <ReaffirmationBadge $status={reaffirmationStatus}>
+                            <StatusBadge $status={reaffirmationStatus}>
                               {getReaffirmationStatusText(reaffirmationStatus)}
-                            </ReaffirmationBadge>
+                            </StatusBadge>
                           </Td>
                           <Td $width="10%">{formatDate(req.updatedAt)}</Td>
                           <Td $width="15%">
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
-                              <Button onClick={() => handleProposeEdit(req)}>
+                              <ActionButton onClick={() => handleProposeEdit(req)}>
                                 <FiEdit3 />
                                 Propose Edit
-                              </Button>
+                              </ActionButton>
                             </div>
                           </Td>
                         </Tr>
@@ -740,7 +570,7 @@ const LegalContentDashboard: React.FC = () => {
           }}
         />
       )}
-    </DashboardContainer>
+    </ModularDashboard>
   );
 };
 

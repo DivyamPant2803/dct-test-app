@@ -1,153 +1,27 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import styled from 'styled-components';
 import { Transfer, RequirementRow, Evidence } from '../types/index';
 import { useEvidenceApi } from '../hooks/useEvidenceApi';
 import { FiLayers, FiCheckCircle, FiClock, FiAlertTriangle } from 'react-icons/fi';
 import { colors } from '../styles/designTokens';
 import UploadEvidenceModal from './UploadEvidenceModal';
 import AuditTrailModal from './AuditTrailModal';
-import Sidebar, { SidebarGroup } from './common/Sidebar';
+import { SidebarGroup } from './common/Sidebar';
 import { DashboardStats, StatItem } from './common/DashboardStats';
 import StatusChip from './StatusChip';
 
-// Styled Components - Following Admin/Legal Dashboard Pattern
-const Container = styled.div`
-  width: 100%;
-  height: 100%;
-  background: #f5f5f5;
-  display: flex;
-`;
-
-const SidebarWrapper = styled.div`
-  flex-shrink: 0;
-`;
-
-const MainContent = styled.div`
-  flex: 1;
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  overflow-y: auto;
-  min-height: 0;
-`;
-
-const Section = styled.div`
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  padding: 1.25rem;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-`;
-
-const Table = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  flex: 1;
-  min-height: 0;
-`;
-
-const Th = styled.th`
-  background: #f8f8f8;
-  padding: 0.75rem 1rem;
-  text-align: left;
-  font-weight: 500;
-  color: #333;
-  border-bottom: 2px solid #eee;
-  white-space: nowrap;
-`;
-
-const Td = styled.td`
-  padding: 0.5rem 1rem;
-  border-bottom: 1px solid #eee;
-  color: #666;
-  vertical-align: top;
-`;
-
-const Tr = styled.tr`
-  &:hover {
-    background: #f9f9f9;
-  }
-`;
-
-const Button = styled.button<{ variant?: 'primary' | 'secondary' | 'danger' }>`
-  padding: 0.4rem 0.8rem;
-  border-radius: 4px;
-  border: 1px solid ${props => {
-    if (props.variant === 'danger') return '#F44336';
-    return props.variant === 'primary' ? '#222' : '#ccc';
-  }};
-  background: ${props => {
-    if (props.variant === 'danger') return '#F44336';
-    return props.variant === 'primary' ? '#222' : 'white';
-  }};
-  color: ${props => props.variant === 'primary' || props.variant === 'danger' ? 'white' : '#222'};
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 0.8rem;
-  margin-right: 0.5rem;
-
-  &:hover {
-    background: ${props => {
-      if (props.variant === 'danger') return '#d32f2f';
-      return props.variant === 'primary' ? '#444' : '#f8f8f8';
-    }};
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-`;
-
-const NoDataMessage = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-  color: #666;
-  font-size: 0.9rem;
-`;
-
-const LoadingMessage = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-  color: #666;
-  font-size: 0.9rem;
-`;
-
-const SLABadge = styled.span<{ $type: 'breached' | 'approaching' | 'ok' }>`
-  display: inline-block;
-  padding: 0.2rem 0.4rem;
-  border-radius: 3px;
-  font-size: 0.65rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  color: white;
-  
-  background-color: ${props => {
-    switch (props.$type) {
-      case 'breached':
-        return '#F44336';
-      case 'approaching':
-        return '#FFA000';
-      default:
-        return '#4CAF50';
-    }
-  }};
-`;
-
-const ProgressText = styled.span`
-  font-size: 0.75rem;
-  color: #666;
-`;
+// Modular Dashboard Imports
+import ModularDashboard from './common/ModularDashboard';
+import {
+  Section,
+  Table,
+  Th,
+  Td,
+  Tr,
+  ActionButton,
+  NoDataMessage,
+  LoadingMessage,
+  SLABadge
+} from './common/DashboardComponents';
 
 type SidebarItemType = 'my-transfers' | 'requirements' | 'evidence';
 
@@ -365,124 +239,88 @@ const EndUserDashboard: React.FC = () => {
 
   // Render My Transfers
   const renderMyTransfers = () => {
-    const statItems: StatItem[] = [
-      {
-        label: 'Total Transfers',
-        value: stats.total,
-        icon: <FiLayers />,
-        color: colors.status.underReview,
-        subtext: 'All active transfers'
-      },
-      {
-        label: 'Pending Review',
-        value: stats.pending,
-        icon: <FiClock />,
-        color: colors.status.pending,
-        subtext: 'Awaiting action'
-      },
-      {
-        label: 'Approved',
-        value: stats.approved,
-        icon: <FiCheckCircle />,
-        color: colors.status.approved,
-        subtext: 'Successfully completed'
-      },
-      {
-        label: 'Escalated',
-        value: stats.escalated,
-        icon: <FiAlertTriangle />,
-        color: colors.status.escalated,
-        subtext: 'Requires attention',
-        highlight: stats.escalated > 0
-      }
-    ];
-
     return (
-      <>
-        <DashboardStats items={statItems} />
+      <Section>
+        {loading ? (
+          <LoadingMessage>Loading transfers...</LoadingMessage>
+        ) : transfers.length > 0 ? (
+          <Table>
+            <thead>
+              <tr>
+                <Th>Transfer Name</Th>
+                <Th>Jurisdiction</Th>
+                <Th>Entity</Th>
+                <Th>Progress</Th>
+                <Th>SLA Status</Th>
+                <Th>Status</Th>
+                <Th>Actions</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {transfers.map((transfer) => {
+                const actualStatus = getActualStatus(transfer);
+                const progress = getProgress(transfer);
+                const slaStatus = getSLAStatus(transfer);
+                const canEscalate = (slaStatus.status === 'breached' || slaStatus.status === 'approaching') && 
+                                   !transfer.escalatedTo && 
+                                   actualStatus !== 'APPROVED';
 
-        <Section>
-          {loading ? (
-            <LoadingMessage>Loading transfers...</LoadingMessage>
-          ) : transfers.length > 0 ? (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Transfer Name</Th>
-                  <Th>Jurisdiction</Th>
-                  <Th>Entity</Th>
-                  <Th>Progress</Th>
-                  <Th>SLA Status</Th>
-                  <Th>Status</Th>
-                  <Th>Actions</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {transfers.map((transfer) => {
-                  const actualStatus = getActualStatus(transfer);
-                  const progress = getProgress(transfer);
-                  const slaStatus = getSLAStatus(transfer);
-                  const canEscalate = (slaStatus.status === 'breached' || slaStatus.status === 'approaching') && 
-                                     !transfer.escalatedTo && 
-                                     actualStatus !== 'APPROVED';
-
-                  return (
-                    <Tr key={transfer.id}>
-                      <Td>
-                        <div style={{ lineHeight: '1.3' }}>
-                          <div style={{ fontWeight: '500', marginBottom: '0.25rem' }}>{transfer.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: '#888', fontFamily: 'monospace' }}>{transfer.id}</div>
-                        </div>
-                      </Td>
-                      <Td>{transfer.jurisdiction}</Td>
-                      <Td>{transfer.entity}</Td>
-                      <Td>
-                        <ProgressText>{progress.approved} / {progress.total}</ProgressText>
-                      </Td>
-                      <Td>
-                        <SLABadge $type={slaStatus.status}>
-                          {slaStatus.status === 'breached' 
-                            ? `${slaStatus.daysRemaining}d overdue`
-                            : slaStatus.status === 'approaching'
-                            ? `${slaStatus.daysRemaining}d left`
-                            : 'On track'}
-                        </SLABadge>
-                      </Td>
-                      <Td>
-                        <StatusChip status={actualStatus} />
-                      </Td>
-                      <Td>
-                        <Button
-                          variant="secondary"
-                          onClick={() => handleViewTransfer(transfer)}
+                return (
+                  <Tr key={transfer.id}>
+                    <Td>
+                      <div style={{ lineHeight: '1.3' }}>
+                        <div style={{ fontWeight: '500', marginBottom: '0.25rem' }}>{transfer.name}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#888', fontFamily: 'monospace' }}>{transfer.id}</div>
+                      </div>
+                    </Td>
+                    <Td>{transfer.jurisdiction}</Td>
+                    <Td>{transfer.entity}</Td>
+                    <Td>
+                      <span style={{ fontSize: '0.75rem', color: '#666' }}>{progress.approved} / {progress.total}</span>
+                    </Td>
+                    <Td>
+                      <SLABadge $type={slaStatus.status}>
+                        {slaStatus.status === 'breached' 
+                          ? `${slaStatus.daysRemaining}d overdue`
+                          : slaStatus.status === 'approaching'
+                          ? `${slaStatus.daysRemaining}d left`
+                          : 'On track'}
+                      </SLABadge>
+                    </Td>
+                    <Td>
+                      <StatusChip status={actualStatus} />
+                    </Td>
+                    <Td>
+                      <ActionButton
+                        variant="secondary"
+                        onClick={() => handleViewTransfer(transfer)}
+                      >
+                        View
+                      </ActionButton>
+                      <ActionButton
+                        variant="primary"
+                        onClick={() => handleSelectTransfer(transfer.id)}
+                      >
+                        Details
+                      </ActionButton>
+                      {canEscalate && (
+                        <ActionButton
+                          variant="danger"
+                          onClick={() => handleEscalate(transfer)}
                         >
-                          View
-                        </Button>
-                        <Button
-                          variant="primary"
-                          onClick={() => handleSelectTransfer(transfer.id)}
-                        >
-                          Details
-                        </Button>
-                        {canEscalate && (
-                          <Button
-                            variant="danger"
-                            onClick={() => handleEscalate(transfer)}
-                          >
-                            Escalate
-                          </Button>
-                        )}
-                      </Td>
-                    </Tr>
-                  );
-                })}
-              </tbody>
-            </Table>
-          ) : (
-            <NoDataMessage>No transfers found</NoDataMessage>
-          )}
-        </Section>
-      </>
+                          Escalate
+                        </ActionButton>
+                      )}
+                    </Td>
+                  </Tr>
+                );
+              })}
+            </tbody>
+          </Table>
+        ) : (
+          <NoDataMessage>No transfers found</NoDataMessage>
+        )}
+      </Section>
     );
   };
 
@@ -525,19 +363,19 @@ const EndUserDashboard: React.FC = () => {
                 </Td>
                 <Td>{new Date(requirement.updatedAt).toLocaleDateString()}</Td>
                 <Td>
-                  <Button
+                  <ActionButton
                     variant="primary"
                     onClick={() => handleUploadClick(requirement)}
                     disabled={requirement.status === 'APPROVED'}
                   >
                     Upload
-                  </Button>
-                  <Button
+                  </ActionButton>
+                  <ActionButton
                     variant="secondary"
                     onClick={() => handleViewAudit(requirement)}
                   >
                     View
-                  </Button>
+                  </ActionButton>
                 </Td>
               </Tr>
             ))}
@@ -615,22 +453,49 @@ const EndUserDashboard: React.FC = () => {
     </Section>
   );
 
+  const statItems: StatItem[] = [
+    {
+      label: 'Total Transfers',
+      value: stats.total,
+      icon: <FiLayers />,
+      color: colors.status.underReview,
+      subtext: 'All active transfers'
+    },
+    {
+      label: 'Pending Review',
+      value: stats.pending,
+      icon: <FiClock />,
+      color: colors.status.pending,
+      subtext: 'Awaiting action'
+    },
+    {
+      label: 'Approved',
+      value: stats.approved,
+      icon: <FiCheckCircle />,
+      color: colors.status.approved,
+      subtext: 'Successfully completed'
+    },
+    {
+      label: 'Escalated',
+      value: stats.escalated,
+      icon: <FiAlertTriangle />,
+      color: colors.status.escalated,
+      subtext: 'Requires attention',
+      highlight: stats.escalated > 0
+    }
+  ];
+
   return (
-    <Container>
-      <SidebarWrapper>
-        <Sidebar
-          groups={sidebarGroups}
-          activeItemId={activeItem}
-          onItemClick={handleSidebarItemClick}
-          onGroupToggle={handleSidebarGroupToggle}
-        />
-      </SidebarWrapper>
-      
-      <MainContent>
-        {activeItem === 'my-transfers' && renderMyTransfers()}
-        {activeItem === 'requirements' && renderRequirements()}
-        {activeItem === 'evidence' && renderEvidence()}
-      </MainContent>
+    <ModularDashboard
+      sidebarGroups={sidebarGroups}
+      activeItemId={activeItem}
+      onItemChange={handleSidebarItemClick}
+      onGroupToggle={handleSidebarGroupToggle}
+      headerContent={activeItem === 'my-transfers' ? <DashboardStats items={statItems} /> : null}
+    >
+      {activeItem === 'my-transfers' && renderMyTransfers()}
+      {activeItem === 'requirements' && renderRequirements()}
+      {activeItem === 'evidence' && renderEvidence()}
 
       {/* Modals */}
       {showUploadModal && selectedRequirement && (
@@ -658,7 +523,7 @@ const EndUserDashboard: React.FC = () => {
           onClose={() => setSelectedTransferForAudit(null)}
         />
       )}
-    </Container>
+    </ModularDashboard>
   );
 };
 

@@ -84,7 +84,7 @@ export const AdminQueueSummary: React.FC<AdminQueueSummaryProps> = ({ evidence }
     });
   }
 
-  return <DashboardStats items={stats} />;
+  return <DashboardStats items={stats} columns={stats.length} />;
 };
 
 

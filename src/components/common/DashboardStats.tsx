@@ -17,8 +17,9 @@ interface DashboardStatsProps {
   columns?: number;
 }
 
-const StatsContainer = styled.div`
-  display: flex;
+const StatsContainer = styled.div<{ $columns?: number }>`
+  display: ${props => props.$columns ? 'grid' : 'flex'};
+  ${props => props.$columns && `grid-template-columns: repeat(${props.$columns}, 1fr);`}
   gap: ${spacing.md};
   margin-bottom: ${spacing.lg};
   flex-wrap: wrap;
@@ -36,7 +37,7 @@ const CompactCard = styled.div<{ $highlight?: boolean; $color?: string; $clickab
   gap: ${spacing.md};
   cursor: ${props => props.$clickable ? 'pointer' : 'default'};
   flex: 1;
-  min-width: 200px;
+  min-width: 0;
   position: relative;
   overflow: hidden;
 
@@ -95,9 +96,9 @@ const Subtext = styled.div`
   text-overflow: ellipsis;
 `;
 
-export const DashboardStats: React.FC<DashboardStatsProps> = ({ items }) => {
+export const DashboardStats: React.FC<DashboardStatsProps> = ({ items, columns }) => {
   return (
-    <StatsContainer>
+    <StatsContainer $columns={columns}>
       {items.map((item, index) => (
         <CompactCard 
           key={index} 
