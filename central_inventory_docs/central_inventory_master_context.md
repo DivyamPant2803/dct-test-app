@@ -28,6 +28,7 @@
 | **Workflows** | `sequence_diagrams.md` | Mermaid diagrams for User, Admin, Legal flows. |
 | **Implementation** | `refined_work_items.md` | Prioritized checklist of 38 dev tasks. |
 | **Service Roles** | `service_usage_guide.md` | Responsibilities of backend services. |
+| **UI/UX Spec** | `frontend_implementation_guide.md` | React Components, Routes, and Styles. |
 
 ---
 
