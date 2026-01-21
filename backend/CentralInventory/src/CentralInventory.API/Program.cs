@@ -55,9 +55,10 @@ builder.Services.AddScoped<IEvidenceService, EvidenceService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
+builder.Services.AddScoped<IWorkflowService, WorkflowService>();
+builder.Services.AddScoped<ITemplateService, TemplateService>();
+builder.Services.AddScoped<ISLAService, SLAService>();
 
-// TODO: Add WorkflowService when implemented
-// builder.Services.AddScoped<IWorkflowService, WorkflowService>();
 
 // ============================================================================
 // 5. CORS CONFIGURATION

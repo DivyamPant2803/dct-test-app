@@ -18,12 +18,18 @@ public class ApplicationDbContext : DbContext
     public DbSet<User> Users { get; set; }
     public DbSet<Role> Roles { get; set; }
     public DbSet<UserRole> UserRoles { get; set; }
+    public DbSet<Control> Controls { get; set; }
+    public DbSet<Template> Templates { get; set; }
     public DbSet<Transfer> Transfers { get; set; }
     public DbSet<TransferMERData> TransferMERData { get; set; }
     public DbSet<Requirement> Requirements { get; set; }
     public DbSet<Evidence> Evidence { get; set; }
     public DbSet<EvidenceHistory> EvidenceHistory { get; set; }
     public DbSet<AuditTrail> AuditTrail { get; set; }
+    public DbSet<SLAConfiguration> SLAConfigurations { get; set; }
+    public DbSet<SLATracking> SLATrackings { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
+    public DbSet<ApplicationMetadata> ApplicationMetadata { get; set; }
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -32,12 +38,18 @@ public class ApplicationDbContext : DbContext
         ConfigureUsers(modelBuilder);
         ConfigureRoles(modelBuilder);
         ConfigureUserRoles(modelBuilder);
+        ConfigureControls(modelBuilder);
+        ConfigureTemplates(modelBuilder);
         ConfigureTransfers(modelBuilder);
         ConfigureTransferMERData(modelBuilder);
         ConfigureRequirements(modelBuilder);
         ConfigureEvidence(modelBuilder);
         ConfigureEvidenceHistory(modelBuilder);
         ConfigureAuditTrail(modelBuilder);
+        ConfigureSLAConfigurations(modelBuilder);
+        ConfigureSLATrackings(modelBuilder);
+        ConfigureNotifications(modelBuilder);
+        ConfigureApplicationMetadata(modelBuilder);
     }
     
     private void ConfigureUsers(ModelBuilder modelBuilder)
@@ -465,4 +477,290 @@ public class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }
+    
+    private void ConfigureControls(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Control>(entity =>
+        {
+            entity.ToTable("Controls");
+            
+            entity.HasKey(e => e.ControlId);
+            
+            entity.Property(e => e.ControlCode)
+                .IsRequired()
+                .HasMaxLength(50);
+            
+            entity.HasIndex(e => e.ControlCode)
+                .IsUnique()
+                .HasDatabaseName("IX_Controls_ControlCode");
+            
+            entity.Property(e => e.ControlName)
+                .IsRequired()
+                .HasMaxLength(200);
+            
+            entity.Property(e => e.ControlType)
+                .IsRequired()
+                .HasMaxLength(50);
+            
+            entity.HasIndex(e => e.ControlType)
+                .HasDatabaseName("IX_Controls_ControlType");
+            
+            entity.Property(e => e.ApplicationName)
+                .HasMaxLength(200);
+            
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true);
+            
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("GETUTCDATE()");
+        });
+    }
+    
+    private void ConfigureTemplates(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Template>(entity =>
+        {
+            entity.ToTable("Templates");
+            
+            entity.HasKey(e => e.TemplateId);
+            
+            entity.Property(e => e.TemplateId)
+                .HasDefaultValueSql("NEWID()");
+            
+            entity.Property(e => e.TemplateName)
+                .IsRequired()
+                .HasMaxLength(200);
+            
+            entity.Property(e => e.TemplateType)
+                .IsRequired()
+                .HasMaxLength(50);
+            
+            entity.Property(e => e.Version)
+                .IsRequired()
+                .HasMaxLength(20)
+                .HasDefaultValue("1.0.0");
+            
+            entity.Property(e => e.Status)
+                .IsRequired()
+                .HasMaxLength(50)
+                .HasDefaultValue("DRAFT");
+            
+            entity.HasIndex(e => e.Status)
+                .HasDatabaseName("IX_Templates_Status");
+            
+            entity.Property(e => e.OriginalFileName)
+                .HasMaxLength(255);
+            
+            entity.Property(e => e.DocumentType)
+                .HasMaxLength(10);
+            
+            entity.Property(e => e.BlobStorageUrl)
+                .HasMaxLength(500);
+            
+            // JSON columns
+            entity.Property(e => e.Sections)
+                .HasColumnType("NVARCHAR(MAX)");
+            
+            entity.Property(e => e.FieldMappings)
+                .HasColumnType("NVARCHAR(MAX)");
+            
+            entity.Property(e => e.UploadedAt)
+                .HasDefaultValueSql("GETUTCDATE()");
+            
+            entity.HasIndex(e => e.ControlId)
+                .HasDatabaseName("IX_Templates_ControlId");
+            
+            // Relationships
+            entity.HasOne(e => e.Control)
+                .WithMany(c => c.Templates)
+                .HasForeignKey(e => e.ControlId)
+                .OnDelete(DeleteBehavior.Restrict);
+            
+            entity.HasOne(e => e.PreviousVersion)
+                .WithMany()
+                .HasForeignKey(e => e.PreviousVersionId)
+                .OnDelete(DeleteBehavior.Restrict);
+            
+            entity.HasOne(e => e.Uploader)
+                .WithMany()
+                .HasForeignKey(e => e.UploadedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+    }
+    
+    private void ConfigureSLAConfigurations(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<SLAConfiguration>(entity =>
+        {
+            entity.ToTable("SLAConfigurations");
+            
+            entity.HasKey(e => e.SLAConfigId);
+            
+            entity.Property(e => e.EscalateToRole)
+                .HasMaxLength(50);
+            
+            entity.Property(e => e.NotifyOnApproaching)
+                .HasDefaultValue(true);
+            
+            entity.Property(e => e.NotifyOnBreach)
+                .HasDefaultValue(true);
+            
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true);
+            
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("GETUTCDATE()");
+            
+            entity.Property(e => e.UpdatedAt)
+                .HasDefaultValueSql("GETUTCDATE()");
+            
+            entity.HasIndex(e => e.ControlId)
+                .HasDatabaseName("IX_SLAConfigurations_ControlId");
+            
+            // Relationship
+            entity.HasOne(e => e.Control)
+                .WithMany(c => c.SLAConfigurations)
+                .HasForeignKey(e => e.ControlId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+    }
+    
+    private void ConfigureSLATrackings(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<SLATracking>(entity =>
+        {
+            entity.ToTable("SLATrackings");
+            
+            entity.HasKey(e => e.SLATrackingId);
+            
+            entity.Property(e => e.SLATrackingId)
+                .HasDefaultValueSql("NEWID()");
+            
+            entity.Property(e => e.Status)
+                .IsRequired()
+                .HasMaxLength(50)
+                .HasDefaultValue("ON_TRACK");
+            
+            entity.HasIndex(e => e.Status)
+                .HasDatabaseName("IX_SLATrackings_Status");
+            
+            entity.HasIndex(e => e.TransferId)
+                .HasDatabaseName("IX_SLATrackings_TransferId");
+            
+            entity.HasIndex(e => e.TargetDate)
+                .HasDatabaseName("IX_SLATrackings_TargetDate");
+            
+            entity.Property(e => e.LastCheckedAt)
+                .HasDefaultValueSql("GETUTCDATE()");
+            
+            // Relationships
+            entity.HasOne(e => e.Transfer)
+                .WithMany()
+                .HasForeignKey(e => e.TransferId)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasOne(e => e.SLAConfiguration)
+                .WithMany(c => c.SLATrackings)
+                .HasForeignKey(e => e.SLAConfigId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+    }
+    
+    private void ConfigureNotifications(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.ToTable("Notifications");
+            
+            entity.HasKey(e => e.NotificationId);
+            
+            entity.Property(e => e.NotificationId)
+                .HasDefaultValueSql("NEWID()");
+            
+            entity.Property(e => e.RecipientRole)
+                .HasMaxLength(50);
+            
+            entity.Property(e => e.Type)
+                .IsRequired()
+                .HasMaxLength(50);
+            
+            entity.Property(e => e.IsRead)
+                .HasDefaultValue(false);
+            
+            entity.Property(e => e.SentToEmail)
+                .HasDefaultValue(false);
+            
+            entity.Property(e => e.SentToTeams)
+                .HasDefaultValue(false);
+            
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("GETUTCDATE()");
+            
+            entity.HasIndex(e => e.RecipientUserId)
+                .HasDatabaseName("IX_Notifications_RecipientUserId");
+            
+            entity.HasIndex(e => e.IsRead)
+                .HasDatabaseName("IX_Notifications_IsRead");
+            
+            entity.HasIndex(e => e.CreatedAt)
+                .HasDatabaseName("IX_Notifications_CreatedAt");
+            
+            // Relationships
+            entity.HasOne(e => e.Recipient)
+                .WithMany()
+                .HasForeignKey(e => e.RecipientUserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasOne(e => e.Transfer)
+                .WithMany()
+                .HasForeignKey(e => e.TransferId)
+                .OnDelete(DeleteBehavior.SetNull);
+            
+            entity.HasOne(e => e.Evidence)
+                .WithMany()
+                .HasForeignKey(e => e.EvidenceId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+    }
+    
+    private void ConfigureApplicationMetadata(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<ApplicationMetadata>(entity =>
+        {
+            entity.ToTable("ApplicationMetadata");
+            
+            entity.HasKey(e => e.SwcId);
+            
+            entity.Property(e => e.SwcId)
+                .IsRequired()
+                .HasMaxLength(50);
+            
+            entity.Property(e => e.AppName)
+                .IsRequired()
+                .HasMaxLength(200);
+            
+            entity.HasIndex(e => e.AppName)
+                .HasDatabaseName("IX_ApplicationMetadata_AppName");
+            
+            entity.Property(e => e.Owner)
+                .HasMaxLength(200);
+            
+            entity.Property(e => e.DataClassification)
+                .HasMaxLength(50);
+            
+            entity.Property(e => e.HostingProvider)
+                .HasMaxLength(100);
+            
+            // JSON column for raw data
+            entity.Property(e => e.RawData)
+                .HasColumnType("NVARCHAR(MAX)");
+            
+            entity.Property(e => e.SourceSystem)
+                .HasMaxLength(50);
+            
+            entity.Property(e => e.LastSyncedAt)
+                .HasDefaultValueSql("GETUTCDATE()");
+        });
+    }
 }
+

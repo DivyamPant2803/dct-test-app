@@ -1,3 +1,5 @@
+using CentralInventory.Core.Enums;
+
 namespace CentralInventory.Core.Entities;
 
 /// <summary>
