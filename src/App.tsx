@@ -214,7 +214,7 @@ const AppContent = () => {
           )}
           <Route path="/central-inventory" element={<CentralInventory />} />
           <Route path="/admin" element={<Administration />} />
-          <Route path="/my-transfers" element={<PersonaRouter route="/my-transfers" />} />
+          <Route path="/my-transfers/*" element={<PersonaRouter route="/my-transfers" />} />
           <Route path="/dct" element={<PersonaRouter route="/dct" />} />
           <Route path="/legal" element={<PersonaRouter route="/legal" />} />
           <Route path="/legal-content" element={<PersonaRouter route="/legal-content" />} />

@@ -353,6 +353,9 @@ export const MER_13_TEMPLATE: UploadedTemplate = {
     // Dynamic form sections
     sections: MER13_SECTIONS,
 
+    // Form builder schema ID — used by FormRendererStep when VITE_USE_FORM_RENDERER=true
+    formBuilderId: 'cmp9qo1z40000upktm59wlx6a',
+
     // Field mappings for prefill from ApplicationData
     fieldMappings: {
         'swcId': 'swcId',

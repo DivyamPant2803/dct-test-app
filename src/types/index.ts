@@ -606,6 +606,9 @@ export interface UploadedTemplate {
   // Dynamic form template data (when templateType === 'DYNAMIC_FORM')
   sections?: TemplateSection[];
 
+  // Form builder schema ID — when set, FormRenderer can fetch and render this form
+  formBuilderId?: string;
+
   // Field mapping for API prefilling (works for both types)
   // Maps field IDs to ApplicationData property names
   // Example: { 'swc_id': 'swcId', 'swc_name': 'swcName', 'manager': 'swcManager' }

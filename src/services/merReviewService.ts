@@ -1,5 +1,7 @@
 import { Transfer, Evidence, UploadedTemplate, TemplateSection, FileAttachment, MERReviewDecision, AttachmentReviewDecision, AuditEntry, RequirementStatus } from '../types/index';
 import { getAllTemplates } from './uploadedTemplateService';
+import { fetchFormSchema } from './formBuilderService';
+import { convertFormSchemaToTemplateSections } from '../utils/formSchemaConverter';
 
 /**
  * Aggregated MER submission data for review
@@ -107,8 +109,18 @@ export const getMERSubmissionData = async (transferId: string): Promise<MERSubmi
         console.log('[getMERSubmissionData] Template attachments:', templateAttachments.length);
         console.log('[getMERSubmissionData] Supporting evidence:', supportingEvidence.length);
 
-        // Get sections from template
-        const sections = template.sections || [];
+        // Get sections — use FormSchema from the form builder API when available,
+        // otherwise fall back to the local template sections
+        let sections: TemplateSection[] = template.sections || [];
+        const formBuilderId = merTemplateData.__formBuilderId as string | undefined;
+        if (formBuilderId) {
+            try {
+                const formSchema = await fetchFormSchema(formBuilderId);
+                sections = convertFormSchemaToTemplateSections(formSchema);
+            } catch (err) {
+                console.warn('[getMERSubmissionData] Failed to load FormSchema, using template sections:', err);
+            }
+        }
 
         // Get escalation info from virtual evidence if available
         const virtualEvidenceKey = `evidence_evidence-mer-${transfer.id}`;

@@ -22,6 +22,10 @@ import {
 } from '../../types/index';
 import { ApplicationData } from '../../services/applicationDataService';
 import {
+  computeMerSectionStatuses,
+  MerSectionStatus,
+} from '../../utils/merTemplateSectionStatus';
+import {
   loadPDFForRendering,
   renderPDFPage,
   base64ToBlob,
@@ -89,6 +93,7 @@ const SectionCard = styled.div<{ $collapsed?: boolean }>`
   border-radius: ${borderRadius.lg};
   box-shadow: ${shadows.sm};
   overflow: hidden;
+  scroll-margin-top: 88px;
 `;
 
 const SectionHeader = styled.div<{ $collapsible?: boolean }>`
@@ -506,12 +511,15 @@ interface DynamicTemplateFormProps {
     tableData: Record<string, any[]>,
     fileData: Record<string, FileAttachment[]>
   ) => void;
+  /** Fired when per-section completion status changes (for MER section stepper) */
+  onSectionStatusesChange?: (statuses: Record<string, MerSectionStatus>) => void;
 }
 
 const DynamicTemplateForm: React.FC<DynamicTemplateFormProps> = ({
   template,
   prefillData,
   onContinue,
+  onSectionStatusesChange,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -582,6 +590,17 @@ const DynamicTemplateForm: React.FC<DynamicTemplateFormProps> = ({
     });
     setCollapsedSections(collapsed);
   }, [template, prefillData]);
+
+  useEffect(() => {
+    if (!onSectionStatusesChange || !template.sections?.length) return;
+    const statuses = computeMerSectionStatuses(
+      template,
+      formData as Record<string, unknown>,
+      tableData as Record<string, unknown[]>,
+      fileData
+    );
+    onSectionStatusesChange(statuses);
+  }, [template, formData, tableData, fileData, onSectionStatusesChange]);
 
   useEffect(() => {
     if (showPDFPreview && canvasRef.current) {
@@ -1064,7 +1083,7 @@ const DynamicTemplateForm: React.FC<DynamicTemplateFormProps> = ({
             const visibleFields = section.fields.filter(f => shouldShowField(f));
             
             return (
-              <SectionCard key={section.id} $collapsed={isCollapsed}>
+              <SectionCard key={section.id} id={`template-section-${section.id}`} $collapsed={isCollapsed}>
                 <SectionHeader 
                   $collapsible={isCollapsible}
                   onClick={() => isCollapsible && toggleSection(section.id)}

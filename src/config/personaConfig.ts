@@ -229,7 +229,7 @@ export const getPersonaNavigation = (persona: string) => {
     baseItems.push({ name: 'Guidance', route: '/guidance' });
   }
 
-  baseItems.push({ name: 'Central Inventory', route: '/central-inventory' });
+  const centralInventoryNav = { name: 'Central Inventory', route: '/central-inventory' };
 
   switch (persona) {
     case 'user':
@@ -240,34 +240,40 @@ export const getPersonaNavigation = (persona: string) => {
     case 'admin':
       return [
         ...baseItems,
+        centralInventoryNav,
         { name: 'Administration', route: '/dct' },
       ];
     case 'legal':
       return [
         ...baseItems,
+        centralInventoryNav,
         { name: 'Legal', route: '/legal' },
       ];
     case 'business':
       return [
         ...baseItems,
+        centralInventoryNav,
         { name: 'Business', route: '/business' }
       ];
     case 'diso':
       return [
         ...baseItems,
+        centralInventoryNav,
         { name: 'DISO', route: '/diso' }
       ];
     case 'finance':
       return [
         ...baseItems,
+        centralInventoryNav,
         { name: 'Finance', route: '/finance' }
       ];
     case 'privacy':
       return [
         ...baseItems,
+        centralInventoryNav,
         { name: 'Privacy', route: '/privacy' }
       ];
     default:
-      return baseItems;
+      return [...baseItems, centralInventoryNav];
   }
 };

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Routes, Route, Navigate, useNavigate, useLocation, Link } from 'react-router-dom';
 import { Transfer, RequirementRow, Evidence } from '../types/index';
 import { useEvidenceApi } from '../hooks/useEvidenceApi';
 import { FiLayers, FiCheckCircle, FiClock, FiAlertTriangle } from 'react-icons/fi';
@@ -8,6 +9,7 @@ import AuditTrailModal from './AuditTrailModal';
 import { SidebarGroup } from './common/Sidebar';
 import { DashboardStats, StatItem } from './common/DashboardStats';
 import StatusChip from './StatusChip';
+import MerRequestWorkspace from '../pages/MerRequestWorkspace';
 
 // Modular Dashboard Imports
 import ModularDashboard from './common/ModularDashboard';
@@ -22,6 +24,15 @@ import {
   LoadingMessage,
   SLABadge
 } from './common/DashboardComponents';
+
+const CreateMerButton: React.FC = () => {
+  const navigate = useNavigate();
+  return (
+    <ActionButton variant="primary" onClick={() => navigate('new')}>
+      Create new MER
+    </ActionButton>
+  );
+};
 
 type SidebarItemType = 'my-transfers' | 'requirements' | 'evidence';
 
@@ -109,6 +120,13 @@ const EndUserDashboard: React.FC = () => {
     const interval = setInterval(refreshAllData, 30000);
     return () => clearInterval(interval);
   }, [refreshAllData]);
+
+  const location = useLocation();
+  useEffect(() => {
+    if (location.pathname === '/my-transfers' || location.pathname === '/my-transfers/') {
+      void refreshAllData();
+    }
+  }, [location.pathname, refreshAllData]);
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -318,7 +336,12 @@ const EndUserDashboard: React.FC = () => {
             </tbody>
           </Table>
         ) : (
-          <NoDataMessage>No transfers found</NoDataMessage>
+          <NoDataMessage>
+            No transfers found.{' '}
+            <Link to="new" style={{ fontWeight: 600, textDecoration: 'underline' }}>
+              Create a MER request
+            </Link>
+          </NoDataMessage>
         )}
       </Section>
     );
@@ -486,44 +509,60 @@ const EndUserDashboard: React.FC = () => {
   ];
 
   return (
-    <ModularDashboard
-      sidebarGroups={sidebarGroups}
-      activeItemId={activeItem}
-      onItemChange={handleSidebarItemClick}
-      onGroupToggle={handleSidebarGroupToggle}
-      headerContent={activeItem === 'my-transfers' ? <DashboardStats items={statItems} /> : null}
-    >
-      {activeItem === 'my-transfers' && renderMyTransfers()}
-      {activeItem === 'requirements' && renderRequirements()}
-      {activeItem === 'evidence' && renderEvidence()}
+    <Routes>
+      <Route path="new" element={<MerRequestWorkspace />} />
+      <Route
+        index
+        element={
+          <ModularDashboard
+            sidebarGroups={sidebarGroups}
+            activeItemId={activeItem}
+            onItemChange={handleSidebarItemClick}
+            onGroupToggle={handleSidebarGroupToggle}
+            headerContent={
+              activeItem === 'my-transfers' ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <CreateMerButton />
+                  </div>
+                  <DashboardStats items={statItems} />
+                </div>
+              ) : null
+            }
+          >
+            {activeItem === 'my-transfers' && renderMyTransfers()}
+            {activeItem === 'requirements' && renderRequirements()}
+            {activeItem === 'evidence' && renderEvidence()}
 
-      {/* Modals */}
-      {showUploadModal && selectedRequirement && (
-        <UploadEvidenceModal
-          requirement={selectedRequirement}
-          onClose={() => setShowUploadModal(false)}
-          onSuccess={() => {
-            setShowUploadModal(false);
-            refreshAllData();
-          }}
-        />
-      )}
+            {showUploadModal && selectedRequirement && (
+              <UploadEvidenceModal
+                requirement={selectedRequirement}
+                onClose={() => setShowUploadModal(false)}
+                onSuccess={() => {
+                  setShowUploadModal(false);
+                  refreshAllData();
+                }}
+              />
+            )}
 
-      {showAuditModal && selectedRequirement && (
-        <AuditTrailModal
-          requirement={selectedRequirement}
-          onClose={() => setShowAuditModal(false)}
-        />
-      )}
-      
-      {/* Transfer Audit Trail Modal */}
-      {selectedTransferForAudit && (
-        <AuditTrailModal
-          transfer={selectedTransferForAudit}
-          onClose={() => setSelectedTransferForAudit(null)}
-        />
-      )}
-    </ModularDashboard>
+            {showAuditModal && selectedRequirement && (
+              <AuditTrailModal
+                requirement={selectedRequirement}
+                onClose={() => setShowAuditModal(false)}
+              />
+            )}
+
+            {selectedTransferForAudit && (
+              <AuditTrailModal
+                transfer={selectedTransferForAudit}
+                onClose={() => setSelectedTransferForAudit(null)}
+              />
+            )}
+          </ModularDashboard>
+        }
+      />
+      <Route path="*" element={<Navigate to="/my-transfers" replace />} />
+    </Routes>
   );
 };
 

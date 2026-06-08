@@ -1,8 +1,13 @@
-import React, { useState } from 'react';
-import styled from 'styled-components';
-import { FiSearch, FiCheckCircle, FiAlertCircle, FiLoader } from 'react-icons/fi';
-import { colors, borderRadius, shadows, spacing } from '../../styles/designTokens';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import styled, { keyframes } from 'styled-components';
+import { FiCheckCircle, FiAlertCircle, FiRefreshCw } from 'react-icons/fi';
+import { colors, borderRadius, spacing } from '../../styles/designTokens';
 import { fetchApplicationData, ApplicationData } from '../../services/applicationDataService';
+
+const spin = keyframes`
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+`;
 
 const Container = styled.div`
   display: flex;
@@ -10,25 +15,19 @@ const Container = styled.div`
   gap: ${spacing.lg};
 `;
 
-const Title = styled.h3`
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: ${colors.text.primary};
-  margin-bottom: ${spacing.base};
-`;
-
 const Description = styled.p`
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: ${colors.text.secondary};
-  margin-bottom: ${spacing.lg};
+  line-height: 1.6;
+  margin: 0;
 `;
 
 const FormGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: ${spacing.lg};
-  
-  @media (max-width: 768px) {
+
+  @media (max-width: 640px) {
     grid-template-columns: 1fr;
   }
 `;
@@ -36,65 +35,72 @@ const FormGrid = styled.div`
 const FormGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${spacing.sm};
+  gap: ${spacing.xs};
 `;
 
 const Label = styled.label`
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   font-weight: 600;
   color: ${colors.text.primary};
 `;
 
-const Input = styled.input`
+const InputWrapper = styled.div`
+  position: relative;
+`;
+
+const Input = styled.input<{ $hasError?: boolean }>`
+  width: 100%;
   padding: ${spacing.md};
-  border: 1px solid ${colors.neutral.gray300};
+  padding-right: 2.5rem;
+  border: 1.5px solid ${props => props.$hasError ? colors.semantic.error : colors.neutral.gray300};
   border-radius: ${borderRadius.base};
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: ${colors.text.primary};
   transition: all 0.2s ease;
-  
+  box-sizing: border-box;
+
+  &::placeholder {
+    color: ${colors.text.tertiary};
+  }
+
   &:focus {
     outline: none;
-    border-color: ${colors.status.underReview};
-    box-shadow: 0 0 0 3px ${colors.status.underReview}15;
+    border-color: ${props => props.$hasError ? colors.semantic.error : colors.status.underReview};
+    box-shadow: 0 0 0 3px ${props => props.$hasError ? `${colors.semantic.error}15` : `${colors.status.underReview}15`};
   }
-  
+
   &:disabled {
-    background: ${colors.neutral.gray100};
+    background: ${colors.neutral.gray50};
     cursor: not-allowed;
   }
 `;
 
-const HelpText = styled.span`
-  font-size: 0.8rem;
-  color: ${colors.text.secondary};
-`;
-
-const FetchButton = styled.button<{ $disabled: boolean }>`
-  background-color: ${props => props.$disabled ? colors.neutral.gray400 : colors.status.underReview};
-  color: white;
-  border: none;
-  padding: ${spacing.md} ${spacing.xl};
-  border-radius: ${borderRadius.base};
-  cursor: ${props => props.$disabled ? 'not-allowed' : 'pointer'};
-  font-weight: 600;
-  font-size: 1rem;
-  transition: all 0.2s ease;
+const InputSuffix = styled.div`
+  position: absolute;
+  right: ${spacing.md};
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
-  gap: ${spacing.sm};
-  align-self: flex-start;
-  box-shadow: ${shadows.sm};
+  color: ${colors.text.tertiary};
+`;
 
-  &:hover:not(:disabled) {
-    background-color: ${colors.status.approved};
-    transform: translateY(-2px);
-    box-shadow: ${shadows.base};
-  }
-  
-  &:active:not(:disabled) {
-    transform: translateY(0);
-  }
+const SpinnerIcon = styled.div`
+  animation: ${spin} 0.8s linear infinite;
+  display: flex;
+  align-items: center;
+  color: ${colors.status.underReview};
+`;
+
+const FieldError = styled.div`
+  font-size: 0.78rem;
+  color: ${colors.semantic.error};
+  margin-top: 2px;
+`;
+
+const HelpText = styled.div`
+  font-size: 0.78rem;
+  color: ${colors.text.tertiary};
 `;
 
 const StatusCard = styled.div<{ $type: 'loading' | 'success' | 'error' }>`
@@ -102,46 +108,37 @@ const StatusCard = styled.div<{ $type: 'loading' | 'success' | 'error' }>`
   border-radius: ${borderRadius.base};
   border: 1px solid;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: ${spacing.md};
-  margin-top: ${spacing.lg};
-  
+
   ${props => {
     switch (props.$type) {
       case 'loading':
         return `
-          background: ${colors.status.underReview}10;
-          border-color: ${colors.status.underReview}40;
+          background: ${colors.status.underReview}08;
+          border-color: ${colors.status.underReview}30;
           color: ${colors.status.underReview};
         `;
       case 'success':
         return `
-          background: ${colors.semantic.success}10;
-          border-color: ${colors.semantic.success}40;
+          background: ${colors.semantic.success}08;
+          border-color: ${colors.semantic.success}30;
           color: ${colors.semantic.success};
         `;
       case 'error':
         return `
-          background: ${colors.semantic.error}10;
-          border-color: ${colors.semantic.error}40;
+          background: ${colors.semantic.error}08;
+          border-color: ${colors.semantic.error}30;
           color: ${colors.semantic.error};
         `;
     }
   }}
 `;
 
-const StatusIcon = styled.div`
-  font-size: 1.5rem;
+const StatusIconWrapper = styled.div`
+  font-size: 1.25rem;
   flex-shrink: 0;
-  
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-  
-  ${props => props.className?.includes('loading') && `
-    animation: spin 1s linear infinite;
-  `}
+  margin-top: 2px;
 `;
 
 const StatusContent = styled.div`
@@ -150,11 +147,12 @@ const StatusContent = styled.div`
 
 const StatusTitle = styled.div`
   font-weight: 600;
-  margin-bottom: 4px;
+  font-size: 0.9rem;
+  margin-bottom: 2px;
 `;
 
 const StatusMessage = styled.div`
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   opacity: 0.9;
 `;
 
@@ -163,214 +161,300 @@ const DataSummary = styled.div`
   border: 1px solid ${colors.neutral.gray200};
   border-radius: ${borderRadius.base};
   padding: ${spacing.lg};
-  margin-top: ${spacing.md};
+`;
+
+const DataSummaryHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: ${spacing.md};
+`;
+
+const DataSummaryTitle = styled.div`
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: ${colors.text.primary};
+`;
+
+const ResearchButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: ${spacing.xs};
+  padding: ${spacing.xs} ${spacing.md};
+  border: 1px solid ${colors.neutral.gray300};
+  border-radius: ${borderRadius.base};
+  background: white;
+  color: ${colors.text.secondary};
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: ${colors.neutral.gray400};
+    color: ${colors.text.primary};
+    background: ${colors.background.hover};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${colors.status.underReview};
+    outline-offset: 2px;
+  }
 `;
 
 const DataGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: ${spacing.md};
 `;
 
 const DataItem = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 `;
 
 const DataLabel = styled.span`
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: ${colors.text.secondary};
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: ${colors.text.tertiary};
   text-transform: uppercase;
+  letter-spacing: 0.5px;
 `;
 
 const DataValue = styled.span`
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   color: ${colors.text.primary};
   font-weight: 500;
 `;
 
-const ContinueButton = styled.button<{ $disabled: boolean }>`
-  background-color: ${props => props.$disabled ? colors.neutral.gray400 : colors.neutral.black};
-  color: white;
-  border: none;
-  padding: ${spacing.base} ${spacing.xl};
-  border-radius: ${borderRadius.base};
-  cursor: ${props => props.$disabled ? 'not-allowed' : 'pointer'};
-  font-weight: 600;
-  font-size: 1rem;
-  transition: all 0.2s ease;
-  align-self: flex-start;
-  box-shadow: ${shadows.sm};
-
-  &:hover:not(:disabled) {
-    background-color: ${colors.neutral.gray800};
-    transform: translateY(-2px);
-    box-shadow: ${shadows.base};
-  }
-`;
-
 interface ApplicationIdentificationStepProps {
-  onComplete: (appData: ApplicationData) => void;
+  onDataFetched: (appData: ApplicationData) => void;
+  currentData?: ApplicationData | null;
 }
 
-const ApplicationIdentificationStep: React.FC<ApplicationIdentificationStepProps> = ({ onComplete }) => {
+const ApplicationIdentificationStep: React.FC<ApplicationIdentificationStepProps> = ({
+  onDataFetched,
+  currentData,
+}) => {
   const [appName, setAppName] = useState('');
   const [appId, setAppId] = useState('');
   const [loading, setLoading] = useState(false);
-  const [appData, setAppData] = useState<ApplicationData | null>(null);
+  const [appData, setAppData] = useState<ApplicationData | null>(currentData || null);
   const [error, setError] = useState<string | null>(null);
+  const [appNameError, setAppNameError] = useState('');
+  const [appIdError, setAppIdError] = useState('');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fetchedRef = useRef(false);
 
-  const handleFetchData = async () => {
-    if (!appName.trim() || !appId.trim()) return;
+  const validateAppName = (val: string) => {
+    if (!val.trim()) return 'Application name is required';
+    if (val.trim().length < 2) return 'Must be at least 2 characters';
+    return '';
+  };
+
+  const validateAppId = (val: string) => {
+    if (!val.trim()) return 'Application ID is required';
+    if (val.trim().length < 3) return 'Must be at least 3 characters';
+    return '';
+  };
+
+  const doFetch = useCallback(async (name: string, id: string) => {
+    if (!name.trim() || !id.trim()) return;
 
     setLoading(true);
     setError(null);
-    setAppData(null);
+    fetchedRef.current = false;
 
     try {
-      const data = await fetchApplicationData(appName.trim(), appId.trim());
+      const data = await fetchApplicationData(name.trim(), id.trim());
       setAppData(data);
-    } catch (err) {
-      setError('Failed to fetch application data. Please check your inputs and try again.');
-      console.error('Error fetching application data:', err);
+      fetchedRef.current = true;
+      onDataFetched(data);
+    } catch {
+      setError('No application found for the provided name and ID. Please check your inputs.');
+      setAppData(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, [onDataFetched]);
 
-  const handleContinue = () => {
-    if (appData) {
-      onComplete(appData);
+  useEffect(() => {
+    const nameValid = appName.trim().length >= 2;
+    const idValid = appId.trim().length >= 3;
+
+    if (!nameValid || !idValid) {
+      setAppData(null);
+      return;
+    }
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      doFetch(appName, appId);
+    }, 600);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [appName, appId, doFetch]);
+
+  const handleReSearch = () => {
+    setAppData(null);
+    setError(null);
+    if (appName.trim() && appId.trim()) {
+      doFetch(appName, appId);
     }
   };
 
-  const canFetch = appName.trim().length > 0 && appId.trim().length > 0 && !loading;
-  const canContinue = appData !== null && !loading;
+  const showStatus = loading || error || appData;
 
   return (
     <Container>
-      <div>
-        <Title>Application Identification</Title>
-        <Description>
-          Enter your application details to automatically fetch and prefill compliance data from multiple sources (CMDB, IAM, Data Catalog, Compliance Registry).
-        </Description>
-      </div>
+      <Description>
+        Enter your application details — data is automatically retrieved from CMDB, IAM, Data Catalog, and Compliance Registry once both fields are filled.
+      </Description>
 
       <FormGrid>
         <FormGroup>
           <Label htmlFor="appName">Application Name *</Label>
-          <Input
-            id="appName"
-            type="text"
-            placeholder="e.g., Customer Data Platform"
-            value={appName}
-            onChange={(e) => setAppName(e.target.value)}
-            disabled={loading}
-          />
-          <HelpText>Official name of the application</HelpText>
+          <InputWrapper>
+            <Input
+              id="appName"
+              type="text"
+              placeholder="e.g., Customer Data Platform"
+              value={appName}
+              $hasError={!!appNameError}
+              onChange={e => {
+                setAppName(e.target.value);
+                setAppNameError('');
+              }}
+              onBlur={e => setAppNameError(validateAppName(e.target.value))}
+              disabled={loading}
+              aria-describedby={appNameError ? 'appName-error' : 'appName-help'}
+            />
+            {loading && (
+              <InputSuffix>
+                <SpinnerIcon>
+                  <FiRefreshCw size={14} />
+                </SpinnerIcon>
+              </InputSuffix>
+            )}
+          </InputWrapper>
+          {appNameError
+            ? <FieldError id="appName-error" role="alert">{appNameError}</FieldError>
+            : <HelpText id="appName-help">Official name of the application</HelpText>
+          }
         </FormGroup>
 
         <FormGroup>
           <Label htmlFor="appId">Application ID *</Label>
-          <Input
-            id="appId"
-            type="text"
-            placeholder="e.g., APP-CDP-2024"
-            value={appId}
-            onChange={(e) => setAppId(e.target.value)}
-            disabled={loading}
-          />
-          <HelpText>Unique application identifier</HelpText>
+          <InputWrapper>
+            <Input
+              id="appId"
+              type="text"
+              placeholder="e.g., APP-CDP-2024"
+              value={appId}
+              $hasError={!!appIdError}
+              onChange={e => {
+                setAppId(e.target.value);
+                setAppIdError('');
+              }}
+              onBlur={e => setAppIdError(validateAppId(e.target.value))}
+              disabled={loading}
+              aria-describedby={appIdError ? 'appId-error' : 'appId-help'}
+            />
+            {loading && (
+              <InputSuffix>
+                <SpinnerIcon>
+                  <FiRefreshCw size={14} />
+                </SpinnerIcon>
+              </InputSuffix>
+            )}
+          </InputWrapper>
+          {appIdError
+            ? <FieldError id="appId-error" role="alert">{appIdError}</FieldError>
+            : <HelpText id="appId-help">Unique application identifier (e.g. APP-CDP-2024)</HelpText>
+          }
         </FormGroup>
       </FormGrid>
 
-      <FetchButton
-        $disabled={!canFetch}
-        onClick={handleFetchData}
-        disabled={!canFetch}
-      >
-        <FiSearch />
-        Fetch Application Data
-      </FetchButton>
-
-      {loading && (
-        <StatusCard $type="loading">
-          <StatusIcon className="loading">
-            <FiLoader />
-          </StatusIcon>
-          <StatusContent>
-            <StatusTitle>Fetching Data...</StatusTitle>
-            <StatusMessage>
-              Retrieving application details from CMDB, IAM, Data Catalog, and Compliance Registry
-            </StatusMessage>
-          </StatusContent>
-        </StatusCard>
-      )}
-
-      {error && (
-        <StatusCard $type="error">
-          <StatusIcon>
-            <FiAlertCircle />
-          </StatusIcon>
-          <StatusContent>
-            <StatusTitle>Error</StatusTitle>
-            <StatusMessage>{error}</StatusMessage>
-          </StatusContent>
-        </StatusCard>
-      )}
-
-      {appData && !loading && (
+      {showStatus && (
         <>
-          <StatusCard $type="success">
-            <StatusIcon>
-              <FiCheckCircle />
-            </StatusIcon>
-            <StatusContent>
-              <StatusTitle>Data Retrieved Successfully</StatusTitle>
-              <StatusMessage>
-                Application data has been fetched and will be used to prefill your MER template
-              </StatusMessage>
-            </StatusContent>
-          </StatusCard>
+          {loading && (
+            <StatusCard $type="loading">
+              <StatusIconWrapper>
+                <SpinnerIcon style={{ fontSize: '1.2rem' }}>
+                  <FiRefreshCw />
+                </SpinnerIcon>
+              </StatusIconWrapper>
+              <StatusContent>
+                <StatusTitle>Fetching application data...</StatusTitle>
+                <StatusMessage>Querying CMDB, IAM, Data Catalog, and Compliance Registry</StatusMessage>
+              </StatusContent>
+            </StatusCard>
+          )}
 
-          <DataSummary>
-            <DataGrid>
-              <DataItem>
-                <DataLabel>Owner / Manager</DataLabel>
-                <DataValue>{appData.owner}</DataValue>
-              </DataItem>
-              <DataItem>
-                <DataLabel>Data Classification</DataLabel>
-                <DataValue>{appData.dataClassification}</DataValue>
-              </DataItem>
-              <DataItem>
-                <DataLabel>Deployment Model</DataLabel>
-                <DataValue>{appData.deploymentModel}</DataValue>
-              </DataItem>
-              <DataItem>
-                <DataLabel>Locations</DataLabel>
-                <DataValue>{appData.locations.join(', ')}</DataValue>
-              </DataItem>
-              <DataItem>
-                <DataLabel>Hosting Provider</DataLabel>
-                <DataValue>{appData.hostingProvider}</DataValue>
-              </DataItem>
-              <DataItem>
-                <DataLabel>Compliance Flags</DataLabel>
-                <DataValue>{appData.complianceFlags.join(', ') || 'None'}</DataValue>
-              </DataItem>
-            </DataGrid>
-          </DataSummary>
+          {error && !loading && (
+            <StatusCard $type="error">
+              <StatusIconWrapper>
+                <FiAlertCircle />
+              </StatusIconWrapper>
+              <StatusContent>
+                <StatusTitle>Application not found</StatusTitle>
+                <StatusMessage>{error}</StatusMessage>
+              </StatusContent>
+            </StatusCard>
+          )}
 
-          <ContinueButton
-            $disabled={!canContinue}
-            onClick={handleContinue}
-            disabled={!canContinue}
-          >
-            Continue to MER Template
-          </ContinueButton>
+          {appData && !loading && (
+            <>
+              <StatusCard $type="success">
+                <StatusIconWrapper>
+                  <FiCheckCircle />
+                </StatusIconWrapper>
+                <StatusContent>
+                  <StatusTitle>Data retrieved successfully</StatusTitle>
+                  <StatusMessage>Application data will be used to pre-fill your MER template.</StatusMessage>
+                </StatusContent>
+              </StatusCard>
+
+              <DataSummary>
+                <DataSummaryHeader>
+                  <DataSummaryTitle>Retrieved Data</DataSummaryTitle>
+                  <ResearchButton onClick={handleReSearch} aria-label="Re-fetch application data">
+                    <FiRefreshCw size={12} />
+                    Re-search
+                  </ResearchButton>
+                </DataSummaryHeader>
+                <DataGrid>
+                  <DataItem>
+                    <DataLabel>Owner / Manager</DataLabel>
+                    <DataValue>{appData.owner}</DataValue>
+                  </DataItem>
+                  <DataItem>
+                    <DataLabel>Data Classification</DataLabel>
+                    <DataValue>{appData.dataClassification}</DataValue>
+                  </DataItem>
+                  <DataItem>
+                    <DataLabel>Deployment Model</DataLabel>
+                    <DataValue>{appData.deploymentModel}</DataValue>
+                  </DataItem>
+                  <DataItem>
+                    <DataLabel>Locations</DataLabel>
+                    <DataValue>{appData.locations.join(', ')}</DataValue>
+                  </DataItem>
+                  <DataItem>
+                    <DataLabel>Hosting Provider</DataLabel>
+                    <DataValue>{appData.hostingProvider}</DataValue>
+                  </DataItem>
+                  <DataItem>
+                    <DataLabel>Compliance Flags</DataLabel>
+                    <DataValue>{appData.complianceFlags.join(', ') || 'None'}</DataValue>
+                  </DataItem>
+                </DataGrid>
+              </DataSummary>
+            </>
+          )}
         </>
       )}
     </Container>
