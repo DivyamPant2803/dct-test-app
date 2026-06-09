@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import styled from 'styled-components'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './App.css'
@@ -19,6 +19,11 @@ import { getUnreadCount } from './services/notificationService'
 import { ToastProvider } from './components/common'
 import './utils/backfillAuditTrail' // Import to trigger backfill on app load
 import { FEATURE_FLAGS } from './config/featureFlags'
+import DevHostProvider from './host-integration/DevHostProvider'
+
+// Code-split: admin bundle is not downloaded by users without the admin role
+const HomepageModule = lazy(() => import('./features/homepage/HomepageModule'))
+const HomepageAdminModule = lazy(() => import('./features/admin/HomepageAdminModule'))
 
 const queryClient = new QueryClient()
 
@@ -213,6 +218,26 @@ const AppContent = () => {
             <Route path="/guidance" element={<Guidance />} />
           )}
           <Route path="/central-inventory" element={<CentralInventory />} />
+          <Route
+            path="/central-inventory/home"
+            element={
+              <DevHostProvider>
+                <Suspense fallback={<div style={{ padding: '2rem' }}>Loading homepage…</div>}>
+                  <HomepageModule />
+                </Suspense>
+              </DevHostProvider>
+            }
+          />
+          <Route
+            path="/central-inventory/home/admin/*"
+            element={
+              <DevHostProvider>
+                <Suspense fallback={<div style={{ padding: '2rem' }}>Loading admin…</div>}>
+                  <HomepageAdminModule />
+                </Suspense>
+              </DevHostProvider>
+            }
+          />
           <Route path="/admin" element={<Administration />} />
           <Route path="/my-transfers/*" element={<PersonaRouter route="/my-transfers" />} />
           <Route path="/dct" element={<PersonaRouter route="/dct" />} />
